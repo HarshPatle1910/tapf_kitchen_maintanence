@@ -482,6 +482,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // --- NEW SIDEBAR ---
   Widget _buildSidebar(BuildContext context, bool isAdmin) {
     return Drawer(
+      backgroundColor: Colors.white,
       child: Column(
         children: [
           UserAccountsDrawerHeader(
