@@ -1,73 +1,126 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Using Riverpod
+import '../main.dart'; // Access to your global authControllerProvider
 import '../providers/auth_provider.dart';
 import 'home_screen.dart';
 
-class LoginScreen extends StatefulWidget {
+enum LoginStep { phone, otp, profile, pending }
+
+// 1. Change to ConsumerStatefulWidget
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final _idController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController(); // For setup mode
+// 2. Change to ConsumerState
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _phoneController = TextEditingController();
+  final _otpController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _ampIdController = TextEditingController();
 
-  bool _isFirstTimeSetup = false; // Toggles the UI mode
+  LoginStep _currentStep = LoginStep.phone;
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-redirect if session exists
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkExistingSession();
+    });
+  }
+
+  void _checkExistingSession() {
+    // FIX: Replaced context.read with ref.read
+    final auth = ref.read(authControllerProvider);
+    _handleAuthState(auth.authState);
+  }
+
+  void _handleAuthState(AuthState state) {
+    if (state == AuthState.authenticated) {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+    } else if (state == AuthState.pendingApproval) {
+      setState(() => _currentStep = LoginStep.pending);
+    } else if (state == AuthState.profileIncomplete) {
+      setState(() => _currentStep = LoginStep.profile);
+    }
+  }
 
   @override
   void dispose() {
-    _idController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
+    _phoneController.dispose();
+    _otpController.dispose();
+    _nameController.dispose();
+    _ampIdController.dispose();
     super.dispose();
-  }
-
-  Future<void> _handleSubmit() async {
-    final employeeId = _idController.text.trim();
-    final password = _passwordController.text;
-
-    if (employeeId.isEmpty || password.isEmpty) {
-      _showError('Please fill in all fields');
-      return;
-    }
-
-    final authProvider = context.read<AuthProvider>();
-    bool success = false;
-
-    if (_isFirstTimeSetup) {
-      // Setup Mode Validation
-      if (password.length < 6) {
-        _showError('Password must be at least 6 characters');
-        return;
-      }
-      if (password != _confirmPasswordController.text) {
-        _showError('Passwords do not match');
-        return;
-      }
-      // Execute Setup
-      success = await authProvider.setupFirstTimePassword(employeeId, password);
-    } else {
-      // Normal Login
-      success = await authProvider.loginWithEmployeeId(employeeId, password);
-    }
-
-    if (success && mounted) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
-    } else if (mounted && authProvider.errorMessage != null) {
-      _showError(authProvider.errorMessage!);
-    }
   }
 
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
   }
 
+  Future<void> _sendOtp() async {
+    if (_phoneController.text.trim().length < 10) {
+      _showError("Enter a valid mobile number");
+      return;
+    }
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    // FIX: Replaced context.read with ref.read
+    final success = await ref.read(authControllerProvider).sendOtp(_phoneController.text.trim());
+    if (success && mounted) {
+      setState(() => _currentStep = LoginStep.otp);
+    } else if (mounted) {
+      _showError(ref.read(authControllerProvider).errorMessage ?? "Failed to send OTP");
+    }
+  }
+
+  Future<void> _verifyOtp() async {
+    if (_otpController.text.trim().isEmpty) {
+      _showError("Enter OTP");
+      return;
+    }
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    // FIX: Replaced context.read with ref.read
+    final auth = ref.read(authControllerProvider);
+    final success = await auth.verifyOtp(_phoneController.text.trim(), _otpController.text.trim());
+
+    if (success && mounted) {
+      _handleAuthState(auth.authState);
+    } else if (mounted) {
+      _showError(auth.errorMessage ?? "Invalid OTP");
+    }
+  }
+
+  Future<void> _submitProfile() async {
+    if (_nameController.text.trim().isEmpty || _ampIdController.text.trim().isEmpty) {
+      _showError("All fields are required");
+      return;
+    }
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    // FIX: Replaced context.read with ref.read
+    final auth = ref.read(authControllerProvider);
+    final success = await auth.completeProfile(
+      _nameController.text.trim(),
+      _ampIdController.text.trim(),
+      _phoneController.text.trim(),
+    );
+
+    if (success && mounted) {
+      setState(() => _currentStep = LoginStep.pending);
+    } else if (mounted) {
+      _showError(auth.errorMessage ?? "Failed to save profile");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isLoading = context.watch<AuthProvider>().isLoading;
+    // FIX: Replaced context.watch with ref.watch
+    final isLoading = ref.watch(authControllerProvider).isLoading;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -82,74 +135,100 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Icon(Icons.handyman, size: 80, color: Color(0xFF4A56E2)),
                 const SizedBox(height: 16),
                 const Text("Plant Maintenance", textAlign: TextAlign.center, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF4A56E2))),
-                const SizedBox(height: 8),
-                Text(
-                  _isFirstTimeSetup ? "Create your password to activate your account." : "Welcome back. Please login.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-                ),
                 const SizedBox(height: 48),
 
-                TextField(
-                  controller: _idController,
-                  decoration: const InputDecoration(labelText: "Employee ID", prefixIcon: Icon(Icons.badge), border: OutlineInputBorder()),
-                  textInputAction: TextInputAction.next,
-                ),
-                const SizedBox(height: 16),
+                if (_currentStep == LoginStep.phone) ...[
+                  const Text("Login or Register", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  const Text("Enter your mobile number to receive an OTP.", style: TextStyle(color: Colors.grey)),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(labelText: "Mobile Number", prefixIcon: Icon(Icons.phone), border: OutlineInputBorder()),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildPrimaryButton(isLoading, "SEND OTP", _sendOtp),
+                ],
 
-                TextField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: InputDecoration(labelText: _isFirstTimeSetup ? "Create New Password" : "Password", prefixIcon: const Icon(Icons.lock), border: const OutlineInputBorder()),
-                  textInputAction: _isFirstTimeSetup ? TextInputAction.next : TextInputAction.done,
-                  onSubmitted: _isFirstTimeSetup ? null : (_) => _handleSubmit(),
-                ),
+                if (_currentStep == LoginStep.otp) ...[
+                  const Text("Verify Phone", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text("Enter the OTP sent to ${_phoneController.text}", style: const TextStyle(color: Colors.grey)),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: _otpController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: "6-Digit OTP", prefixIcon: Icon(Icons.lock_clock), border: OutlineInputBorder()),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildPrimaryButton(isLoading, "VERIFY OTP", _verifyOtp),
+                  TextButton(
+                    onPressed: () => setState(() => _currentStep = LoginStep.phone),
+                    child: const Text("Change Phone Number"),
+                  )
+                ],
 
-                if (_isFirstTimeSetup) ...[
+                if (_currentStep == LoginStep.profile) ...[
+                  const Text("Complete Registration", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  const Text("Please provide your details for admin approval.", style: TextStyle(color: Colors.grey)),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(labelText: "Full Name", prefixIcon: Icon(Icons.person), border: OutlineInputBorder()),
+                  ),
                   const SizedBox(height: 16),
                   TextField(
-                    controller: _confirmPasswordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(labelText: "Confirm Password", prefixIcon: Icon(Icons.lock_outline), border: OutlineInputBorder()),
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _handleSubmit(),
+                    controller: _ampIdController,
+                    decoration: const InputDecoration(labelText: "AMP ID", prefixIcon: Icon(Icons.badge), border: OutlineInputBorder()),
                   ),
+                  const SizedBox(height: 24),
+                  _buildPrimaryButton(isLoading, "SUBMIT FOR APPROVAL", _submitProfile),
                 ],
-                const SizedBox(height: 32),
 
-                SizedBox(
-                  height: 50,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4A56E2),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                if (_currentStep == LoginStep.pending) ...[
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.orange.shade200)),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.pending_actions, size: 48, color: Colors.orange),
+                        const SizedBox(height: 16),
+                        const Text("Approval Pending", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.orange)),
+                        const SizedBox(height: 8),
+                        const Text("Your account has been registered successfully. Please wait for an Admin to approve your access.", textAlign: TextAlign.center, style: TextStyle(color: Colors.black87)),
+                        const SizedBox(height: 24),
+                        OutlinedButton(
+                          // FIX: Replaced context.read with ref.read
+                          onPressed: () => ref.read(authControllerProvider).logout().then((_) => setState(()=> _currentStep = LoginStep.phone)),
+                          child: const Text("LOGOUT"),
+                        )
+                      ],
                     ),
-                    onPressed: isLoading ? null : _handleSubmit,
-                    child: isLoading
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text(_isFirstTimeSetup ? "COMPLETE SETUP" : "LOGIN", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _isFirstTimeSetup = !_isFirstTimeSetup;
-                      _passwordController.clear();
-                      _confirmPasswordController.clear();
-                    });
-                  },
-                  child: Text(
-                    _isFirstTimeSetup ? "Already have a password? Login here." : "First time logging in? Setup Password.",
-                    style: const TextStyle(color: Color(0xFF4A56E2), fontWeight: FontWeight.w600),
-                  ),
-                )
+                  )
+                ],
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildPrimaryButton(bool isLoading, String text, VoidCallback onPressed) {
+    return SizedBox(
+      height: 50,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF4A56E2),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        onPressed: isLoading ? null : onPressed,
+        child: isLoading
+            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+            : Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
       ),
     );
   }

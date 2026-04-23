@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Only Riverpod now!
+import '../main.dart'; // Access to your global providers
 import '../providers/auth_provider.dart';
 import '../providers/ticket_provider.dart';
 import 'login_screen.dart';
 import 'master/equipment_master_screen.dart';
 import 'ticket_detail_screen.dart';
-// Restored Master Page Imports
 import 'master/user_management.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
 
@@ -25,7 +25,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
           _scrollController.position.maxScrollExtent - 200) {
-        context.read<TicketProvider>().fetchTickets(loadMore: true);
+        // FIX: Replaced context.read with ref.read
+        ref.read(ticketControllerProvider).fetchTickets(loadMore: true);
       }
     });
   }
@@ -39,13 +40,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final ticketProvider = context.watch<TicketProvider>();
-    final isAdmin = context.watch<AuthProvider>().isAdmin;
+    // FIX: Properly watch both providers using Riverpod
+    final ticketProvider = ref.watch(ticketControllerProvider);
+    final authProvider = ref.watch(authControllerProvider);
+    final isAdmin = authProvider.isAdmin; // Extracted from watched provider
 
-    // Check if any advanced filters are active to highlight the filter button
     final bool hasActiveFilters =
         ticketProvider.priorityFilter != 'ALL' ||
-        ticketProvider.startDate != null; // Also checking custom dates
+            ticketProvider.startDate != null;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6F8),
@@ -66,37 +68,19 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            width: double.infinity,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                _buildStatCard(
-                  "Total",
-                  ticketProvider.total,
-                  Colors.blueGrey,
-                  'ALL',
-                  ticketProvider,
-                ),
-                _buildStatCard(
-                  "To Do",
-                  ticketProvider.toDo,
-                  Colors.redAccent,
-                  'TO DO',
-                  ticketProvider,
-                ),
-                _buildStatCard(
-                  "In Progress",
-                  ticketProvider.inProgress,
-                  Colors.orange,
-                  'IN PROGRESS',
-                  ticketProvider,
-                ),
-                _buildStatCard(
-                  "Completed",
-                  ticketProvider.completed,
-                  Colors.green,
-                  'COMPLETED',
-                  ticketProvider,
-                ),
+                Expanded(child: _buildStatCard("Total", ticketProvider.total, Colors.blueGrey, 'ALL', ticketProvider)),
+                const SizedBox(width: 4),
+                Expanded(child: _buildStatCard("To Do", ticketProvider.toDo, Colors.redAccent, 'TO DO', ticketProvider)),
+                const SizedBox(width: 8),
+                Expanded(child: _buildStatCard("In Progress", ticketProvider.inProgress, Colors.orange, 'IN PROGRESS', ticketProvider)),
+                const SizedBox(width: 8),
+                Expanded(child: _buildStatCard("Completed", ticketProvider.completed, Colors.green, 'COMPLETED', ticketProvider)),
+                const SizedBox(width: 8),
+                Expanded(child: _buildStatCard("Verified", ticketProvider.verified, Colors.teal, 'VERIFIED', ticketProvider)),
               ],
             ),
           ),
@@ -109,21 +93,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 Expanded(
                   child: TextField(
                     controller: _searchController,
+                    // FIX: Replaced context.read with ref.read
                     onSubmitted: (value) =>
-                        context.read<TicketProvider>().setSearchQuery(value),
+                        ref.read(ticketControllerProvider).setSearchQuery(value),
                     decoration: InputDecoration(
                       hintText: "Search title or ticket #...",
                       prefixIcon: const Icon(Icons.search, color: Colors.grey),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchController.clear();
-                                context.read<TicketProvider>().setSearchQuery(
-                                  '',
-                                );
-                              },
-                            )
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          // FIX: Replaced context.read with ref.read
+                          ref.read(ticketControllerProvider).setSearchQuery('');
+                        },
+                      )
                           : null,
                       filled: true,
                       fillColor: Colors.white,
@@ -136,7 +120,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Advanced Filters Button
                 InkWell(
                   onTap: () => _showFilterBottomSheet(context, ticketProvider),
                   child: Container(
@@ -175,7 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   vertical: 8,
                 ),
                 itemCount:
-                    ticketProvider.tickets.length +
+                ticketProvider.tickets.length +
                     (ticketProvider.isLoading ? 1 : 0),
                 itemBuilder: (context, index) {
                   if (index == ticketProvider.tickets.length) {
@@ -207,14 +190,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- STAT CARD WIDGET ---
   Widget _buildStatCard(
-    String label,
-    int count,
-    Color baseColor,
-    String targetStatus,
-    TicketProvider provider,
-  ) {
+      String label,
+      int count,
+      Color baseColor,
+      String targetStatus,
+      TicketProvider provider,
+      ) {
     final isSelected = provider.statusFilter == targetStatus;
 
     return InkWell(
@@ -223,6 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
       },
       borderRadius: BorderRadius.circular(8),
       child: Container(
+        constraints: const BoxConstraints(minWidth: 80),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? baseColor.withOpacity(0.1) : Colors.transparent,
@@ -237,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               count.toString(),
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: baseColor,
               ),
@@ -257,7 +240,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- FILTER BOTTOM SHEET ---
   void _showFilterBottomSheet(BuildContext context, TicketProvider provider) {
     String tempPriority = provider.priorityFilter;
     String tempStatus = provider.statusFilter;
@@ -274,11 +256,10 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
-            // Helper text for the date display
             String dateText = "Select Date Range";
             if (tempStart != null && tempEnd != null) {
               dateText =
-                  "${tempStart!.day}/${tempStart!.month}/${tempStart!.year}  -  ${tempEnd!.day}/${tempEnd!.month}/${tempEnd!.year}";
+              "${tempStart!.day}/${tempStart!.month}/${tempStart!.year}  -  ${tempEnd!.day}/${tempEnd!.month}/${tempEnd!.year}";
             }
 
             return Padding(
@@ -318,7 +299,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const Divider(),
 
-                  // 1. Sort By
                   const Text(
                     "Sort By",
                     style: TextStyle(fontWeight: FontWeight.bold),
@@ -356,7 +336,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 2. Custom Date Range
                   const Text(
                     "Date Raised",
                     style: TextStyle(fontWeight: FontWeight.bold),
@@ -422,7 +401,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 3. Priority Filter
                   const Text(
                     "Priority",
                     style: TextStyle(fontWeight: FontWeight.bold),
@@ -433,12 +411,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
                         .map(
                           (prio) => ChoiceChip(
-                            label: Text(prio),
-                            selected: tempPriority == prio,
-                            onSelected: (val) =>
-                                setModalState(() => tempPriority = prio),
-                          ),
-                        )
+                        label: Text(prio),
+                        selected: tempPriority == prio,
+                        onSelected: (val) =>
+                            setModalState(() => tempPriority = prio),
+                      ),
+                    )
                         .toList(),
                   ),
 
@@ -479,7 +457,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- NEW SIDEBAR ---
   Widget _buildSidebar(BuildContext context, bool isAdmin) {
     return Drawer(
       backgroundColor: Colors.white,
@@ -513,12 +490,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            // Restored Routing for Admins
             ListTile(
               leading: const Icon(Icons.people_outline),
               title: const Text('User Management'),
               onTap: () {
-                Navigator.pop(context); // Close drawer first
+                Navigator.pop(context);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -531,7 +507,7 @@ class _HomeScreenState extends State<HomeScreen> {
               leading: const Icon(Icons.build_circle_outlined),
               title: const Text('Equipment Registry'),
               onTap: () {
-                Navigator.pop(context); // Close drawer first
+                Navigator.pop(context);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -548,7 +524,8 @@ class _HomeScreenState extends State<HomeScreen> {
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Logout', style: TextStyle(color: Colors.red)),
             onTap: () async {
-              await context.read<AuthProvider>().logout();
+              // FIX: Replaced context.read with ref.read
+              await ref.read(authControllerProvider).logout();
               if (context.mounted) {
                 Navigator.pushReplacement(
                   context,
@@ -564,7 +541,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// --- REDESIGNED TICKET CARD ---
 class _TicketCard extends StatelessWidget {
   final Map<String, dynamic> ticket;
   const _TicketCard({required this.ticket});
