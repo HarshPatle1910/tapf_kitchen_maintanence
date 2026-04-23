@@ -14,13 +14,14 @@ class TicketProvider with ChangeNotifier {
   String _priorityFilter = 'ALL';
   DateTime? _startDate;
   DateTime? _endDate;
-  String _sortBy = 'DATE_DESC'; // DATE_DESC, DATE_ASC, PRIORITY_DESC
+  String _sortBy = 'DATE_DESC';
 
   // Global Stats
   int _total = 0;
   int _toDo = 0;
   int _inProgress = 0;
   int _completed = 0;
+  int _verified = 0;
 
   List<Map<String, dynamic>> get tickets => _tickets;
   bool get isLoading => _isLoading;
@@ -35,6 +36,7 @@ class TicketProvider with ChangeNotifier {
   int get toDo => _toDo;
   int get inProgress => _inProgress;
   int get completed => _completed;
+  int get verified => _verified;
 
   TicketProvider() {
     _initRealtime();
@@ -55,7 +57,6 @@ class TicketProvider with ChangeNotifier {
     refreshTickets();
   }
 
-  // Updated to accept dates and sorting
   void setFilters({String? status, String? priority, DateTime? start, DateTime? end, String? sort}) {
     if (status != null) _statusFilter = status;
     if (priority != null) _priorityFilter = priority;
@@ -63,7 +64,6 @@ class TicketProvider with ChangeNotifier {
     if (end != null) _endDate = end;
     if (sort != null) _sortBy = sort;
 
-    // If the user cleared the dates from the UI
     if (start == null && end == null && sort == null && status == null && priority == null) {
       _startDate = null;
       _endDate = null;
@@ -91,7 +91,8 @@ class TicketProvider with ChangeNotifier {
       _total = statsData.length;
       _toDo = statsData.where((t) => t['status'] == 'RAISED').length;
       _inProgress = statsData.where((t) => t['status'] == 'IN_PROGRESS' || t['status'] == 'ASSIGNED').length;
-      _completed = statsData.where((t) => t['status'] == 'COMPLETED' || t['status'] == 'VERIFIED').length;
+      _completed = statsData.where((t) => t['status'] == 'COMPLETED').length;
+      _verified = statsData.where((t) => t['status'] == 'VERIFIED').length;
     } catch (e) {
       debugPrint("Error fetching stats: $e");
     }
@@ -106,12 +107,12 @@ class TicketProvider with ChangeNotifier {
     if (loadMore) _offset += _limit;
 
     try {
+      // UPDATED: Removed issue_categories(name)
       var query = _supabase
           .from('tickets')
           .select('''
             *, 
             m_kitchen(name),
-            issue_categories(name),
             raised_by:m_user!raised_by_id(name),
             assigned_to:m_user!assigned_to_id(name)
           ''');
@@ -123,7 +124,9 @@ class TicketProvider with ChangeNotifier {
         } else if (_statusFilter == 'IN PROGRESS') {
           query = query.inFilter('status', ['IN_PROGRESS', 'ASSIGNED']);
         } else if (_statusFilter == 'COMPLETED') {
-          query = query.inFilter('status', ['COMPLETED', 'VERIFIED']);
+          query = query.eq('status', 'COMPLETED');
+        } else if (_statusFilter == 'VERIFIED') {
+          query = query.eq('status', 'VERIFIED');
         } else {
           query = query.eq('status', _statusFilter);
         }
@@ -139,7 +142,6 @@ class TicketProvider with ChangeNotifier {
         query = query.gte('ticket_raised_time', _startDate!.toIso8601String());
       }
       if (_endDate != null) {
-        // Include the entire end day (up to 23:59:59)
         final endOfDay = DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
         query = query.lte('ticket_raised_time', endOfDay.toIso8601String());
       }
@@ -149,7 +151,7 @@ class TicketProvider with ChangeNotifier {
         query = query.or('title.ilike.%$_searchQuery%,ticket_no.ilike.%$_searchQuery%');
       }
 
-      // 5. Database Sorting (Date based)
+      // 5. Database Sorting
       final bool isAscending = _sortBy == 'DATE_ASC';
       final response = await query
           .order('ticket_raised_time', ascending: isAscending)
@@ -161,13 +163,13 @@ class TicketProvider with ChangeNotifier {
         _tickets = List<Map<String, dynamic>>.from(response);
       }
 
-      // 6. Local Sorting for Priority (CRITICAL -> LOW)
+      // 6. Local Sorting for Priority
       if (_sortBy == 'PRIORITY_DESC') {
         _tickets.sort((a, b) {
           const pWeights = {'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1};
           final valA = pWeights[a['priority']] ?? 0;
           final valB = pWeights[b['priority']] ?? 0;
-          return valB.compareTo(valA); // Descending
+          return valB.compareTo(valA);
         });
       }
 
