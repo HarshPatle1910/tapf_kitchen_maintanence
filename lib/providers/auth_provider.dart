@@ -1,61 +1,74 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 enum AuthState { unauthenticated, profileIncomplete, pendingApproval, authenticated }
 
 class AuthProvider with ChangeNotifier {
   final _supabase = Supabase.instance.client;
 
+  // NEW: Flag to track initial app load
+  bool _isInitializing = true;
   bool _isLoading = false;
+
   String? _errorMessage;
-  String? _role;
   AuthState _authState = AuthState.unauthenticated;
 
+  String? _activeRole;
+  String? _activeKitchenId;
+  String? _userName;
+
+  // Getters
+  bool get isInitializing => _isInitializing; // NEW
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  String? get currentUserId => _supabase.auth.currentUser?.id;
-  bool get isAdmin => _role == 'admin';
   AuthState get authState => _authState;
+
+  String? get currentUserId => _supabase.auth.currentUser?.id;
+  String? get activeRole => _activeRole;
+  bool get isAdmin => _activeRole == 'admin';
+  String? get activeKitchenId => _activeKitchenId;
+  String? get userName => _userName;
 
   AuthProvider() {
     _checkExistingSession();
   }
 
   Future<void> _checkExistingSession() async {
+    _isInitializing = true;
+    notifyListeners();
+
     if (_supabase.auth.currentSession != null) {
-      await _fetchUserAndCheckStatus(_supabase.auth.currentUser!.id);
+      await refreshUserStatus();
+    } else {
+      _authState = AuthState.unauthenticated;
     }
+
+    // Stop the splash screen once we know the state
+    _isInitializing = false;
+    notifyListeners();
   }
 
-  // 1. SEND OTP
   Future<bool> sendOtp(String phoneNumber) async {
     _setLoading(true);
     _errorMessage = null;
     try {
-      // Ensure phone number has country code. Assuming +91 for India as default if missing.
       String formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : '+91$phoneNumber';
-
       await _supabase.auth.signInWithOtp(phone: formattedPhone);
       _setLoading(false);
       return true;
-    } on AuthException catch (e) {
-      _errorMessage = e.message;
-      _setLoading(false);
-      return false;
     } catch (e) {
-      _errorMessage = "An unexpected error occurred.";
+      _errorMessage = e.toString();
       _setLoading(false);
       return false;
     }
   }
 
-  // 2. VERIFY OTP
   Future<bool> verifyOtp(String phoneNumber, String otp) async {
     _setLoading(true);
     _errorMessage = null;
     try {
       String formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : '+91$phoneNumber';
-
       final response = await _supabase.auth.verifyOTP(
         phone: formattedPhone,
         token: otp,
@@ -63,24 +76,23 @@ class AuthProvider with ChangeNotifier {
       );
 
       if (response.user != null) {
-        await _fetchUserAndCheckStatus(response.user!.id);
-        _setLoading(false);
+        await refreshUserStatus();
         return true;
       }
       return false;
-    } on AuthException catch (e) {
-      _errorMessage = e.message;
-      _setLoading(false);
-      return false;
     } catch (e) {
-      _errorMessage = "An unexpected error occurred.";
+      _errorMessage = e.toString();
       _setLoading(false);
       return false;
     }
   }
 
-  // 3. COMPLETE PROFILE (First Time Registration)
-  Future<bool> completeProfile(String name, String ampId, String phoneNumber) async {
+  Future<bool> registerUser({
+    required String name,
+    required String ampId,
+    required String address,
+    required String phone,
+  }) async {
     _setLoading(true);
     _errorMessage = null;
     try {
@@ -90,48 +102,56 @@ class AuthProvider with ChangeNotifier {
         'id': userId,
         'amp_id': ampId,
         'name': name,
-        'mobile_no': phoneNumber,
-        'role': 'worker', // Default role
-        'status': false,  // Needs Admin Approval
+        'mobile_no': phone,
+        'address': address,
+        'role': 'worker',
+        'status': false,
       });
 
-      _authState = AuthState.pendingApproval;
-      _setLoading(false);
+      await refreshUserStatus();
       return true;
+    } on PostgrestException catch (e) {
+      _errorMessage = e.message;
+      _setLoading(false);
+      return false;
     } catch (e) {
-      _errorMessage = "Failed to save profile. AMP ID might be taken.";
+      _errorMessage = "Registration failed. Please try again.";
       _setLoading(false);
       return false;
     }
   }
 
-  // 4. CHECK STATUS & ROLE
-  Future<void> _fetchUserAndCheckStatus(String userId) async {
-    try {
-      final response = await _supabase.from('m_user').select().eq('id', userId).maybeSingle();
+  Future<void> refreshUserStatus() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
 
-      if (response == null) {
-        // User authenticated but hasn't created their m_user profile yet
+    try {
+      final data = await _supabase.from('m_user').select().eq('id', user.id).maybeSingle();
+
+      if (data == null) {
         _authState = AuthState.profileIncomplete;
+      } else if (data['status'] == false) {
+        _userName = data['name'];
+        _authState = AuthState.pendingApproval;
       } else {
-        if (response['status'] == true) {
-          _role = response['role'];
-          _authState = AuthState.authenticated;
-        } else {
-          _authState = AuthState.pendingApproval;
-        }
+        _activeRole = data['role'];
+        _userName = data['name'];
+        _activeKitchenId = data['kitchen_id'];
+        _authState = AuthState.authenticated;
       }
     } catch (e) {
-      debugPrint("Error fetching user: $e");
+      debugPrint("Error fetching status: $e");
       _authState = AuthState.unauthenticated;
     }
-    notifyListeners();
+    _setLoading(false);
   }
 
   Future<void> logout() async {
     _setLoading(true);
     await _supabase.auth.signOut();
-    _role = null;
+    _activeRole = null;
+    _activeKitchenId = null;
+    _userName = null;
     _authState = AuthState.unauthenticated;
     _setLoading(false);
   }

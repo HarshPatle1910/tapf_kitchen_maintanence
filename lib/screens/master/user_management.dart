@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -9,6 +10,9 @@ class UserManagementScreen extends StatefulWidget {
 }
 
 class _UserManagementScreenState extends State<UserManagementScreen> {
+  static const Color navy = Color(0xFF26538D);
+  static const Color golden = Color(0xFFD4AF37);
+
   final _supabase = Supabase.instance.client;
   List<Map<String, dynamic>> _users = [];
   bool _isLoading = true;
@@ -31,68 +35,58 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     }
   }
 
+  // Inside UserManagementScreen, update the _showApprovalDialog function:
   void _showApprovalDialog(Map<String, dynamic> user) {
     String selectedRole = user['role'] ?? 'worker';
+    String? selectedDept = user['department'];
+    String? selectedKitchen = user['kitchen_id'];
     bool isApproved = user['status'] ?? false;
 
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      isScrollControlled: true,
       builder: (ctx) => StatefulBuilder(
-          builder: (context, setModalState) {
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Manage: ${user['name']}", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                    Text("AMP ID: ${user['amp_id']}  |  Phone: ${user['mobile_no']}", style: const TextStyle(color: Colors.grey)),
-                    const SizedBox(height: 24),
-
-                    DropdownButtonFormField<String>(
-                      value: selectedRole,
-                      decoration: const InputDecoration(labelText: "Assign Role", border: OutlineInputBorder()),
-                      items: const [
-                        DropdownMenuItem(value: 'worker', child: Text("WORKER")),
-                        DropdownMenuItem(value: 'admin', child: Text("ADMIN")),
-                      ],
-                      onChanged: (val) => setModalState(() => selectedRole = val!),
-                    ),
-                    const SizedBox(height: 16),
-
-                    SwitchListTile(
-                      title: const Text("Account Approved", style: TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: const Text("Allow this user to access the app"),
-                      activeColor: const Color(0xFF4A56E2),
-                      value: isApproved,
-                      onChanged: (val) => setModalState(() => isApproved = val),
-                    ),
-                    const SizedBox(height: 24),
-
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4A56E2), foregroundColor: Colors.white),
-                        onPressed: () async {
-                          Navigator.pop(ctx);
-                          setState(() => _isLoading = true);
-                          await _supabase.from('m_user').update({
-                            'role': selectedRole,
-                            'status': isApproved,
-                          }).eq('id', user['id']);
-                          _fetchUsers();
-                        },
-                        child: const Text("SAVE CHANGES", style: TextStyle(fontWeight: FontWeight.bold)),
-                      ),
-                    )
-                  ],
-                ),
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 24, right: 24, top: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("Approve User: ${user['name']}"),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: selectedRole,
+                items: const [DropdownMenuItem(value: 'worker', child: Text("WORKER")), DropdownMenuItem(value: 'admin', child: Text("ADMIN"))],
+                onChanged: (v) => setModalState(() => selectedRole = v!),
+                decoration: const InputDecoration(labelText: "Role"),
               ),
-            );
-          }
+              const SizedBox(height: 16),
+              TextField(
+                onChanged: (v) => selectedDept = v,
+                decoration: const InputDecoration(labelText: "Department (e.g. Electrical, Plumbing)"),
+              ),
+              const SizedBox(height: 16),
+              SwitchListTile(
+                  title: const Text("Approve Status"),
+                  value: isApproved,
+                  onChanged: (v) => setModalState(() => isApproved = v)
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                  onPressed: () async {
+                    await Supabase.instance.client.from('m_user').update({
+                      'role': selectedRole,
+                      'department': selectedDept,
+                      'status': isApproved,
+                    }).eq('id', user['id']);
+                    Navigator.pop(ctx);
+                    _fetchUsers();
+                  },
+                  child: const Text("SAVE & APPROVE")
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -100,15 +94,15 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F8),
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        title: const Text("User Approvals & Management", style: TextStyle(fontWeight: FontWeight.bold)),
+        foregroundColor: navy,
+        title: Text("User Approvals", style: GoogleFonts.inter(fontWeight: FontWeight.w800, letterSpacing: -0.5)),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: golden))
           : ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: _users.length,
@@ -118,34 +112,39 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
+            elevation: 0,
+            color: Colors.white,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: isPending ? Colors.orange.shade300 : Colors.transparent, width: isPending ? 2 : 0)
+                side: BorderSide(color: isPending ? Colors.orange.shade300 : Colors.grey.shade200, width: isPending ? 2 : 1)
             ),
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               leading: CircleAvatar(
-                backgroundColor: isPending ? Colors.orange.shade50 : (user['role'] == 'admin' ? Colors.red.shade50 : const Color(0xFF4A56E2).withOpacity(0.1)),
+                backgroundColor: isPending ? Colors.orange.shade50 : (user['role'] == 'admin' ? Colors.red.shade50 : navy.withOpacity(0.05)),
                 child: Icon(
                     isPending ? Icons.pending_actions : Icons.person,
-                    color: isPending ? Colors.orange : (user['role'] == 'admin' ? Colors.red : const Color(0xFF4A56E2))
+                    color: isPending ? Colors.orange : (user['role'] == 'admin' ? Colors.red : navy)
                 ),
               ),
               title: Row(
                 children: [
-                  Text(user['name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Expanded(child: Text(user['name'] ?? 'Unknown', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: navy))),
                   if (isPending) ...[
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(4)),
-                      child: const Text("NEW", style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
+                      child: Text("NEW", style: GoogleFonts.inter(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
                     )
                   ]
                 ],
               ),
-              subtitle: Text("AMP: ${user['amp_id']} • ${user['role'].toString().toUpperCase()}"),
-              trailing: const Icon(Icons.edit_square, color: Colors.grey),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Text("AMP: ${user['amp_id']} • ${user['role'].toString().toUpperCase()}", style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 13, fontWeight: FontWeight.w500)),
+              ),
+              trailing: const Icon(Icons.edit_square, color: golden),
               onTap: () => _showApprovalDialog(user),
             ),
           );

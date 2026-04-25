@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // Only Riverpod now!
-import '../main.dart'; // Access to your global providers
-import '../providers/auth_provider.dart';
-import '../providers/ticket_provider.dart';
-import 'login_screen.dart';
-import 'master/equipment_master_screen.dart';
-import 'ticket_detail_screen.dart';
-import 'master/user_management.dart';
+import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-class HomeScreen extends ConsumerStatefulWidget {
+import '../../providers/auth_provider.dart';
+import '../../providers/ticket_provider.dart';
+import 'authentication/login_screen.dart';
+import 'master/equipment_master_screen.dart';
+import 'master/user_management.dart';
+import 'ticket_detail_screen.dart';
+
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> {
+  static const Color navy = Color(0xFF26538D);
+  static const Color golden = Color(0xFFD4AF37);
+
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -25,9 +30,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
           _scrollController.position.maxScrollExtent - 200) {
-        // FIX: Replaced context.read with ref.read
-        ref.read(ticketControllerProvider).fetchTickets(loadMore: true);
+        context.read<TicketProvider>().fetchTickets(loadMore: true);
       }
+    });
+
+    // Safely trigger initialization exactly ONCE when the screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = context.read<AuthProvider>();
+      context.read<TicketProvider>().initialize(authProvider.activeKitchenId);
     });
   }
 
@@ -35,204 +45,300 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void dispose() {
     _scrollController.dispose();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // FIX: Properly watch both providers using Riverpod
-    final ticketProvider = ref.watch(ticketControllerProvider);
-    final authProvider = ref.watch(authControllerProvider);
-    final isAdmin = authProvider.isAdmin; // Extracted from watched provider
+    final ticketProvider = context.watch<TicketProvider>();
+    final authProvider = context.watch<AuthProvider>();
+    final isAdmin = authProvider.activeRole == 'admin';
 
     final bool hasActiveFilters =
         ticketProvider.priorityFilter != 'ALL' ||
-            ticketProvider.startDate != null;
+        ticketProvider.startDate != null;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F8),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        title: const Text(
-          "Dashboard",
-          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: -0.5),
-        ),
-        centerTitle: false,
-      ),
-      drawer: _buildSidebar(context, isAdmin),
-      body: Column(
-        children: [
-          // 1. Clickable Stats Row
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            width: double.infinity,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Expanded(child: _buildStatCard("Total", ticketProvider.total, Colors.blueGrey, 'ALL', ticketProvider)),
-                const SizedBox(width: 4),
-                Expanded(child: _buildStatCard("To Do", ticketProvider.toDo, Colors.redAccent, 'TO DO', ticketProvider)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildStatCard("In Progress", ticketProvider.inProgress, Colors.orange, 'IN PROGRESS', ticketProvider)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildStatCard("Completed", ticketProvider.completed, Colors.green, 'COMPLETED', ticketProvider)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildStatCard("Verified", ticketProvider.verified, Colors.teal, 'VERIFIED', ticketProvider)),
-              ],
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: Colors.white,
+          foregroundColor: navy,
+          title: Text(
+            "Maintenance Dashboard",
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
             ),
           ),
+          centerTitle: false,
+        ),
+        drawer: _buildSidebar(context, isAdmin, authProvider),
+        body: Column(
+          children: [
+            // 1. NON-SCROLLABLE QUICK FILTERS ROW
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+              width: double.infinity,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard(
+                      "Total",
+                      ticketProvider.total,
+                      Colors.blueGrey,
+                      'ALL',
+                      ticketProvider,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: _buildStatCard(
+                      "To Do",
+                      ticketProvider.toDo,
+                      Colors.redAccent,
+                      'TO DO',
+                      ticketProvider,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: _buildStatCard(
+                      "WIP",
+                      ticketProvider.inProgress,
+                      Colors.orange,
+                      'IN PROGRESS',
+                      ticketProvider,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: _buildStatCard(
+                      "Done",
+                      ticketProvider.completed,
+                      Colors.green,
+                      'COMPLETED',
+                      ticketProvider,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: _buildStatCard(
+                      "Verified",
+                      ticketProvider.verified,
+                      Colors.teal,
+                      'VERIFIED',
+                      ticketProvider,
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
-          // 2. Search & Filter Bar
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    // FIX: Replaced context.read with ref.read
-                    onSubmitted: (value) =>
-                        ref.read(ticketControllerProvider).setSearchQuery(value),
-                    decoration: InputDecoration(
-                      hintText: "Search title or ticket #...",
-                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          // FIX: Replaced context.read with ref.read
-                          ref.read(ticketControllerProvider).setSearchQuery('');
-                        },
-                      )
-                          : null,
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide.none,
+            // 2. Sleek Search & Advanced Filter Bar
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        onSubmitted: (value) => context
+                            .read<TicketProvider>()
+                            .setSearchQuery(value),
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          color: navy,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: "Search title or ticket #...",
+                          hintStyle: GoogleFonts.inter(
+                            color: Colors.grey.shade400,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: Colors.grey,
+                          ),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(
+                                    Icons.clear,
+                                    color: Colors.grey,
+                                    size: 20,
+                                  ),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    context
+                                        .read<TicketProvider>()
+                                        .setSearchQuery('');
+                                    _searchFocusNode.unfocus();
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: golden,
+                              width: 2,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                InkWell(
-                  onTap: () => _showFilterBottomSheet(context, ticketProvider),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: hasActiveFilters
-                          ? const Color(0xFF4A56E2)
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 8,
+                  const SizedBox(width: 12),
+                  InkWell(
+                    onTap: () {
+                      _searchFocusNode.unfocus();
+                      _showFilterBottomSheet(context, ticketProvider);
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: hasActiveFilters ? navy : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: hasActiveFilters ? navy : Colors.grey.shade300,
                         ),
-                      ],
-                    ),
-                    child: Icon(
-                      Icons.tune,
-                      color: hasActiveFilters ? Colors.white : Colors.black87,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.tune,
+                        color: hasActiveFilters ? Colors.white : navy,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          // 3. Ticket List
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () => ticketProvider.refreshTickets(),
-              child: ListView.builder(
-                controller: _scrollController,
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                itemCount:
-                ticketProvider.tickets.length +
-                    (ticketProvider.isLoading ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index == ticketProvider.tickets.length) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-                  return _TicketCard(ticket: ticketProvider.tickets[index]);
-                },
+                ],
               ),
             ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF4A56E2),
-        foregroundColor: Colors.white,
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const TicketDetailScreen()),
+
+            // 3. Ticket List
+            Expanded(
+              child: RefreshIndicator(
+                color: golden,
+                onRefresh: () => ticketProvider.refreshTickets(),
+                child: ListView.builder(
+                  controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                  itemCount:
+                      ticketProvider.tickets.length +
+                      (ticketProvider.isLoading ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == ticketProvider.tickets.length) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Center(
+                          child: CircularProgressIndicator(color: golden),
+                        ),
+                      );
+                    }
+                    return _TicketCard(ticket: ticketProvider.tickets[index]);
+                  },
+                ),
+              ),
+            ),
+          ],
         ),
-        icon: const Icon(Icons.add),
-        label: const Text(
-          "Raise Issue",
-          style: TextStyle(fontWeight: FontWeight.bold),
+        floatingActionButton: FloatingActionButton.extended(
+          backgroundColor: golden,
+          foregroundColor: navy,
+          elevation: 4,
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TicketDetailScreen()),
+          ),
+          icon: const Icon(Icons.add_rounded),
+          label: Text(
+            "Raise Issue",
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
         ),
       ),
     );
   }
 
+  // UPDATED STAT CARD TO FIT PERFECTLY
   Widget _buildStatCard(
-      String label,
-      int count,
-      Color baseColor,
-      String targetStatus,
-      TicketProvider provider,
-      ) {
+    String label,
+    int count,
+    Color baseColor,
+    String targetStatus,
+    TicketProvider provider,
+  ) {
     final isSelected = provider.statusFilter == targetStatus;
 
     return InkWell(
-      onTap: () {
-        provider.setFilters(status: targetStatus);
-      },
+      onTap: () => provider.setFilters(status: targetStatus),
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        constraints: const BoxConstraints(minWidth: 80),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? baseColor.withOpacity(0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? baseColor : Colors.transparent,
+            color: isSelected ? baseColor : Colors.grey.shade200,
             width: 1.5,
           ),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               count.toString(),
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: baseColor,
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: isSelected ? baseColor : navy,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 11,
-                color: isSelected ? baseColor : Colors.grey,
-                fontWeight: FontWeight.w600,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                color: isSelected ? baseColor : Colors.grey.shade600,
+                fontWeight: FontWeight.bold,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -250,8 +356,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
@@ -259,28 +366,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             String dateText = "Select Date Range";
             if (tempStart != null && tempEnd != null) {
               dateText =
-              "${tempStart!.day}/${tempStart!.month}/${tempStart!.year}  -  ${tempEnd!.day}/${tempEnd!.month}/${tempEnd!.year}";
+                  "${tempStart!.day}/${tempStart!.month}/${tempStart!.year}  -  ${tempEnd!.day}/${tempEnd!.month}/${tempEnd!.year}";
             }
 
             return Padding(
               padding: EdgeInsets.only(
                 left: 24,
                 right: 24,
-                top: 24,
+                top: 16,
                 bottom: MediaQuery.of(context).padding.bottom + 24,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 24),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         "Sort & Filter",
-                        style: TextStyle(
+                        style: GoogleFonts.inter(
                           fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w800,
+                          color: navy,
                         ),
                       ),
                       TextButton(
@@ -293,54 +412,57 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             tempEnd = null;
                           });
                         },
-                        child: const Text("Reset All"),
+                        child: Text(
+                          "Reset All",
+                          style: GoogleFonts.inter(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                  const Divider(),
+                  const Divider(height: 32),
 
-                  const Text(
+                  Text(
                     "Sort By",
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade600,
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      ChoiceChip(
-                        label: const Text("Newest First"),
-                        selected: tempSort == 'DATE_DESC',
-                        onSelected: (val) =>
-                            setModalState(() => tempSort = 'DATE_DESC'),
+                      _buildChip(
+                        "Newest First",
+                        tempSort == 'DATE_DESC',
+                        () => setModalState(() => tempSort = 'DATE_DESC'),
                       ),
-                      ChoiceChip(
-                        label: const Text("Oldest First"),
-                        selected: tempSort == 'DATE_ASC',
-                        onSelected: (val) =>
-                            setModalState(() => tempSort = 'DATE_ASC'),
+                      _buildChip(
+                        "Oldest First",
+                        tempSort == 'DATE_ASC',
+                        () => setModalState(() => tempSort = 'DATE_ASC'),
                       ),
-                      ChoiceChip(
-                        label: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text("Priority "),
-                            Icon(Icons.arrow_downward, size: 14),
-                          ],
-                        ),
-                        selected: tempSort == 'PRIORITY_DESC',
-                        onSelected: (val) =>
-                            setModalState(() => tempSort = 'PRIORITY_DESC'),
-                        selectedColor: Colors.red.withOpacity(0.2),
+                      _buildChip(
+                        "Highest Priority",
+                        tempSort == 'PRIORITY_DESC',
+                        () => setModalState(() => tempSort = 'PRIORITY_DESC'),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
 
-                  const Text(
+                  Text(
                     "Date Raised",
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade600,
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   InkWell(
                     onTap: () async {
                       final DateTimeRange? picked = await showDateRangePicker(
@@ -350,84 +472,91 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         initialDateRange: tempStart != null && tempEnd != null
                             ? DateTimeRange(start: tempStart!, end: tempEnd!)
                             : null,
-                        builder: (context, child) {
-                          return Theme(
-                            data: Theme.of(context).copyWith(
-                              colorScheme: const ColorScheme.light(
-                                primary: Color(0xFF4A56E2),
-                                onPrimary: Colors.white,
-                                onSurface: Colors.black,
-                              ),
+                        builder: (context, child) => Theme(
+                          data: ThemeData.light().copyWith(
+                            colorScheme: const ColorScheme.light(
+                              primary: navy,
+                              onPrimary: Colors.white,
+                              onSurface: navy,
                             ),
-                            child: child!,
-                          );
-                        },
+                          ),
+                          child: child!,
+                        ),
                       );
-                      if (picked != null) {
+                      if (picked != null)
                         setModalState(() {
                           tempStart = picked.start;
                           tempEnd = picked.end;
                         });
-                      }
                     },
+                    borderRadius: BorderRadius.circular(10),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
-                        vertical: 12,
+                        vertical: 14,
                       ),
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
+                        color: Colors.grey.shade50,
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
                             dateText,
-                            style: TextStyle(
+                            style: GoogleFonts.inter(
                               color: tempStart == null
-                                  ? Colors.grey
-                                  : Colors.black87,
+                                  ? Colors.grey.shade500
+                                  : navy,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           const Icon(
                             Icons.calendar_today,
-                            size: 20,
-                            color: Color(0xFF4A56E2),
+                            size: 18,
+                            color: navy,
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
 
-                  const Text(
+                  Text(
                     "Priority",
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade600,
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
+                    runSpacing: 8,
                     children: ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
                         .map(
-                          (prio) => ChoiceChip(
-                        label: Text(prio),
-                        selected: tempPriority == prio,
-                        onSelected: (val) =>
-                            setModalState(() => tempPriority = prio),
-                      ),
-                    )
+                          (prio) => _buildChip(
+                            prio,
+                            tempPriority == prio,
+                            () => setModalState(() => tempPriority = prio),
+                          ),
+                        )
                         .toList(),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,
-                    height: 50,
+                    height: 54,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4A56E2),
+                        backgroundColor: navy,
                         foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
                       ),
                       onPressed: () {
                         provider.setFilters(
@@ -439,11 +568,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         );
                         Navigator.pop(ctx);
                       },
-                      child: const Text(
-                        "APPLY",
-                        style: TextStyle(
+                      child: Text(
+                        "APPLY FILTERS",
+                        style: GoogleFonts.inter(
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: 15,
+                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
@@ -457,42 +587,98 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildSidebar(BuildContext context, bool isAdmin) {
+  Widget _buildChip(String label, bool isSelected, VoidCallback onTap) {
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: GoogleFonts.inter(
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+          color: isSelected ? navy : Colors.black87,
+        ),
+      ),
+      selected: isSelected,
+      onSelected: (_) => onTap(),
+      selectedColor: golden.withOpacity(0.3),
+      backgroundColor: Colors.grey.shade100,
+      side: BorderSide(color: isSelected ? golden : Colors.grey.shade300),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    );
+  }
+
+  Widget _buildSidebar(
+    BuildContext context,
+    bool isAdmin,
+    AuthProvider authProv,
+  ) {
+    // Safely get the user's name or fallback to a default
+    final String displayName =
+        authProv.userName ?? (isAdmin ? "Administrator" : "Staff Member");
+    // Format the role to look clean (e.g., "Role: ADMIN")
+    final String displayRole =
+        "Role: ${(authProv.activeRole ?? 'Worker').toUpperCase()}";
+    // Get the first letter for the Avatar (Fallback to 'U' if name is empty)
+    final String initials = displayName.trim().isNotEmpty
+        ? displayName.trim()[0].toUpperCase()
+        : 'U';
+
     return Drawer(
       backgroundColor: Colors.white,
       child: Column(
         children: [
           UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(color: Color(0xFF4A56E2)),
+            decoration: const BoxDecoration(color: navy),
             accountName: Text(
-              isAdmin ? "Administrator" : "Staff Member",
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              displayName,
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
             ),
-            accountEmail: Text(isAdmin ? "Full Access" : "Worker Portal"),
-            currentAccountPicture: const CircleAvatar(
+            accountEmail: Text(
+              displayRole,
+              style: GoogleFonts.inter(
+                color: Colors.white70,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
-              child: Icon(Icons.person, size: 40, color: Color(0xFF4A56E2)),
+              child: Text(
+                initials,
+                style: GoogleFonts.inter(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: navy,
+                ),
+              ),
             ),
           ),
 
           if (isAdmin) ...[
-            const Padding(
-              padding: EdgeInsets.all(16.0),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
                   "ADMIN CONTROLS",
-                  style: TextStyle(
+                  style: GoogleFonts.inter(
                     color: Colors.grey,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
                   ),
                 ),
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.people_outline),
-              title: const Text('User Management'),
+              leading: const Icon(Icons.people_outline, color: navy),
+              title: Text(
+                'User Management',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  color: navy,
+                ),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -504,8 +690,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.build_circle_outlined),
-              title: const Text('Equipment Registry'),
+              leading: const Icon(Icons.build_circle_outlined, color: navy),
+              title: Text(
+                'Equipment Registry',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  color: navy,
+                ),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -522,16 +714,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const Spacer(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('Logout', style: TextStyle(color: Colors.red)),
+            title: Text(
+              'Logout',
+              style: GoogleFonts.inter(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             onTap: () async {
-              // FIX: Replaced context.read with ref.read
-              await ref.read(authControllerProvider).logout();
-              if (context.mounted) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                );
-              }
+              await authProv.logout();
+              // if (context.mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
             },
           ),
           const SizedBox(height: 24),
@@ -555,21 +747,22 @@ class _TicketCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
             offset: const Offset(0, 4),
           ),
         ],
+        border: Border.all(color: Colors.grey.shade100),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
           decoration: BoxDecoration(
             border: Border(
-              left: BorderSide(color: priorityInfo.color, width: 6),
+              left: BorderSide(color: priorityInfo.color, width: 5),
             ),
           ),
           child: InkWell(
@@ -589,10 +782,10 @@ class _TicketCard extends StatelessWidget {
                     children: [
                       Text(
                         ticket['ticket_no'] ?? '#---',
-                        style: const TextStyle(
-                          color: Colors.grey,
+                        style: GoogleFonts.inter(
+                          color: Colors.grey.shade500,
                           fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                          fontSize: 12,
                         ),
                       ),
                       Container(
@@ -606,10 +799,10 @@ class _TicketCard extends StatelessWidget {
                         ),
                         child: Text(
                           priorityInfo.label,
-                          style: TextStyle(
+                          style: GoogleFonts.inter(
                             color: priorityInfo.color,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                       ),
@@ -619,7 +812,7 @@ class _TicketCard extends StatelessWidget {
 
                   Text(
                     ticket['title'] ?? 'No Title',
-                    style: const TextStyle(
+                    style: GoogleFonts.inter(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                       color: Colors.black87,
@@ -634,33 +827,34 @@ class _TicketCard extends StatelessWidget {
                       Icon(
                         Icons.kitchen,
                         size: 14,
-                        color: Colors.grey.shade600,
+                        color: Colors.grey.shade400,
                       ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           ticket['m_kitchen']?['name'] ?? 'General',
-                          style: TextStyle(
+                          style: GoogleFonts.inter(
                             color: Colors.grey.shade600,
                             fontSize: 13,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         "•  ${ticket['status']}",
-                        style: TextStyle(
+                        style: GoogleFonts.inter(
                           fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                          fontSize: 12,
                           color: _getStatusColor(ticket['status']),
                         ),
                       ),
                     ],
                   ),
 
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Divider(height: 1, color: Colors.grey.shade200),
                   ),
 
                   Row(
@@ -742,26 +936,30 @@ class _UserDisplay extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 11, color: Colors.grey),
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            color: Colors.grey.shade500,
+            fontWeight: FontWeight.w600,
+          ),
           overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         Row(
           children: [
             if (!isRight)
-              const Icon(Icons.person, size: 14, color: Colors.black54),
+              Icon(Icons.person, size: 14, color: Colors.grey.shade400),
             if (!isRight) const SizedBox(width: 4),
             Text(
               name,
-              style: const TextStyle(
+              style: GoogleFonts.inter(
                 fontSize: 13,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.bold,
                 color: Colors.black87,
               ),
             ),
             if (isRight) const SizedBox(width: 4),
             if (isRight)
-              const Icon(Icons.engineering, size: 14, color: Colors.black54),
+              Icon(Icons.engineering, size: 14, color: Colors.grey.shade400),
           ],
         ),
       ],
