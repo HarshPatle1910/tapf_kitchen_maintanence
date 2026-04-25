@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum AuthState { unauthenticated, profileIncomplete, pendingApproval, authenticated }
+enum AuthState {
+  unauthenticated,
+  profileIncomplete,
+  pendingApproval,
+  authenticated,
+}
 
 class AuthProvider with ChangeNotifier {
   final _supabase = Supabase.instance.client;
@@ -53,7 +58,9 @@ class AuthProvider with ChangeNotifier {
     _setLoading(true);
     _errorMessage = null;
     try {
-      String formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : '+91$phoneNumber';
+      String formattedPhone = phoneNumber.startsWith('+')
+          ? phoneNumber
+          : '+91$phoneNumber';
       await _supabase.auth.signInWithOtp(phone: formattedPhone);
       _setLoading(false);
       return true;
@@ -68,7 +75,9 @@ class AuthProvider with ChangeNotifier {
     _setLoading(true);
     _errorMessage = null;
     try {
-      String formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : '+91$phoneNumber';
+      String formattedPhone = phoneNumber.startsWith('+')
+          ? phoneNumber
+          : '+91$phoneNumber';
       final response = await _supabase.auth.verifyOTP(
         phone: formattedPhone,
         token: otp,
@@ -126,7 +135,11 @@ class AuthProvider with ChangeNotifier {
     if (user == null) return;
 
     try {
-      final data = await _supabase.from('m_user').select().eq('id', user.id).maybeSingle();
+      final data = await _supabase
+          .from('m_user')
+          .select()
+          .eq('id', user.id)
+          .maybeSingle();
 
       if (data == null) {
         _authState = AuthState.profileIncomplete;

@@ -30,7 +30,10 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg, style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
+        content: Text(
+          msg,
+          style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+        ),
         backgroundColor: Colors.red.shade600,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -63,7 +66,10 @@ class _LoginScreenState extends State<LoginScreen> {
     FocusManager.instance.primaryFocus?.unfocus();
 
     final auth = context.read<AuthProvider>();
-    final ok = await auth.verifyOtp(_phoneCtrl.text.trim(), _otpCtrl.text.trim());
+    final ok = await auth.verifyOtp(
+      _phoneCtrl.text.trim(),
+      _otpCtrl.text.trim(),
+    );
 
     if (!ok && mounted) {
       _showError(auth.errorMessage ?? "Invalid OTP");
@@ -88,25 +94,39 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Icon(Icons.handyman_rounded, size: 80, color: navy),
                 const SizedBox(height: 16),
                 Text(
-                    "Plant Maintenance",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w900, color: navy, letterSpacing: -1)
+                  "Plant Maintenance",
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: navy,
+                    letterSpacing: -1,
+                  ),
                 ),
                 const SizedBox(height: 48),
 
                 // Dynamic Context Header
                 Text(
-                    _otpSent
-                        ? "Verify your number"
-                        : (_isLoginMode ? "Login to your account" : "Create an account"),
-                    style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: navy)
+                  _otpSent
+                      ? "Verify your number"
+                      : (_isLoginMode
+                            ? "Login to your account"
+                            : "Create an account"),
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: navy,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                    _otpSent
-                        ? "Enter the OTP sent to ${_phoneCtrl.text}"
-                        : "Enter your mobile number to receive an OTP.",
-                    style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 14)
+                  _otpSent
+                      ? "Enter the OTP sent to ${_phoneCtrl.text}"
+                      : "Enter your mobile number to receive an OTP.",
+                  style: GoogleFonts.inter(
+                    color: Colors.grey.shade600,
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 24),
 
@@ -138,17 +158,34 @@ class _LoginScreenState extends State<LoginScreen> {
                       backgroundColor: navy,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     onPressed: isLoading
                         ? null
                         : (_otpSent ? _handleVerifyOtp : _handleSendOtp),
                     child: isLoading
-                        ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
                         : Text(
-                        _otpSent ? "VERIFY OTP" : (_isLoginMode ? "LOGIN WITH OTP" : "REGISTER WITH OTP"),
-                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 0.5)
-                    ),
+                            _otpSent
+                                ? "VERIFY OTP"
+                                : (_isLoginMode
+                                      ? "LOGIN WITH OTP"
+                                      : "REGISTER WITH OTP"),
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                   ),
                 ),
 
@@ -157,10 +194,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Toggle Login/Register OR Change Number
                 if (!_otpSent)
                   TextButton(
-                    onPressed: () => setState(() => _isLoginMode = !_isLoginMode),
+                    onPressed: () =>
+                        setState(() => _isLoginMode = !_isLoginMode),
                     child: Text(
-                      _isLoginMode ? "Don't have an account? Register" : "Already have an account? Login",
-                      style: GoogleFonts.inter(color: golden, fontWeight: FontWeight.bold),
+                      _isLoginMode
+                          ? "Don't have an account? Register"
+                          : "Already have an account? Login",
+                      style: GoogleFonts.inter(
+                        color: golden,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   )
                 else
@@ -171,9 +214,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     }),
                     child: Text(
                       "Change Mobile Number",
-                      style: GoogleFonts.inter(color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                      style: GoogleFonts.inter(
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  )
+                  ),
               ],
             ),
           ),
@@ -182,24 +228,55 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildTextField({required TextEditingController ctrl, required String label, required IconData icon, bool isEnabled = true}) {
+  Widget _buildTextField({
+    required TextEditingController ctrl,
+    required String label,
+    required IconData icon,
+    bool isEnabled = true,
+  }) {
     return TextFormField(
       controller: ctrl,
       enabled: isEnabled,
       keyboardType: TextInputType.phone,
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: isEnabled ? navy : Colors.grey.shade600, fontSize: 15),
+      style: GoogleFonts.inter(
+        fontWeight: FontWeight.w600,
+        color: isEnabled ? navy : Colors.grey.shade600,
+        fontSize: 15,
+      ),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 14),
-        prefixIcon: Icon(icon, color: isEnabled ? navy : Colors.grey.shade400, size: 22),
+        labelStyle: GoogleFonts.inter(
+          color: Colors.grey.shade500,
+          fontSize: 14,
+        ),
+        prefixIcon: Icon(
+          icon,
+          color: isEnabled ? navy : Colors.grey.shade400,
+          size: 22,
+        ),
         filled: true,
         fillColor: isEnabled ? Colors.grey.shade50 : Colors.grey.shade100,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: golden, width: 2)),
-        disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: golden, width: 2),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
       ),
     );
   }

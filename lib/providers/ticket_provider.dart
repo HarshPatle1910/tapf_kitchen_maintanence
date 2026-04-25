@@ -49,7 +49,11 @@ class TicketProvider with ChangeNotifier {
     // SMART FALLBACK: If user has no kitchen assigned yet, grab the default one
     if (targetKitchen == null) {
       try {
-        final fallback = await _supabase.from('m_kitchen').select('id').limit(1).maybeSingle();
+        final fallback = await _supabase
+            .from('m_kitchen')
+            .select('id')
+            .limit(1)
+            .maybeSingle();
         if (fallback != null) {
           targetKitchen = fallback['id'];
         }
@@ -69,15 +73,17 @@ class TicketProvider with ChangeNotifier {
     // Clean up old channel if switching kitchens
     _ticketChannel?.unsubscribe();
 
-    _ticketChannel = _supabase.channel('public_tickets_channel').onPostgresChanges(
-      event: PostgresChangeEvent.all,
-      schema: 'public',
-      table: 'tickets',
-      callback: (payload) {
-        debugPrint("Realtime DB Change Detected: Refreshing tickets...");
-        refreshTickets(isRealtime: true);
-      },
-    );
+    _ticketChannel = _supabase
+        .channel('public_tickets_channel')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'tickets',
+          callback: (payload) {
+            debugPrint("Realtime DB Change Detected: Refreshing tickets...");
+            refreshTickets(isRealtime: true);
+          },
+        );
     _ticketChannel?.subscribe();
   }
 
@@ -92,14 +98,24 @@ class TicketProvider with ChangeNotifier {
     refreshTickets();
   }
 
-  void setFilters({String? status, String? priority, DateTime? start, DateTime? end, String? sort}) {
+  void setFilters({
+    String? status,
+    String? priority,
+    DateTime? start,
+    DateTime? end,
+    String? sort,
+  }) {
     if (status != null) _statusFilter = status;
     if (priority != null) _priorityFilter = priority;
     if (start != null) _startDate = start;
     if (end != null) _endDate = end;
     if (sort != null) _sortBy = sort;
 
-    if (start == null && end == null && sort == null && status == null && priority == null) {
+    if (start == null &&
+        end == null &&
+        sort == null &&
+        status == null &&
+        priority == null) {
       _startDate = null;
       _endDate = null;
     }
@@ -133,7 +149,11 @@ class TicketProvider with ChangeNotifier {
 
       _total = statsData.length;
       _toDo = statsData.where((t) => t['status'] == 'RAISED').length;
-      _inProgress = statsData.where((t) => t['status'] == 'IN_PROGRESS' || t['status'] == 'ASSIGNED').length;
+      _inProgress = statsData
+          .where(
+            (t) => t['status'] == 'IN_PROGRESS' || t['status'] == 'ASSIGNED',
+          )
+          .length;
       _completed = statsData.where((t) => t['status'] == 'COMPLETED').length;
       _verified = statsData.where((t) => t['status'] == 'VERIFIED').length;
 
@@ -143,7 +163,10 @@ class TicketProvider with ChangeNotifier {
     }
   }
 
-  Future<void> fetchTickets({bool loadMore = false, bool forceRefresh = false}) async {
+  Future<void> fetchTickets({
+    bool loadMore = false,
+    bool forceRefresh = false,
+  }) async {
     // Prevent overlapping queries unless forced by Realtime
     if (_isLoading && !forceRefresh) return;
     if (_currentKitchenId == null) return;
@@ -190,13 +213,22 @@ class TicketProvider with ChangeNotifier {
         query = query.gte('ticket_raised_time', _startDate!.toIso8601String());
       }
       if (_endDate != null) {
-        final endOfDay = DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
+        final endOfDay = DateTime(
+          _endDate!.year,
+          _endDate!.month,
+          _endDate!.day,
+          23,
+          59,
+          59,
+        );
         query = query.lte('ticket_raised_time', endOfDay.toIso8601String());
       }
 
       // 4. Search Filter
       if (_searchQuery.isNotEmpty) {
-        query = query.or('title.ilike.%$_searchQuery%,ticket_no.ilike.%$_searchQuery%');
+        query = query.or(
+          'title.ilike.%$_searchQuery%,ticket_no.ilike.%$_searchQuery%',
+        );
       }
 
       // 5. Database Sorting Execution
@@ -220,7 +252,6 @@ class TicketProvider with ChangeNotifier {
           return valB.compareTo(valA);
         });
       }
-
     } catch (e) {
       debugPrint("Error fetching tickets: $e");
     } finally {
