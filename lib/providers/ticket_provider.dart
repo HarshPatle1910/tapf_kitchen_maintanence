@@ -184,7 +184,8 @@ class TicketProvider with ChangeNotifier {
             *, 
             m_kitchen(name),
             raised_by:m_user!raised_by_id(name),
-            assigned_to:m_user!assigned_to_id(name)
+            assigned_to:m_user!assigned_to_id(name),
+            ticket_equipments(m_equipment(name))
           ''')
           .eq('kitchen_id', _currentKitchenId!);
 
