@@ -1,18 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-enum AuthState {
-  unauthenticated,
-  profileIncomplete,
-  pendingApproval,
-  authenticated,
-}
+enum AuthState { unauthenticated, profileIncomplete, pendingApproval, authenticated }
 
 class AuthProvider with ChangeNotifier {
   final _supabase = Supabase.instance.client;
 
-  // NEW: Flag to track initial app load
   bool _isInitializing = true;
   bool _isLoading = false;
 
@@ -20,11 +13,10 @@ class AuthProvider with ChangeNotifier {
   AuthState _authState = AuthState.unauthenticated;
 
   String? _activeRole;
-  String? _activeKitchenId;
+  List<String> _activeKitchenIds = []; // FIX: Now a list of kitchens
   String? _userName;
 
-  // Getters
-  bool get isInitializing => _isInitializing; // NEW
+  bool get isInitializing => _isInitializing;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   AuthState get authState => _authState;
@@ -32,7 +24,11 @@ class AuthProvider with ChangeNotifier {
   String? get currentUserId => _supabase.auth.currentUser?.id;
   String? get activeRole => _activeRole;
   bool get isAdmin => _activeRole == 'admin';
-  String? get activeKitchenId => _activeKitchenId;
+
+  // Expose the list of kitchens, and a default active kitchen (the first one)
+  List<String> get activeKitchenIds => _activeKitchenIds;
+  String? get activeKitchenId => _activeKitchenIds.isNotEmpty ? _activeKitchenIds.first : null;
+
   String? get userName => _userName;
 
   AuthProvider() {
@@ -42,14 +38,11 @@ class AuthProvider with ChangeNotifier {
   Future<void> _checkExistingSession() async {
     _isInitializing = true;
     notifyListeners();
-
     if (_supabase.auth.currentSession != null) {
       await refreshUserStatus();
     } else {
       _authState = AuthState.unauthenticated;
     }
-
-    // Stop the splash screen once we know the state
     _isInitializing = false;
     notifyListeners();
   }
@@ -58,9 +51,7 @@ class AuthProvider with ChangeNotifier {
     _setLoading(true);
     _errorMessage = null;
     try {
-      String formattedPhone = phoneNumber.startsWith('+')
-          ? phoneNumber
-          : '+91$phoneNumber';
+      String formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : '+91$phoneNumber';
       await _supabase.auth.signInWithOtp(phone: formattedPhone);
       _setLoading(false);
       return true;
@@ -75,15 +66,8 @@ class AuthProvider with ChangeNotifier {
     _setLoading(true);
     _errorMessage = null;
     try {
-      String formattedPhone = phoneNumber.startsWith('+')
-          ? phoneNumber
-          : '+91$phoneNumber';
-      final response = await _supabase.auth.verifyOTP(
-        phone: formattedPhone,
-        token: otp,
-        type: OtpType.sms,
-      );
-
+      String formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : '+91$phoneNumber';
+      final response = await _supabase.auth.verifyOTP(phone: formattedPhone, token: otp, type: OtpType.sms);
       if (response.user != null) {
         await refreshUserStatus();
         return true;
@@ -101,12 +85,14 @@ class AuthProvider with ChangeNotifier {
     required String ampId,
     required String address,
     required String phone,
+    required List<String> selectedKitchenIds, // FIX: Added selected kitchens
   }) async {
     _setLoading(true);
     _errorMessage = null;
     try {
       final userId = _supabase.auth.currentUser!.id;
 
+      // 1. Insert User
       await _supabase.from('m_user').insert({
         'id': userId,
         'amp_id': ampId,
@@ -116,6 +102,15 @@ class AuthProvider with ChangeNotifier {
         'role': 'worker',
         'status': false,
       });
+
+      // 2. Insert mapped kitchens into the junction table
+      if (selectedKitchenIds.isNotEmpty) {
+        final kitchenInserts = selectedKitchenIds.map((kId) => {
+          'user_id': userId,
+          'kitchen_id': kId,
+        }).toList();
+        await _supabase.from('user_kitchens').insert(kitchenInserts);
+      }
 
       await refreshUserStatus();
       return true;
@@ -135,9 +130,10 @@ class AuthProvider with ChangeNotifier {
     if (user == null) return;
 
     try {
+      // FIX: Inner join to fetch the user's assigned kitchens
       final data = await _supabase
           .from('m_user')
-          .select()
+          .select('*, user_kitchens(kitchen_id)')
           .eq('id', user.id)
           .maybeSingle();
 
@@ -149,7 +145,9 @@ class AuthProvider with ChangeNotifier {
       } else {
         _activeRole = data['role'];
         _userName = data['name'];
-        _activeKitchenId = data['kitchen_id'];
+        _activeKitchenIds = (data['user_kitchens'] as List<dynamic>?)
+            ?.map((k) => k['kitchen_id'].toString())
+            .toList() ?? [];
         _authState = AuthState.authenticated;
       }
     } catch (e) {
@@ -163,7 +161,7 @@ class AuthProvider with ChangeNotifier {
     _setLoading(true);
     await _supabase.auth.signOut();
     _activeRole = null;
-    _activeKitchenId = null;
+    _activeKitchenIds = [];
     _userName = null;
     _authState = AuthState.unauthenticated;
     _setLoading(false);
