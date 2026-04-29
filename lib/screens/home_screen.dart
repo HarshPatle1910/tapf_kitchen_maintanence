@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kitchen_maintanence/screens/master/area_screen.dart';
+import 'package:kitchen_maintanence/screens/master/kitchen_screen.dart';
 import 'package:kitchen_maintanence/screens/master/zone_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -766,6 +767,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const ZoneMasterScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.kitchen, color: navy),
+              title: Text(
+                'Kitchen',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  color: navy,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const KitchenMasterScreen()),
                 );
               },
             ),
