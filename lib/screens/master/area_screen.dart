@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../providers/auth_provider.dart';
+import '../../providers/ticket_provider.dart';
 
 class AreaMasterScreen extends StatefulWidget {
   const AreaMasterScreen({super.key});
@@ -21,18 +22,17 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
   List<Map<String, dynamic>> _activeZones = [];
   bool _isLoading = true;
 
-  // Search & Filter States
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
-  String _statusFilter = 'ALL'; // ALL, ACTIVE, INACTIVE
+  String _statusFilter = 'ALL';
   String _zoneFilter = 'ALL';
-  String _sortBy = 'NEWEST'; // NEWEST, NAME_ASC, NAME_DESC
+  String _sortBy = 'NEWEST';
 
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchData());
   }
 
   @override
@@ -42,25 +42,39 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
     super.dispose();
   }
 
+  String _getActiveKitchenId() {
+    final authProv = context.read<AuthProvider>();
+    final ticketProv = context.read<TicketProvider>();
+    String activeKitchenId = ticketProv.kitchenFilter;
+
+    if (activeKitchenId == 'ALL' || !authProv.assignedKitchens.any((k) => k['id'].toString() == activeKitchenId)) {
+      if (authProv.assignedKitchens.isNotEmpty) {
+        activeKitchenId = authProv.assignedKitchens.first['id'].toString();
+      }
+    }
+    return activeKitchenId;
+  }
+
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
     try {
-      final kitchenId = context.read<AuthProvider>().activeKitchenId;
-      if (kitchenId == null) throw Exception("No active kitchen found.");
+      final activeKitchenId = _getActiveKitchenId();
 
-      // 1. Fetch Active Zones for the Dropdown
-      final zonesResponse = await _supabase.from('m_zone').select().eq('kitchen_id', kitchenId).eq('status', true).order('name');
-
-      // 2. Fetch Areas that belong to Zones in the active Kitchen
+      // STRICT FILTER: Fetch Zones & Areas specifically for the active kitchen
+      final zonesResponse = await _supabase.from('m_zone').select().eq('kitchen_id', activeKitchenId).eq('status', true).order('name');
       final areasResponse = await _supabase
           .from('m_area')
           .select('*, m_zone!inner(id, name, kitchen_id)')
-          .eq('m_zone.kitchen_id', kitchenId)
+          .eq('m_zone.kitchen_id', activeKitchenId)
           .order('created_at');
 
       if (mounted) {
         setState(() {
           _activeZones = List<Map<String, dynamic>>.from(zonesResponse);
+          // Add display name for the Autocomplete widget
+          for (var z in _activeZones) {
+            z['display_name'] = z['name'];
+          }
           _areas = List<Map<String, dynamic>>.from(areasResponse);
         });
       }
@@ -71,28 +85,21 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
     }
   }
 
-  // --- FILTER & SORT LOGIC ---
   List<Map<String, dynamic>> get _filteredAreas {
     var list = List<Map<String, dynamic>>.from(_areas);
 
-    // 1. Search Filter
     if (_searchQuery.isNotEmpty) {
       list = list.where((a) => a['area_name'].toString().toLowerCase().contains(_searchQuery.toLowerCase())).toList();
     }
-
-    // 2. Status Filter
     if (_statusFilter == 'ACTIVE') {
       list = list.where((a) => a['status'] == true).toList();
     } else if (_statusFilter == 'INACTIVE') {
       list = list.where((a) => a['status'] == false).toList();
     }
-
-    // 3. Zone Filter
     if (_zoneFilter != 'ALL') {
       list = list.where((a) => a['zone_id'].toString() == _zoneFilter).toList();
     }
 
-    // 4. Sorting
     if (_sortBy == 'NAME_ASC') {
       list.sort((a, b) => a['area_name'].toString().compareTo(b['area_name'].toString()));
     } else if (_sortBy == 'NAME_DESC') {
@@ -100,11 +107,9 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
     } else {
       list.sort((a, b) => b['created_at'].toString().compareTo(a['created_at'].toString()));
     }
-
     return list;
   }
 
-  // --- BOTTOM SHEETS ---
   void _showFilterBottomSheet() {
     String tempStatus = _statusFilter;
     String tempZone = _zoneFilter;
@@ -215,7 +220,19 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
 
   void _showAreaForm({Map<String, dynamic>? existingArea}) {
     final nameController = TextEditingController(text: existingArea?['area_name'] ?? '');
-    String? selectedZoneId = existingArea?['zone_id'] ?? (_activeZones.isNotEmpty ? _activeZones.first['id'].toString() : null);
+
+    // Autocomplete variables for Zone
+    String? selectedZoneId = existingArea?['zone_id']?.toString();
+    final zoneCtrl = TextEditingController();
+    final zoneFocusNode = FocusNode();
+
+    if (existingArea != null) {
+      zoneCtrl.text = existingArea['m_zone']?['name'] ?? '';
+    } else if (_activeZones.isNotEmpty) {
+      selectedZoneId = _activeZones.first['id'].toString();
+      zoneCtrl.text = _activeZones.first['name'].toString();
+    }
+
     final formKey = GlobalKey<FormState>();
     bool isSaving = false;
 
@@ -238,21 +255,24 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
                   Text(existingArea == null ? "Add New Area" : "Edit Area", style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: navy)),
                   const SizedBox(height: 24),
 
-                  DropdownButtonFormField<String>(
-                    value: selectedZoneId,
-                    validator: (val) => val == null ? 'Please select a parent Zone' : null,
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy, fontSize: 14),
-                    decoration: InputDecoration(
-                      labelText: "Parent Zone *",
-                      labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
-                      prefixIcon: const Icon(Icons.layers_outlined, color: Colors.grey),
-                      filled: true, fillColor: Colors.white,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: golden, width: 2)),
-                    ),
-                    items: _activeZones.map((z) => DropdownMenuItem(value: z['id'].toString(), child: Text(z['name'].toString()))).toList(),
-                    onChanged: (val) => setModalState(() => selectedZoneId = val),
+                  // REPLACED Dropdown with Sleek Autocomplete
+                  _buildSleekAutocomplete(
+                    hint: "Search Parent Zone *",
+                    icon: Icons.layers_outlined,
+                    controller: zoneCtrl,
+                    focusNode: zoneFocusNode,
+                    options: _activeZones,
+                    isDisabled: false,
+                    onSelected: (val) {
+                      setModalState(() {
+                        selectedZoneId = val['id'].toString();
+                      });
+                    },
+                    onCleared: () {
+                      setModalState(() {
+                        selectedZoneId = null;
+                      });
+                    },
                   ),
                   const SizedBox(height: 16),
 
@@ -260,6 +280,7 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
                     controller: nameController,
                     validator: (val) => val == null || val.trim().isEmpty ? 'Area Name is required' : null,
                     style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy),
+                    textCapitalization: TextCapitalization.words,
                     decoration: InputDecoration(
                       labelText: "Area Name *",
                       labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
@@ -278,6 +299,12 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
                       style: ElevatedButton.styleFrom(backgroundColor: navy, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), elevation: 0),
                       onPressed: isSaving ? null : () async {
                         if (!formKey.currentState!.validate()) return;
+
+                        if (selectedZoneId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select a parent Zone.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
+                          return;
+                        }
+
                         setModalState(() => isSaving = true);
                         try {
                           if (existingArea == null) {
@@ -303,6 +330,80 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  // RawAutocomplete Helper
+  Widget _buildSleekAutocomplete({
+    required String hint,
+    required IconData icon,
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required List<Map<String, dynamic>> options,
+    required bool isDisabled,
+    required Function(Map<String, dynamic>) onSelected,
+    VoidCallback? onCleared,
+  }) {
+    return RawAutocomplete<Map<String, dynamic>>(
+      textEditingController: controller,
+      focusNode: focusNode,
+      optionsBuilder: (val) {
+        if (val.text.isEmpty) {
+          return options;
+        }
+        return options.where((opt) => opt['display_name'].toString().toLowerCase().contains(val.text.toLowerCase()));
+      },
+      displayStringForOption: (opt) => opt['display_name'].toString(),
+      onSelected: (sel) {
+        onSelected(sel);
+        focusNode.unfocus();
+      },
+      fieldViewBuilder: (ctx, ctrl, fNode, onSub) => TextFormField(
+        controller: ctrl,
+        focusNode: fNode,
+        enabled: !isDisabled,
+        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: isDisabled ? Colors.grey.shade700 : navy),
+        decoration: InputDecoration(
+          labelText: hint,
+          labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
+          prefixIcon: Icon(icon, color: Colors.grey.shade400, size: 20),
+          filled: true,
+          fillColor: isDisabled ? Colors.grey.shade100 : Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: golden, width: 2)),
+          suffixIcon: ctrl.text.isNotEmpty && !isDisabled ? IconButton(
+            icon: const Icon(Icons.clear, size: 16, color: Colors.grey),
+            onPressed: () {
+              ctrl.clear();
+              if (onCleared != null) onCleared();
+            },
+          ) : null,
+        ),
+      ),
+      optionsViewBuilder: (ctx, onSel, opts) => Align(
+        alignment: Alignment.topLeft,
+        child: Material(
+          elevation: 4.0,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            constraints: BoxConstraints(maxHeight: 200, maxWidth: MediaQuery.of(context).size.width - 48),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+            child: ListView.separated(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              itemCount: opts.length,
+              separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
+              itemBuilder: (ctx, idx) => ListTile(
+                dense: true,
+                title: Text(opts.elementAt(idx)['display_name'], style: GoogleFonts.inter(fontSize: 13, color: navy, fontWeight: FontWeight.w500)),
+                onTap: () => onSel(opts.elementAt(idx)),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -359,7 +460,6 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Calculate Stats from the raw database pull
     final int totalCount = _areas.length;
     final int activeCount = _areas.where((a) => a['status'] == true).length;
     final int inactiveCount = totalCount - activeCount;

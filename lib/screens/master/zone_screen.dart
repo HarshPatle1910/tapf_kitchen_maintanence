@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../providers/auth_provider.dart';
+import '../../providers/ticket_provider.dart';
 
 class ZoneMasterScreen extends StatefulWidget {
   const ZoneMasterScreen({super.key});
@@ -18,21 +19,18 @@ class _ZoneMasterScreenState extends State<ZoneMasterScreen> {
 
   final _supabase = Supabase.instance.client;
   List<Map<String, dynamic>> _zones = [];
-  List<Map<String, dynamic>> _kitchens = [];
   bool _isLoading = true;
 
-  // Search & Filter States
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
-  String _statusFilter = 'ALL'; // ALL, ACTIVE, INACTIVE
-  String _kitchenFilter = 'ALL';
-  String _sortBy = 'NEWEST'; // NEWEST, NAME_ASC, NAME_DESC
+  String _statusFilter = 'ALL';
+  String _sortBy = 'NEWEST';
 
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchData());
   }
 
   @override
@@ -42,61 +40,72 @@ class _ZoneMasterScreenState extends State<ZoneMasterScreen> {
     super.dispose();
   }
 
+  String? _getActiveKitchenId() {
+    final authProv = context.read<AuthProvider>();
+    final ticketProv = context.read<TicketProvider>();
+    String activeKitchenId = ticketProv.kitchenFilter;
+
+    if (activeKitchenId == 'ALL' || !authProv.assignedKitchens.any((k) => k['id'].toString() == activeKitchenId)) {
+      if (authProv.assignedKitchens.isNotEmpty) {
+        return authProv.assignedKitchens.first['id'].toString();
+      }
+      return null;
+    }
+    return activeKitchenId;
+  }
+
+  // FIX: Replaced firstWhere with indexWhere to prevent Type Cast Crashes on button click!
+  String _getActiveKitchenName(String? kitchenId) {
+    if (kitchenId == null) return 'Unknown Kitchen';
+    final authProv = context.read<AuthProvider>();
+
+    int index = authProv.assignedKitchens.indexWhere((k) => k['id'].toString() == kitchenId);
+    if (index != -1) {
+      return authProv.assignedKitchens[index]['name']?.toString() ?? 'Unknown Kitchen';
+    }
+    return 'Unknown Kitchen';
+  }
+
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
     try {
-      // 1. Fetch all active kitchens available to the user
-      final kitchenResponse = await _supabase
-          .from('m_kitchen')
-          .select('id, name')
-          .eq('status', true)
-          .order('name');
+      final activeKitchenId = _getActiveKitchenId();
 
-      // 2. Fetch all zones and join with kitchen table to get the kitchen name
+      if (activeKitchenId == null) {
+        if (mounted) setState(() => _zones = []);
+        return;
+      }
+
       final zoneResponse = await _supabase
           .from('m_zone')
           .select('*, m_kitchen(name)')
+          .eq('kitchen_id', activeKitchenId)
           .order('created_at');
 
       if (mounted) {
         setState(() {
-          _kitchens = List<Map<String, dynamic>>.from(kitchenResponse);
           _zones = List<Map<String, dynamic>>.from(zoneResponse);
         });
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Error: $e', style: GoogleFonts.inter()),
-            backgroundColor: Colors.red));
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e', style: GoogleFonts.inter()), backgroundColor: Colors.red));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // --- FILTER & SORT LOGIC ---
   List<Map<String, dynamic>> get _filteredZones {
     var list = List<Map<String, dynamic>>.from(_zones);
 
-    // 1. Search Filter
     if (_searchQuery.isNotEmpty) {
       list = list.where((z) => z['name'].toString().toLowerCase().contains(_searchQuery.toLowerCase())).toList();
     }
-
-    // 2. Status Filter
     if (_statusFilter == 'ACTIVE') {
       list = list.where((z) => z['status'] == true).toList();
     } else if (_statusFilter == 'INACTIVE') {
       list = list.where((z) => z['status'] == false).toList();
     }
 
-    // 3. Kitchen Filter (Only applied if they have multiple kitchens)
-    if (_kitchens.length > 1 && _kitchenFilter != 'ALL') {
-      list = list.where((z) => z['kitchen_id'].toString() == _kitchenFilter).toList();
-    }
-
-    // 4. Sorting
     if (_sortBy == 'NAME_ASC') {
       list.sort((a, b) => a['name'].toString().compareTo(b['name'].toString()));
     } else if (_sortBy == 'NAME_DESC') {
@@ -108,10 +117,8 @@ class _ZoneMasterScreenState extends State<ZoneMasterScreen> {
     return list;
   }
 
-  // --- BOTTOM SHEETS ---
   void _showFilterBottomSheet() {
     String tempStatus = _statusFilter;
-    String tempKitchen = _kitchenFilter;
     String tempSort = _sortBy;
 
     showModalBottomSheet(
@@ -138,7 +145,6 @@ class _ZoneMasterScreenState extends State<ZoneMasterScreen> {
                         onPressed: () {
                           setModalState(() {
                             tempStatus = 'ALL';
-                            tempKitchen = 'ALL';
                             tempSort = 'NEWEST';
                           });
                         },
@@ -171,32 +177,7 @@ class _ZoneMasterScreenState extends State<ZoneMasterScreen> {
                       _buildChip("Inactive", tempStatus == 'INACTIVE', () => setModalState(() => tempStatus = 'INACTIVE')),
                     ],
                   ),
-
-                  // SMART UI: Only show kitchen filter if there are multiple kitchens
-                  if (_kitchens.length > 1) ...[
-                    const SizedBox(height: 24),
-                    Text("Filter by Kitchen", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.grey.shade500, fontSize: 13, letterSpacing: 0.5)),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      value: tempKitchen,
-                      decoration: InputDecoration(
-                        filled: true, fillColor: Colors.white,
-                        prefixIcon: const Icon(Icons.kitchen_outlined, color: Colors.grey),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: golden, width: 2)),
-                      ),
-                      items: [
-                        DropdownMenuItem(value: 'ALL', child: Text("All Kitchens", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy))),
-                        ..._kitchens.map((k) => DropdownMenuItem(value: k['id'].toString(), child: Text(k['name'].toString(), style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy))))
-                      ],
-                      onChanged: (val) => setModalState(() => tempKitchen = val!),
-                    ),
-                    const SizedBox(height: 40),
-                  ] else ...[
-                    const SizedBox(height: 32),
-                  ],
+                  const SizedBox(height: 40),
 
                   SizedBox(
                     width: double.infinity, height: 54,
@@ -205,7 +186,6 @@ class _ZoneMasterScreenState extends State<ZoneMasterScreen> {
                       onPressed: () {
                         setState(() {
                           _statusFilter = tempStatus;
-                          _kitchenFilter = tempKitchen;
                           _sortBy = tempSort;
                         });
                         Navigator.pop(ctx);
@@ -224,19 +204,19 @@ class _ZoneMasterScreenState extends State<ZoneMasterScreen> {
 
   void _showZoneForm({Map<String, dynamic>? existingZone}) {
     final nameController = TextEditingController(text: existingZone?['name'] ?? '');
-
-    String? selectedKitchenId = existingZone?['kitchen_id'] ?? context.read<AuthProvider>().activeKitchenId;
-
-    // SMART LOGIC: If they only have 1 kitchen, auto-select it.
-    // Otherwise, ensure the default exists in the dropdown list.
-    if (_kitchens.length == 1) {
-      selectedKitchenId = _kitchens.first['id'].toString();
-    } else if (selectedKitchenId != null && !_kitchens.any((k) => k['id'].toString() == selectedKitchenId)) {
-      selectedKitchenId = null;
-    }
-
     final formKey = GlobalKey<FormState>();
     bool isSaving = false;
+
+    final targetKitchenId = existingZone?['kitchen_id']?.toString() ?? _getActiveKitchenId();
+
+    if (targetKitchenId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No active kitchen selected.'), backgroundColor: Colors.red));
+      return;
+    }
+
+    final targetKitchenName = existingZone != null
+        ? (existingZone['m_kitchen']?['name'] ?? 'Unknown Kitchen')
+        : _getActiveKitchenName(targetKitchenId);
 
     showModalBottomSheet(
       context: context,
@@ -257,31 +237,26 @@ class _ZoneMasterScreenState extends State<ZoneMasterScreen> {
                   Text(existingZone == null ? "Add New Zone" : "Edit Zone", style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: navy)),
                   const SizedBox(height: 24),
 
-                  // SMART UI: Only show kitchen selection if they have more than 1 kitchen
-                  if (_kitchens.length > 1) ...[
-                    DropdownButtonFormField<String>(
-                      value: selectedKitchenId,
-                      validator: (val) => val == null ? 'Please select a Kitchen' : null,
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy, fontSize: 14),
-                      decoration: InputDecoration(
-                        labelText: "Select Kitchen *",
-                        labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
-                        prefixIcon: const Icon(Icons.kitchen_outlined, color: Colors.grey),
-                        filled: true, fillColor: Colors.white,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: golden, width: 2)),
-                      ),
-                      items: _kitchens.map((k) => DropdownMenuItem(value: k['id'].toString(), child: Text(k['name'].toString()))).toList(),
-                      onChanged: (val) => setModalState(() => selectedKitchenId = val),
+                  TextFormField(
+                    controller: TextEditingController(text: targetKitchenName),
+                    readOnly: true,
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.grey.shade700, fontSize: 14),
+                    decoration: InputDecoration(
+                      labelText: "Target Kitchen",
+                      labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
+                      prefixIcon: Icon(Icons.kitchen_outlined, color: Colors.grey.shade400, size: 20),
+                      filled: true, fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
                     ),
-                    const SizedBox(height: 16),
-                  ],
+                  ),
+                  const SizedBox(height: 16),
 
                   TextFormField(
                     controller: nameController,
                     validator: (val) => val == null || val.trim().isEmpty ? 'Zone Name is required' : null,
                     style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy),
+                    textCapitalization: TextCapitalization.words,
                     decoration: InputDecoration(
                       labelText: "Zone Name *",
                       labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
@@ -299,29 +274,18 @@ class _ZoneMasterScreenState extends State<ZoneMasterScreen> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(backgroundColor: navy, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), elevation: 0),
                       onPressed: isSaving ? null : () async {
-                        // If they only have 1 kitchen, we ensure selectedKitchenId isn't null before submitting
-                        if (_kitchens.length == 1 && selectedKitchenId == null) {
-                          selectedKitchenId = _kitchens.first['id'].toString();
-                        }
-
-                        if (!formKey.currentState!.validate() || selectedKitchenId == null) {
-                          if (selectedKitchenId == null && _kitchens.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No Kitchens available to link.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
-                          }
-                          return;
-                        }
-
+                        if (!formKey.currentState!.validate()) return;
                         setModalState(() => isSaving = true);
+
                         try {
                           if (existingZone == null) {
                             await _supabase.from('m_zone').insert({
                               'name': nameController.text.trim(),
-                              'kitchen_id': selectedKitchenId
+                              'kitchen_id': targetKitchenId
                             });
                           } else {
                             await _supabase.from('m_zone').update({
-                              'name': nameController.text.trim(),
-                              'kitchen_id': selectedKitchenId
+                              'name': nameController.text.trim()
                             }).eq('id', existingZone['id']);
                           }
                           if (mounted) {
@@ -355,7 +319,6 @@ class _ZoneMasterScreenState extends State<ZoneMasterScreen> {
     }
   }
 
-  // --- UI WIDGETS ---
   Widget _buildChip(String label, bool isSelected, VoidCallback onTap) {
     return ChoiceChip(
       label: Text(label, style: GoogleFonts.inter(fontWeight: isSelected ? FontWeight.bold : FontWeight.w600, color: isSelected ? navy : Colors.grey.shade700)),
@@ -398,13 +361,12 @@ class _ZoneMasterScreenState extends State<ZoneMasterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Calculate Stats
     final int totalCount = _zones.length;
     final int activeCount = _zones.where((z) => z['status'] == true).length;
     final int inactiveCount = totalCount - activeCount;
 
     final displayList = _filteredZones;
-    final bool hasActiveFilters = _statusFilter != 'ALL' || _kitchenFilter != 'ALL' || _sortBy != 'NEWEST';
+    final bool hasActiveFilters = _statusFilter != 'ALL' || _sortBy != 'NEWEST';
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -422,23 +384,14 @@ class _ZoneMasterScreenState extends State<ZoneMasterScreen> {
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
-              // Floating Search & Stats Bar
               SliverAppBar(
-                backgroundColor: background,
-                elevation: 0,
-                floating: true,
-                snap: true,
-                automaticallyImplyLeading: false,
-                toolbarHeight: 0,
+                backgroundColor: background, elevation: 0, floating: true, snap: true, automaticallyImplyLeading: false, toolbarHeight: 0,
                 bottom: PreferredSize(
                   preferredSize: const Size.fromHeight(160),
                   child: Column(
                     children: [
-                      // 1. STATS ROW
                       Container(
-                        color: background,
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        width: double.infinity,
+                        color: background, padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), width: double.infinity,
                         child: Row(
                           children: [
                             Expanded(child: _buildStatCard("Total", totalCount, Colors.blueGrey, 'ALL')),
@@ -449,41 +402,21 @@ class _ZoneMasterScreenState extends State<ZoneMasterScreen> {
                           ],
                         ),
                       ),
-
-                      // 2. SEARCH & FILTER ROW
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         child: Row(
                           children: [
                             Expanded(
                               child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
-                                ),
+                                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))]),
                                 child: TextField(
-                                  controller: _searchController,
-                                  focusNode: _searchFocusNode,
-                                  onChanged: (value) => setState(() => _searchQuery = value),
+                                  controller: _searchController, focusNode: _searchFocusNode, onChanged: (value) => setState(() => _searchQuery = value),
                                   style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy),
                                   decoration: InputDecoration(
-                                    hintText: "Search zones...",
-                                    hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontWeight: FontWeight.w500),
+                                    hintText: "Search zones...", hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontWeight: FontWeight.w500),
                                     prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                                    suffixIcon: _searchController.text.isNotEmpty
-                                        ? IconButton(
-                                      icon: const Icon(Icons.clear, color: Colors.grey, size: 20),
-                                      onPressed: () {
-                                        _searchController.clear();
-                                        setState(() => _searchQuery = '');
-                                        _searchFocusNode.unfocus();
-                                      },
-                                    )
-                                        : null,
-                                    filled: true,
-                                    fillColor: Colors.white,
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                                    suffixIcon: _searchController.text.isNotEmpty ? IconButton(icon: const Icon(Icons.clear, color: Colors.grey, size: 20), onPressed: () { _searchController.clear(); setState(() => _searchQuery = ''); _searchFocusNode.unfocus(); }) : null,
+                                    filled: true, fillColor: Colors.white, contentPadding: const EdgeInsets.symmetric(vertical: 14),
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                                     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: golden, width: 2)),
                                   ),
@@ -492,17 +425,12 @@ class _ZoneMasterScreenState extends State<ZoneMasterScreen> {
                             ),
                             const SizedBox(width: 12),
                             InkWell(
-                              onTap: () {
-                                _searchFocusNode.unfocus();
-                                _showFilterBottomSheet();
-                              },
+                              onTap: () { _searchFocusNode.unfocus(); _showFilterBottomSheet(); },
                               borderRadius: BorderRadius.circular(16),
                               child: Container(
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
-                                  color: hasActiveFilters ? navy : Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: hasActiveFilters ? navy : Colors.white),
+                                  color: hasActiveFilters ? navy : Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: hasActiveFilters ? navy : Colors.white),
                                   boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
                                 ),
                                 child: Icon(Icons.tune, color: hasActiveFilters ? Colors.white : navy),
@@ -515,15 +443,8 @@ class _ZoneMasterScreenState extends State<ZoneMasterScreen> {
                   ),
                 ),
               ),
-
-              // LIST OF ZONES
               if (displayList.isEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(40.0),
-                    child: Center(child: Text("No zones match your filters.", style: GoogleFonts.inter(color: Colors.grey))),
-                  ),
-                )
+                SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.all(40.0), child: Center(child: Text("No zones match your filters.", style: GoogleFonts.inter(color: Colors.grey)))))
               else
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
@@ -532,7 +453,6 @@ class _ZoneMasterScreenState extends State<ZoneMasterScreen> {
                           (context, i) {
                         final zone = displayList[i];
                         final bool isActive = zone['status'] == true;
-                        final kitchenName = zone['m_kitchen']?['name'] ?? 'Unknown Kitchen';
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
@@ -544,33 +464,19 @@ class _ZoneMasterScreenState extends State<ZoneMasterScreen> {
                               padding: const EdgeInsets.only(top: 6.0),
                               child: Row(
                                 children: [
-                                  Icon(Icons.kitchen_outlined, size: 14, color: Colors.grey.shade400),
-                                  const SizedBox(width: 4),
-                                  Expanded(child: Text(kitchenName, style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 12, fontWeight: FontWeight.w500))),
-
-                                  // SMART UI: If they only have 1 kitchen, no need to show the Kitchen name on every card.
-                                  // We just show the Active/Inactive badge aligned to the left.
-                                  if (_kitchens.length > 1)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(color: isActive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                                      child: Text(isActive ? "Active" : "Inactive", style: GoogleFonts.inter(color: isActive ? Colors.green : Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold)),
-                                    )
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(color: isActive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                    child: Text(isActive ? "Active" : "Inactive", style: GoogleFonts.inter(color: isActive ? Colors.green : Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                                  )
                                 ],
                               ),
                             ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Switch.adaptive(
-                                  value: isActive,
-                                  activeColor: golden,
-                                  onChanged: (val) => _toggleStatus(zone['id'], isActive),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.edit_outlined, color: navy),
-                                  onPressed: () => _showZoneForm(existingZone: zone),
-                                ),
+                                Switch.adaptive(value: isActive, activeColor: golden, onChanged: (val) => _toggleStatus(zone['id'], isActive)),
+                                IconButton(icon: const Icon(Icons.edit_outlined, color: navy), onPressed: () => _showZoneForm(existingZone: zone)),
                               ],
                             ),
                           ),
@@ -587,8 +493,8 @@ class _ZoneMasterScreenState extends State<ZoneMasterScreen> {
           backgroundColor: navy, foregroundColor: Colors.white, elevation: 4,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           onPressed: () {
-            if (_kitchens.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('You must create a Kitchen first!', style: GoogleFonts.inter()), backgroundColor: Colors.orange));
+            if (_getActiveKitchenId() == null) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('You must have an active Kitchen first!', style: GoogleFonts.inter()), backgroundColor: Colors.orange));
             } else {
               _showZoneForm();
             }
