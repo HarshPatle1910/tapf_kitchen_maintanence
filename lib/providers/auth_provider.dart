@@ -13,8 +13,10 @@ class AuthProvider with ChangeNotifier {
   AuthState _authState = AuthState.unauthenticated;
 
   String? _activeRole;
-  List<String> _activeKitchenIds = []; // FIX: Now a list of kitchens
   String? _userName;
+
+  // FIX: Store the full kitchen map (id + name) so we can use it in dropdowns
+  List<Map<String, dynamic>> _assignedKitchens = [];
 
   bool get isInitializing => _isInitializing;
   bool get isLoading => _isLoading;
@@ -24,12 +26,12 @@ class AuthProvider with ChangeNotifier {
   String? get currentUserId => _supabase.auth.currentUser?.id;
   String? get activeRole => _activeRole;
   bool get isAdmin => _activeRole == 'admin';
-
-  // Expose the list of kitchens, and a default active kitchen (the first one)
-  List<String> get activeKitchenIds => _activeKitchenIds;
-  String? get activeKitchenId => _activeKitchenIds.isNotEmpty ? _activeKitchenIds.first : null;
-
   String? get userName => _userName;
+
+  // Helper getters for kitchens
+  List<Map<String, dynamic>> get assignedKitchens => _assignedKitchens;
+  List<String> get activeKitchenIds => _assignedKitchens.map((k) => k['id'] as String).toList();
+  String? get activeKitchenId => activeKitchenIds.isNotEmpty ? activeKitchenIds.first : null;
 
   AuthProvider() {
     _checkExistingSession();
@@ -85,14 +87,13 @@ class AuthProvider with ChangeNotifier {
     required String ampId,
     required String address,
     required String phone,
-    required List<String> selectedKitchenIds, // FIX: Added selected kitchens
+    required List<String> selectedKitchenIds,
   }) async {
     _setLoading(true);
     _errorMessage = null;
     try {
       final userId = _supabase.auth.currentUser!.id;
 
-      // 1. Insert User
       await _supabase.from('m_user').insert({
         'id': userId,
         'amp_id': ampId,
@@ -103,7 +104,6 @@ class AuthProvider with ChangeNotifier {
         'status': false,
       });
 
-      // 2. Insert mapped kitchens into the junction table
       if (selectedKitchenIds.isNotEmpty) {
         final kitchenInserts = selectedKitchenIds.map((kId) => {
           'user_id': userId,
@@ -130,10 +130,10 @@ class AuthProvider with ChangeNotifier {
     if (user == null) return;
 
     try {
-      // FIX: Inner join to fetch the user's assigned kitchens
+      // FIX: Fetch kitchen names alongside IDs
       final data = await _supabase
           .from('m_user')
-          .select('*, user_kitchens(kitchen_id)')
+          .select('*, user_kitchens(kitchen_id, m_kitchen(name))')
           .eq('id', user.id)
           .maybeSingle();
 
@@ -145,9 +145,13 @@ class AuthProvider with ChangeNotifier {
       } else {
         _activeRole = data['role'];
         _userName = data['name'];
-        _activeKitchenIds = (data['user_kitchens'] as List<dynamic>?)
-            ?.map((k) => k['kitchen_id'].toString())
-            .toList() ?? [];
+
+        // Map the result into a clean list of maps
+        _assignedKitchens = (data['user_kitchens'] as List<dynamic>?)?.map((k) => {
+          'id': k['kitchen_id'].toString(),
+          'name': k['m_kitchen']['name'].toString()
+        }).toList() ?? [];
+
         _authState = AuthState.authenticated;
       }
     } catch (e) {
@@ -161,7 +165,7 @@ class AuthProvider with ChangeNotifier {
     _setLoading(true);
     await _supabase.auth.signOut();
     _activeRole = null;
-    _activeKitchenIds = [];
+    _assignedKitchens = [];
     _userName = null;
     _authState = AuthState.unauthenticated;
     _setLoading(false);

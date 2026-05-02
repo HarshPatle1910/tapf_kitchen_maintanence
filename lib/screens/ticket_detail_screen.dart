@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb; // Added for Web Support
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -56,6 +56,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   bool get isEditing => widget.ticket != null;
   String get currentStatus => widget.ticket?['status'] ?? 'RAISED';
 
+  bool get isTicketClosed => currentStatus == 'COMPLETED' || currentStatus == 'VERIFIED';
+
   @override
   void initState() {
     super.initState();
@@ -64,8 +66,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       _titleController.text = widget.ticket!['title'] ?? '';
       _causeController.text = widget.ticket!['cause_of_issue'] ?? '';
       _priority = widget.ticket!['priority'] ?? 'MEDIUM';
-      _selectedAreaId = widget.ticket!['area_id'];
-      _selectedWorker = widget.ticket!['assigned_to_id'];
+      _selectedAreaId = widget.ticket!['area_id']?.toString(); // Make sure it's a string
+      _selectedWorker = widget.ticket!['assigned_to_id']?.toString();
 
       _fetchMedia();
     }
@@ -82,6 +84,14 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     _areaFocusNode.dispose();
     _equipFocusNode.dispose();
     super.dispose();
+  }
+
+  String _formatToCamelCase(String text) {
+    if (text.trim().isEmpty) return text;
+    return text.split(' ').map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
   }
 
   Future<void> _fetchMedia() async {
@@ -126,19 +136,16 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
       if (mounted) {
         setState(() {
-          // Format Areas
           _allAreas = List<Map<String, dynamic>>.from(areasData);
           for (var a in _allAreas) {
             a['display_name'] = a['area_name'];
           }
 
-          // Format Equipments
           _allEquipment = List<Map<String, dynamic>>.from(equipsData);
           for (var e in _allEquipment) {
             e['display_name'] = e['name'];
           }
 
-          // Format Workers
           _workers = List<Map<String, dynamic>>.from(staffData);
 
           if (isEditing && _selectedWorker != null) {
@@ -152,7 +159,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           }
 
           if (isEditing && _selectedAreaId != null) {
-            final area = _allAreas.firstWhere((a) => a['id'] == _selectedAreaId, orElse: () => {});
+            // FIX: Explicitly type the orElse return to prevent generic map crashing
+            final area = _allAreas.firstWhere(
+                    (a) => a['id'].toString() == _selectedAreaId,
+                orElse: () => <String, dynamic>{}
+            );
             if (area.isNotEmpty) {
               _areaSearchController.text = area['display_name'];
             }
@@ -245,7 +256,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     bool filesDropped = false;
 
     for (var img in pickedFiles) {
-      // FIX 1: Use XFile's native length() method instead of dart:io File for Web safety
       final bytes = await img.length();
       if (bytes <= 5242880) {
         validImages.add(img);
@@ -265,9 +275,22 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final authProv = context.watch<AuthProvider>();
+    final ticketProv = context.watch<TicketProvider>();
     final isAdmin = (authProv.activeRole == 'admin');
     final isCompleting = isEditing && !isAdmin && currentStatus == 'IN_PROGRESS';
-    final showCameraBox = !isEditing || isCompleting;
+
+    final bool readOnlyFields = isTicketClosed || (isEditing && !isAdmin);
+    final showCameraBox = (!isEditing || isCompleting) && !isTicketClosed;
+
+    // FIX: Replaced firstWhere with indexWhere to prevent Type Cast Crashes on the Screen
+    String activeKitchenName = "Loading Kitchen...";
+    if (!isEditing && authProv.assignedKitchens.isNotEmpty) {
+      int activeIndex = authProv.assignedKitchens.indexWhere((k) => k['id'].toString() == ticketProv.kitchenFilter);
+      final activeK = activeIndex != -1 ? authProv.assignedKitchens[activeIndex] : authProv.assignedKitchens.first;
+      activeKitchenName = activeK['name']?.toString() ?? 'Unknown Kitchen';
+    } else if (isEditing) {
+      activeKitchenName = widget.ticket?['m_kitchen']?['name']?.toString() ?? 'Unknown Kitchen';
+    }
 
     return GestureDetector(
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
@@ -304,7 +327,14 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 1. IMAGES FIRST
+                      _buildTextField(
+                        ctrl: TextEditingController(text: activeKitchenName),
+                        label: "Target Kitchen",
+                        icon: Icons.kitchen,
+                        isReadOnly: true,
+                      ),
+                      const SizedBox(height: 12),
+
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -322,14 +352,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Area Selection
                       _buildSleekAutocomplete(
                         hint: "Search Area *",
                         icon: Icons.place_outlined,
                         controller: _areaSearchController,
                         focusNode: _areaFocusNode,
                         options: _allAreas,
-                        isDisabled: isEditing && !isAdmin,
+                        isDisabled: readOnlyFields,
                         onSelected: (val) {
                           setState(() {
                             _selectedAreaId = val['id'].toString();
@@ -340,14 +369,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Multi-Select Equipment
                       _buildSleekAutocomplete(
                         hint: _selectedAreaId == null ? "Select an Area first" : "Search Equipment *",
                         icon: Icons.precision_manufacturing_outlined,
                         controller: _equipSearchController,
                         focusNode: _equipFocusNode,
-                        options: _allEquipment.where((e) => e['area_id'] == _selectedAreaId).toList(),
-                        isDisabled: (isEditing && !isAdmin) || _selectedAreaId == null,
+                        options: _allEquipment.where((e) => e['area_id']?.toString() == _selectedAreaId).toList(),
+                        isDisabled: readOnlyFields || _selectedAreaId == null,
                         onSelected: (val) {
                           setState(() {
                             if (!_selectedEquipments.any((e) => e['id'] == val['id'])) {
@@ -358,7 +386,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         },
                       ),
 
-                      // Display Selected Equipment Chips
                       if (_selectedEquipments.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         Wrap(
@@ -369,7 +396,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                             side: const BorderSide(color: navy),
                             label: Text(eq['name'], style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: navy)),
                             deleteIcon: const Icon(Icons.close, size: 16),
-                            onDeleted: (isEditing && !isAdmin) ? null : () {
+                            onDeleted: readOnlyFields ? null : () {
                               setState(() => _selectedEquipments.removeWhere((e) => e['id'] == eq['id']));
                             },
                           )).toList(),
@@ -377,32 +404,29 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                       ],
                       const SizedBox(height: 12),
 
-                      // Priority Selection
                       _buildDropdown(
                         "Priority *",
                         ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
                         _priority,
-                        isEditing && !isAdmin ? null : (val) => setState(() => _priority = val!),
+                        readOnlyFields ? null : (val) => setState(() => _priority = val!),
                       ),
                       const SizedBox(height: 12),
 
-                      // Title
                       _buildTextField(
                         ctrl: _titleController,
                         label: "Issue Title *",
                         icon: Icons.title,
-                        isReadOnly: isEditing && !isAdmin,
+                        isReadOnly: readOnlyFields,
                         isRequired: true,
                       ),
                       const SizedBox(height: 12),
 
-                      // Cause of Issue
                       _buildTextField(
                         ctrl: _causeController,
                         label: "Cause of Issue",
                         icon: Icons.report_problem_outlined,
                         maxLines: 4,
-                        isReadOnly: isEditing && !isAdmin,
+                        isReadOnly: readOnlyFields,
                         isRequired: false,
                       ),
                     ],
@@ -410,12 +434,16 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Assignment (Admin Only)
                 if (isEditing && isAdmin) ...[
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
-                    child: _buildWorkerDropdown("Assign Worker", _workers, _selectedWorker, (val) => setState(() => _selectedWorker = val)),
+                    child: _buildWorkerDropdown(
+                        "Assign Worker",
+                        _workers,
+                        _selectedWorker,
+                        isTicketClosed ? null : (val) => setState(() => _selectedWorker = val)
+                    ),
                   ),
                   const SizedBox(height: 24),
                 ],
@@ -513,7 +541,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
         prefixIcon: const Icon(Icons.engineering, color: Colors.grey, size: 20),
         filled: true,
-        fillColor: Colors.grey.shade50,
+        fillColor: onChanged == null ? Colors.grey.shade100 : Colors.grey.shade50,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
@@ -609,7 +637,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   margin: const EdgeInsets.only(right: 8),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    // FIX 2: Safe cross-platform image preview!
                     child: kIsWeb
                         ? Image.network(_selectedImages[index].path, fit: BoxFit.cover)
                         : Image.file(File(_selectedImages[index].path), fit: BoxFit.cover),
@@ -693,7 +720,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     final userId = _supabase.auth.currentUser?.id;
 
     for (var img in _selectedImages) {
-      // FIX 3: Read bytes for secure Web upload + Name extraction
       final fileExt = img.name.contains('.') ? img.name.split('.').last : 'jpg';
       final fileName = '${stage.toLowerCase()}_${DateTime.now().microsecondsSinceEpoch}.$fileExt';
       final storagePath = '$ticketId/$fileName';
@@ -714,6 +740,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   Future<void> _submitNewTicket() async {
     FocusManager.instance.primaryFocus?.unfocus();
 
+    _titleController.text = _formatToCamelCase(_titleController.text);
+
     if (!_formKey.currentState!.validate() || _selectedAreaId == null || _selectedEquipments.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select an Area and at least one Equipment.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
       return;
@@ -721,15 +749,28 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     setState(() => _isLoading = true);
 
     try {
+      final authProv = context.read<AuthProvider>();
+      final ticketProv = context.read<TicketProvider>();
       final userId = _supabase.auth.currentUser?.id;
-      final kitchenResp = await _supabase.from('m_kitchen').select('id').limit(1).single();
+
+      // FIX: Replaced firstWhere with indexWhere to prevent Type Cast Crashes on Submit!
+      dynamic exactKitchenId;
+
+      if (authProv.assignedKitchens.isNotEmpty) {
+        int index = authProv.assignedKitchens.indexWhere((k) => k['id'].toString() == ticketProv.kitchenFilter);
+        final activeKitchen = index != -1 ? authProv.assignedKitchens[index] : authProv.assignedKitchens.first;
+        exactKitchenId = activeKitchen['id'];
+      } else {
+        final kitchenResp = await _supabase.from('m_kitchen').select('id').limit(1).single();
+        exactKitchenId = kitchenResp['id'];
+      }
 
       final newTicket = await _supabase.from('tickets').insert({
         'title': _titleController.text,
         'cause_of_issue': _causeController.text,
         'priority': _priority,
         'area_id': _selectedAreaId,
-        'kitchen_id': kitchenResp['id'],
+        'kitchen_id': exactKitchenId,
         'raised_by_id': userId,
       }).select().single();
 
@@ -757,6 +798,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   Future<void> _updateTicketStatus(String? nextStatus, bool isAdmin) async {
     FocusManager.instance.primaryFocus?.unfocus();
 
+    _titleController.text = _formatToCamelCase(_titleController.text);
+
     if (nextStatus == 'COMPLETED' && _selectedImages.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please upload Completion Photos.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
       return;
@@ -767,7 +810,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       final updates = <String, dynamic>{'updated_at': DateTime.now().toIso8601String()};
       if (nextStatus != null) updates['status'] = nextStatus;
 
-      if (isAdmin) {
+      if (isAdmin && !isTicketClosed) {
         updates['title'] = _titleController.text;
         updates['cause_of_issue'] = _causeController.text;
         updates['priority'] = _priority;
@@ -806,16 +849,31 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   }
 
   Widget? _buildContextualActionButton(bool isAdmin) {
+    if (currentStatus == 'VERIFIED') return null;
+
+    if (currentStatus == 'COMPLETED' && !isAdmin) return null;
+
     String buttonText = "UPDATE TICKET";
     String? nextStatus;
 
     if (isAdmin) {
-      if (currentStatus == 'RAISED' && _selectedWorker != null) { buttonText = "ASSIGN WORKER"; nextStatus = 'ASSIGNED'; }
-      else if (currentStatus == 'COMPLETED') { buttonText = "VERIFY & CLOSE"; nextStatus = 'VERIFIED'; }
+      if (currentStatus == 'RAISED' && _selectedWorker != null) {
+        buttonText = "ASSIGN WORKER";
+        nextStatus = 'ASSIGNED';
+      } else if (currentStatus == 'COMPLETED') {
+        buttonText = "VERIFY & CLOSE";
+        nextStatus = 'VERIFIED';
+      }
     } else {
-      if (currentStatus == 'ASSIGNED') { buttonText = "START WORK"; nextStatus = 'IN_PROGRESS'; }
-      else if (currentStatus == 'IN_PROGRESS') { buttonText = "MARK COMPLETE"; nextStatus = 'COMPLETED'; }
-      else { return null; }
+      if (currentStatus == 'ASSIGNED') {
+        buttonText = "START WORK";
+        nextStatus = 'IN_PROGRESS';
+      } else if (currentStatus == 'IN_PROGRESS') {
+        buttonText = "MARK COMPLETE";
+        nextStatus = 'COMPLETED';
+      } else {
+        return null;
+      }
     }
 
     return SafeArea(

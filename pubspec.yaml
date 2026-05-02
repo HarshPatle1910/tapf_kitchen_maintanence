@@ -17,6 +17,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   supabase_flutter: ^2.12.4
   provider: ^6.1.5+1
+  flutter_launcher_icons: ^0.14.4
 
   intl: ^0.20.2
   go_router: ^17.2.1
@@ -79,3 +80,9 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/app_logo.png"
+

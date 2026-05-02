@@ -12,6 +12,7 @@ class TicketProvider with ChangeNotifier {
   String _searchQuery = '';
   String _statusFilter = 'ALL';
   String _priorityFilter = 'ALL';
+  String _kitchenFilter = 'ALL'; // FIX: New Kitchen Filter state
   DateTime? _startDate;
   DateTime? _endDate;
   String _sortBy = 'DATE_DESC';
@@ -23,8 +24,8 @@ class TicketProvider with ChangeNotifier {
   int _completed = 0;
   int _verified = 0;
 
-  // Current active kitchen context
-  String? _currentKitchenId;
+  // Allowed kitchen contexts
+  List<String> _allowedKitchenIds = [];
   RealtimeChannel? _ticketChannel;
 
   List<Map<String, dynamic>> get tickets => _tickets;
@@ -32,6 +33,7 @@ class TicketProvider with ChangeNotifier {
   String get searchQuery => _searchQuery;
   String get statusFilter => _statusFilter;
   String get priorityFilter => _priorityFilter;
+  String get kitchenFilter => _kitchenFilter;
   DateTime? get startDate => _startDate;
   DateTime? get endDate => _endDate;
   String get sortBy => _sortBy;
@@ -42,48 +44,34 @@ class TicketProvider with ChangeNotifier {
   int get completed => _completed;
   int get verified => _verified;
 
-  // Initialize and attach to a specific kitchen
-  Future<void> initialize(String? kitchenId) async {
-    String? targetKitchen = kitchenId;
+  // FIX: Initialize with a LIST of allowed kitchens instead of one
+  Future<void> initialize(List<String> kitchenIds) async {
+    if (kitchenIds.isEmpty) return;
 
-    // SMART FALLBACK: If user has no kitchen assigned yet, grab the default one
-    if (targetKitchen == null) {
-      try {
-        final fallback = await _supabase
-            .from('m_kitchen')
-            .select('id')
-            .limit(1)
-            .maybeSingle();
-        if (fallback != null) {
-          targetKitchen = fallback['id'];
-        }
-      } catch (e) {
-        debugPrint("Kitchen Fallback Error: $e");
-      }
+    // Prevent re-initializing if nothing changed
+    if (_allowedKitchenIds.length == kitchenIds.length &&
+        _allowedKitchenIds.every((id) => kitchenIds.contains(id))) {
+      return;
     }
 
-    if (targetKitchen == null || targetKitchen == _currentKitchenId) return;
-
-    _currentKitchenId = targetKitchen;
+    _allowedKitchenIds = kitchenIds;
     _initRealtime();
     refreshTickets();
   }
 
   void _initRealtime() {
-    // Clean up old channel if switching kitchens
     _ticketChannel?.unsubscribe();
-
     _ticketChannel = _supabase
         .channel('public_tickets_channel')
         .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'tickets',
-          callback: (payload) {
-            debugPrint("Realtime DB Change Detected: Refreshing tickets...");
-            refreshTickets(isRealtime: true);
-          },
-        );
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'tickets',
+      callback: (payload) {
+        debugPrint("Realtime DB Change Detected: Refreshing tickets...");
+        refreshTickets(isRealtime: true);
+      },
+    );
     _ticketChannel?.subscribe();
   }
 
@@ -101,21 +89,19 @@ class TicketProvider with ChangeNotifier {
   void setFilters({
     String? status,
     String? priority,
+    String? kitchenId,
     DateTime? start,
     DateTime? end,
     String? sort,
   }) {
     if (status != null) _statusFilter = status;
     if (priority != null) _priorityFilter = priority;
+    if (kitchenId != null) _kitchenFilter = kitchenId;
     if (start != null) _startDate = start;
     if (end != null) _endDate = end;
     if (sort != null) _sortBy = sort;
 
-    if (start == null &&
-        end == null &&
-        sort == null &&
-        status == null &&
-        priority == null) {
+    if (start == null && end == null && sort == null && status == null && priority == null && kitchenId == null) {
       _startDate = null;
       _endDate = null;
     }
@@ -123,37 +109,32 @@ class TicketProvider with ChangeNotifier {
     refreshTickets();
   }
 
-  void clearDateFilter() {
-    _startDate = null;
-    _endDate = null;
-    refreshTickets();
-  }
-
   Future<void> refreshTickets({bool isRealtime = false}) async {
     _offset = 0;
-    if (_currentKitchenId != null) {
+    if (_allowedKitchenIds.isNotEmpty) {
       await _fetchGlobalStats();
       await fetchTickets(forceRefresh: isRealtime);
     }
   }
 
   Future<void> _fetchGlobalStats() async {
-    if (_currentKitchenId == null) return;
+    if (_allowedKitchenIds.isEmpty) return;
 
     try {
-      // Strictly isolate stats to the active kitchen
-      final statsData = await _supabase
-          .from('tickets')
-          .select('status')
-          .eq('kitchen_id', _currentKitchenId!);
+      var query = _supabase.from('tickets').select('status');
+
+      // Filter by ALL allowed kitchens or specific selected kitchen
+      if (_kitchenFilter == 'ALL') {
+        query = query.inFilter('kitchen_id', _allowedKitchenIds);
+      } else {
+        query = query.eq('kitchen_id', _kitchenFilter);
+      }
+
+      final statsData = await query;
 
       _total = statsData.length;
       _toDo = statsData.where((t) => t['status'] == 'RAISED').length;
-      _inProgress = statsData
-          .where(
-            (t) => t['status'] == 'IN_PROGRESS' || t['status'] == 'ASSIGNED',
-          )
-          .length;
+      _inProgress = statsData.where((t) => t['status'] == 'IN_PROGRESS' || t['status'] == 'ASSIGNED').length;
       _completed = statsData.where((t) => t['status'] == 'COMPLETED').length;
       _verified = statsData.where((t) => t['status'] == 'VERIFIED').length;
 
@@ -163,13 +144,9 @@ class TicketProvider with ChangeNotifier {
     }
   }
 
-  Future<void> fetchTickets({
-    bool loadMore = false,
-    bool forceRefresh = false,
-  }) async {
-    // Prevent overlapping queries unless forced by Realtime
+  Future<void> fetchTickets({bool loadMore = false, bool forceRefresh = false}) async {
     if (_isLoading && !forceRefresh) return;
-    if (_currentKitchenId == null) return;
+    if (_allowedKitchenIds.isEmpty) return;
 
     _isLoading = true;
     notifyListeners();
@@ -177,7 +154,6 @@ class TicketProvider with ChangeNotifier {
     if (loadMore) _offset += _limit;
 
     try {
-      // 0. Base Query with Relational Joins and Strict Kitchen Isolation
       var query = _supabase
           .from('tickets')
           .select('''
@@ -186,10 +162,16 @@ class TicketProvider with ChangeNotifier {
             raised_by:m_user!raised_by_id(name),
             assigned_to:m_user!assigned_to_id(name),
             ticket_equipments(m_equipment(name))
-          ''')
-          .eq('kitchen_id', _currentKitchenId!);
+          ''');
 
-      // 1. Status Filter
+      // 1. Kitchen Context Filter
+      if (_kitchenFilter == 'ALL') {
+        query = query.inFilter('kitchen_id', _allowedKitchenIds);
+      } else {
+        query = query.eq('kitchen_id', _kitchenFilter);
+      }
+
+      // 2. Status Filter
       if (_statusFilter != 'ALL') {
         if (_statusFilter == 'TO DO') {
           query = query.eq('status', 'RAISED');
@@ -204,47 +186,33 @@ class TicketProvider with ChangeNotifier {
         }
       }
 
-      // 2. Priority Filter
+      // 3. Priority Filter
       if (_priorityFilter != 'ALL') {
         query = query.eq('priority', _priorityFilter);
       }
 
-      // 3. Custom Date Range Filter
+      // 4. Custom Date Range Filter
       if (_startDate != null) {
         query = query.gte('ticket_raised_time', _startDate!.toIso8601String());
       }
       if (_endDate != null) {
-        final endOfDay = DateTime(
-          _endDate!.year,
-          _endDate!.month,
-          _endDate!.day,
-          23,
-          59,
-          59,
-        );
+        final endOfDay = DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
         query = query.lte('ticket_raised_time', endOfDay.toIso8601String());
       }
 
-      // 4. Search Filter
+      // 5. Search Filter
       if (_searchQuery.isNotEmpty) {
-        query = query.or(
-          'title.ilike.%$_searchQuery%,ticket_no.ilike.%$_searchQuery%',
-        );
+        query = query.or('title.ilike.%$_searchQuery%,ticket_no.ilike.%$_searchQuery%');
       }
 
-      // 5. Database Sorting Execution
+      // 6. Execution
       final bool isAscending = _sortBy == 'DATE_ASC';
-      final response = await query
-          .order('ticket_raised_time', ascending: isAscending)
-          .range(_offset, _offset + _limit - 1);
+      final response = await query.order('ticket_raised_time', ascending: isAscending).range(_offset, _offset + _limit - 1);
 
-      if (!loadMore) {
-        _tickets.clear();
-      }
-
+      if (!loadMore) _tickets.clear();
       _tickets.addAll(List<Map<String, dynamic>>.from(response));
 
-      // 6. Local Sorting Override for Priority
+      // 7. Local Sorting Override
       if (_sortBy == 'PRIORITY_DESC') {
         _tickets.sort((a, b) {
           const pWeights = {'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1};
