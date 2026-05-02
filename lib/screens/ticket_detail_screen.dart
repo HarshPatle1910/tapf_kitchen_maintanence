@@ -29,9 +29,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   final _causeController = TextEditingController();
   final _areaSearchController = TextEditingController();
   final _equipSearchController = TextEditingController();
+  final _workerSearchController = TextEditingController();
 
   final FocusNode _areaFocusNode = FocusNode();
   final FocusNode _equipFocusNode = FocusNode();
+  final FocusNode _workerFocusNode = FocusNode();
 
   // States
   String? _selectedAreaId;
@@ -66,7 +68,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       _titleController.text = widget.ticket!['title'] ?? '';
       _causeController.text = widget.ticket!['cause_of_issue'] ?? '';
       _priority = widget.ticket!['priority'] ?? 'MEDIUM';
-      _selectedAreaId = widget.ticket!['area_id']?.toString(); // Make sure it's a string
+      _selectedAreaId = widget.ticket!['area_id']?.toString();
       _selectedWorker = widget.ticket!['assigned_to_id']?.toString();
 
       _fetchMedia();
@@ -81,8 +83,10 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     _causeController.dispose();
     _areaSearchController.dispose();
     _equipSearchController.dispose();
+    _workerSearchController.dispose();
     _areaFocusNode.dispose();
     _equipFocusNode.dispose();
+    _workerFocusNode.dispose();
     super.dispose();
   }
 
@@ -132,7 +136,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     try {
       final areasData = await _supabase.from('m_area').select().eq('status', true);
       final equipsData = await _supabase.from('m_equipment').select().eq('status', true);
-      final staffData = await _supabase.from('m_user').select().eq('status', true);
+
+      final staffData = await _supabase
+          .from('m_user')
+          .select('*, user_kitchens(kitchen_id)')
+          .eq('status', true);
 
       if (mounted) {
         setState(() {
@@ -147,19 +155,23 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           }
 
           _workers = List<Map<String, dynamic>>.from(staffData);
+          for (var w in _workers) {
+            w['display_name'] = w['name'];
+          }
 
           if (isEditing && _selectedWorker != null) {
-            bool workerExistsInList = _workers.any((w) => w['id'].toString() == _selectedWorker);
-            if (!workerExistsInList) {
-              _workers.add({
-                'id': _selectedWorker,
-                'name': widget.ticket!['assigned_to']?['name'] ?? 'Inactive Worker',
-              });
+            final worker = _workers.firstWhere(
+                    (w) => w['id'].toString() == _selectedWorker,
+                orElse: () => <String, dynamic>{}
+            );
+            if (worker.isNotEmpty) {
+              _workerSearchController.text = worker['display_name'];
+            } else {
+              _workerSearchController.text = widget.ticket!['assigned_to']?['name'] ?? 'Inactive Worker';
             }
           }
 
           if (isEditing && _selectedAreaId != null) {
-            // FIX: Explicitly type the orElse return to prevent generic map crashing
             final area = _allAreas.firstWhere(
                     (a) => a['id'].toString() == _selectedAreaId,
                 orElse: () => <String, dynamic>{}
@@ -282,14 +294,17 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     final bool readOnlyFields = isTicketClosed || (isEditing && !isAdmin);
     final showCameraBox = (!isEditing || isCompleting) && !isTicketClosed;
 
-    // FIX: Replaced firstWhere with indexWhere to prevent Type Cast Crashes on the Screen
     String activeKitchenName = "Loading Kitchen...";
+    String activeKitchenId = "";
+
     if (!isEditing && authProv.assignedKitchens.isNotEmpty) {
       int activeIndex = authProv.assignedKitchens.indexWhere((k) => k['id'].toString() == ticketProv.kitchenFilter);
       final activeK = activeIndex != -1 ? authProv.assignedKitchens[activeIndex] : authProv.assignedKitchens.first;
       activeKitchenName = activeK['name']?.toString() ?? 'Unknown Kitchen';
+      activeKitchenId = activeK['id']?.toString() ?? "";
     } else if (isEditing) {
       activeKitchenName = widget.ticket?['m_kitchen']?['name']?.toString() ?? 'Unknown Kitchen';
+      activeKitchenId = widget.ticket?['kitchen_id']?.toString() ?? "";
     }
 
     return GestureDetector(
@@ -353,19 +368,26 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                       const SizedBox(height: 12),
 
                       _buildSleekAutocomplete(
-                        hint: "Search Area *",
-                        icon: Icons.place_outlined,
-                        controller: _areaSearchController,
-                        focusNode: _areaFocusNode,
-                        options: _allAreas,
-                        isDisabled: readOnlyFields,
-                        onSelected: (val) {
-                          setState(() {
-                            _selectedAreaId = val['id'].toString();
-                            _selectedEquipments.clear();
-                            _equipSearchController.clear();
-                          });
-                        },
+                          hint: "Search Area *",
+                          icon: Icons.place_outlined,
+                          controller: _areaSearchController,
+                          focusNode: _areaFocusNode,
+                          options: _allAreas,
+                          isDisabled: readOnlyFields,
+                          onSelected: (val) {
+                            setState(() {
+                              _selectedAreaId = val['id'].toString();
+                              _selectedEquipments.clear();
+                              _equipSearchController.clear();
+                            });
+                          },
+                          onCleared: () {
+                            setState(() {
+                              _selectedAreaId = null;
+                              _selectedEquipments.clear();
+                              _equipSearchController.clear();
+                            });
+                          }
                       ),
                       const SizedBox(height: 12),
 
@@ -418,6 +440,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         icon: Icons.title,
                         isReadOnly: readOnlyFields,
                         isRequired: true,
+                        textCapitalization: TextCapitalization.words,
                       ),
                       const SizedBox(height: 12),
 
@@ -428,21 +451,40 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         maxLines: 4,
                         isReadOnly: readOnlyFields,
                         isRequired: false,
+                        textCapitalization: TextCapitalization.sentences,
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 20),
 
+                // ==========================================
+                // FIX: Strictly restricted to Editing + Admin
+                // ==========================================
                 if (isEditing && isAdmin) ...[
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
-                    child: _buildWorkerDropdown(
-                        "Assign Worker",
-                        _workers,
-                        _selectedWorker,
-                        isTicketClosed ? null : (val) => setState(() => _selectedWorker = val)
+                    child: _buildSleekAutocomplete(
+                      hint: "Search & Assign Worker",
+                      icon: Icons.engineering_outlined,
+                      controller: _workerSearchController,
+                      focusNode: _workerFocusNode,
+                      options: _workers.where((w) {
+                        final assignedKitchensList = w['user_kitchens'] as List<dynamic>? ?? [];
+                        return assignedKitchensList.any((uk) => uk['kitchen_id'].toString() == activeKitchenId);
+                      }).toList(),
+                      isDisabled: isTicketClosed,
+                      onSelected: (val) {
+                        setState(() {
+                          _selectedWorker = val['id'].toString();
+                        });
+                      },
+                      onCleared: () {
+                        setState(() {
+                          _selectedWorker = null;
+                        });
+                      },
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -479,11 +521,20 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     );
   }
 
-  Widget _buildTextField({required TextEditingController ctrl, required String label, required IconData icon, bool isReadOnly = false, bool isRequired = false, int maxLines = 1}) {
+  Widget _buildTextField({
+    required TextEditingController ctrl,
+    required String label,
+    required IconData icon,
+    bool isReadOnly = false,
+    bool isRequired = false,
+    int maxLines = 1,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+  }) {
     return TextFormField(
       controller: ctrl,
       readOnly: isReadOnly,
       maxLines: maxLines,
+      textCapitalization: textCapitalization,
       validator: isRequired ? (val) => val == null || val.trim().isEmpty ? 'Required' : null : null,
       style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: isReadOnly ? Colors.grey.shade700 : navy, fontSize: 14),
       decoration: InputDecoration(
@@ -523,46 +574,25 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     );
   }
 
-  Widget _buildWorkerDropdown(String label, List<Map<String, dynamic>> items, String? val, Function(String?)? onChanged) {
-    String? safeVal;
-    if (val != null) {
-      bool exists = items.any((i) => i['id'].toString() == val);
-      safeVal = exists ? val : null;
-    }
-    return DropdownButtonFormField<String>(
-      value: safeVal,
-      isExpanded: true,
-      dropdownColor: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      icon: const Icon(Icons.keyboard_arrow_down, color: navy, size: 20),
-      style: GoogleFonts.inter(color: navy, fontWeight: FontWeight.w600, fontSize: 14),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
-        prefixIcon: const Icon(Icons.engineering, color: Colors.grey, size: 20),
-        filled: true,
-        fillColor: onChanged == null ? Colors.grey.shade100 : Colors.grey.shade50,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: golden, width: 2)),
-      ),
-      items: items.isEmpty ? [const DropdownMenuItem<String>(value: null, child: Text("No workers available"))] : items.map((w) => DropdownMenuItem(value: w['id'].toString(), child: Text(w['name']))).toList(),
-      onChanged: items.isEmpty ? null : onChanged,
-    );
-  }
-
   Widget _buildSleekAutocomplete({
-    required String hint, required IconData icon, required TextEditingController controller,
-    required FocusNode focusNode, required List<Map<String, dynamic>> options,
-    required bool isDisabled, required Function(Map<String, dynamic>) onSelected,
+    required String hint,
+    required IconData icon,
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required List<Map<String, dynamic>> options,
+    required bool isDisabled,
+    required Function(Map<String, dynamic>) onSelected,
+    VoidCallback? onCleared,
   }) {
     return RawAutocomplete<Map<String, dynamic>>(
       textEditingController: controller,
       focusNode: focusNode,
-      optionsBuilder: (val) => val.text.isEmpty
-          ? const Iterable<Map<String, dynamic>>.empty()
-          : options.where((opt) => opt['display_name'].toString().toLowerCase().contains(val.text.toLowerCase())),
+      optionsBuilder: (val) {
+        if (val.text.isEmpty) {
+          return options;
+        }
+        return options.where((opt) => opt['display_name'].toString().toLowerCase().contains(val.text.toLowerCase()));
+      },
       displayStringForOption: (opt) => opt['display_name'].toString(),
       onSelected: (sel) {
         onSelected(sel);
@@ -583,7 +613,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: golden, width: 2)),
-          suffixIcon: ctrl.text.isNotEmpty && !isDisabled ? IconButton(icon: const Icon(Icons.clear, size: 16, color: Colors.grey), onPressed: () => ctrl.clear()) : null,
+          suffixIcon: ctrl.text.isNotEmpty && !isDisabled ? IconButton(
+            icon: const Icon(Icons.clear, size: 16, color: Colors.grey),
+            onPressed: () {
+              ctrl.clear();
+              if (onCleared != null) onCleared();
+            },
+          ) : null,
         ),
       ),
       optionsViewBuilder: (ctx, onSel, opts) => Align(
@@ -753,7 +789,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       final ticketProv = context.read<TicketProvider>();
       final userId = _supabase.auth.currentUser?.id;
 
-      // FIX: Replaced firstWhere with indexWhere to prevent Type Cast Crashes on Submit!
       dynamic exactKitchenId;
 
       if (authProv.assignedKitchens.isNotEmpty) {
@@ -765,14 +800,20 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         exactKitchenId = kitchenResp['id'];
       }
 
-      final newTicket = await _supabase.from('tickets').insert({
+      Map<String, dynamic> insertData = {
         'title': _titleController.text,
         'cause_of_issue': _causeController.text,
         'priority': _priority,
         'area_id': _selectedAreaId,
         'kitchen_id': exactKitchenId,
         'raised_by_id': userId,
-      }).select().single();
+      };
+
+      // ==========================================
+      // FIX: Ensure no worker injection during creation!
+      // ==========================================
+
+      final newTicket = await _supabase.from('tickets').insert(insertData).select().single();
 
       final equipmentInserts = _selectedEquipments.map((eq) => {
         'ticket_id': newTicket['id'],
