@@ -107,22 +107,74 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               Text("Originally Requested: $requestedKitchenNames", style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 12, fontWeight: FontWeight.w500)),
               const SizedBox(height: 24),
 
-              DropdownButtonFormField<String>(
-                value: selectedRole,
-                items: [
-                  DropdownMenuItem(value: 'worker', child: Text("WORKER", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy))),
-                  DropdownMenuItem(value: 'admin', child: Text("ADMIN", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy))),
-                ],
-                onChanged: (v) => setModalState(() => selectedRole = v!),
-                decoration: InputDecoration(labelText: "Assign Role", labelStyle: GoogleFonts.inter(color: Colors.grey.shade500), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+              // ==========================================
+              // FIX: Styled Role Dropdown
+              // ==========================================
+              Text("Assign Role *", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: navy, fontSize: 13)),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    )
+                  ],
+                ),
+                child: DropdownButtonFormField<String>(
+                  value: selectedRole,
+                  isExpanded: true,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded, color: navy),
+                  dropdownColor: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  elevation: 4,
+                  decoration: const InputDecoration(
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    border: InputBorder.none,
+                  ),
+                  items: [
+                    DropdownMenuItem(value: 'worker', child: Text("WORKER", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy))),
+                    DropdownMenuItem(value: 'admin', child: Text("ADMIN", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy))),
+                  ],
+                  onChanged: (v) => setModalState(() => selectedRole = v!),
+                ),
               ),
               const SizedBox(height: 16),
 
-              TextField(
-                controller: TextEditingController(text: selectedDept)..selection = TextSelection.collapsed(offset: selectedDept?.length ?? 0),
-                onChanged: (v) => selectedDept = v,
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy),
-                decoration: InputDecoration(labelText: "Department (e.g. Electrical)", labelStyle: GoogleFonts.inter(color: Colors.grey.shade500), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+              // ==========================================
+              // FIX: Styled Department TextField
+              // ==========================================
+              Text("Department", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: navy, fontSize: 13)),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    )
+                  ],
+                ),
+                child: TextField(
+                  controller: TextEditingController(text: selectedDept)..selection = TextSelection.collapsed(offset: selectedDept?.length ?? 0),
+                  onChanged: (v) => selectedDept = v,
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy),
+                  textCapitalization: TextCapitalization.words,
+                  decoration: InputDecoration(
+                    hintText: "e.g. Electrical",
+                    hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontWeight: FontWeight.w500),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    border: InputBorder.none,
+                  ),
+                ),
               ),
               const SizedBox(height: 24),
 
