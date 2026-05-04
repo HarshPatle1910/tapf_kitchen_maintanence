@@ -39,6 +39,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   String? _selectedAreaId;
   String? _selectedWorker;
   String _priority = 'MEDIUM';
+  String _category = 'In Breakdown Condition'; // NEW: Category State
   bool _isLoading = false;
 
   // Multi-Select Equipment State
@@ -58,7 +59,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   bool get isEditing => widget.ticket != null;
   String get currentStatus => widget.ticket?['status'] ?? 'RAISED';
 
-  bool get isTicketClosed => currentStatus == 'COMPLETED' || currentStatus == 'VERIFIED';
+  bool get isTicketClosed =>
+      currentStatus == 'COMPLETED' || currentStatus == 'VERIFIED';
 
   @override
   void initState() {
@@ -68,6 +70,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       _titleController.text = widget.ticket!['title'] ?? '';
       _causeController.text = widget.ticket!['cause_of_issue'] ?? '';
       _priority = widget.ticket!['priority'] ?? 'MEDIUM';
+      _category =
+          widget.ticket!['category'] ??
+          'In Breakdown Condition'; // NEW: Load Category
       _selectedAreaId = widget.ticket!['area_id']?.toString();
       _selectedWorker = widget.ticket!['assigned_to_id']?.toString();
 
@@ -92,10 +97,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
   String _formatToCamelCase(String text) {
     if (text.trim().isEmpty) return text;
-    return text.split(' ').map((word) {
-      if (word.isEmpty) return word;
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
+    return text
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return word;
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ');
   }
 
   Future<void> _fetchMedia() async {
@@ -134,8 +142,14 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
   Future<void> _fetchDropdownData() async {
     try {
-      final areasData = await _supabase.from('m_area').select().eq('status', true);
-      final equipsData = await _supabase.from('m_equipment').select().eq('status', true);
+      final areasData = await _supabase
+          .from('m_area')
+          .select()
+          .eq('status', true);
+      final equipsData = await _supabase
+          .from('m_equipment')
+          .select()
+          .eq('status', true);
 
       final staffData = await _supabase
           .from('m_user')
@@ -161,20 +175,21 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
           if (isEditing && _selectedWorker != null) {
             final worker = _workers.firstWhere(
-                    (w) => w['id'].toString() == _selectedWorker,
-                orElse: () => <String, dynamic>{}
+              (w) => w['id'].toString() == _selectedWorker,
+              orElse: () => <String, dynamic>{},
             );
             if (worker.isNotEmpty) {
               _workerSearchController.text = worker['display_name'];
             } else {
-              _workerSearchController.text = widget.ticket!['assigned_to']?['name'] ?? 'Inactive Worker';
+              _workerSearchController.text =
+                  widget.ticket!['assigned_to']?['name'] ?? 'Inactive Worker';
             }
           }
 
           if (isEditing && _selectedAreaId != null) {
             final area = _allAreas.firstWhere(
-                    (a) => a['id'].toString() == _selectedAreaId,
-                orElse: () => <String, dynamic>{}
+              (a) => a['id'].toString() == _selectedAreaId,
+              orElse: () => <String, dynamic>{},
             );
             if (area.isNotEmpty) {
               _areaSearchController.text = area['display_name'];
@@ -216,28 +231,64 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10))),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
               const SizedBox(height: 12),
-              Text("Add Photo", style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: navy)),
+              Text(
+                "Add Photo",
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: navy,
+                ),
+              ),
               const SizedBox(height: 12),
               ListTile(
-                leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: navy.withOpacity(0.1), shape: BoxShape.circle), child: const Icon(Icons.camera_alt_rounded, color: navy)),
-                title: Text('Take a Photo (Camera)', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: navy.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.camera_alt_rounded, color: navy),
+                ),
+                title: Text(
+                  'Take a Photo (Camera)',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   _pickImages(fromCamera: true);
                 },
               ),
               ListTile(
-                leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: navy.withOpacity(0.1), shape: BoxShape.circle), child: const Icon(Icons.photo_library_rounded, color: navy)),
-                title: Text('Choose from Gallery', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: navy.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.photo_library_rounded, color: navy),
+                ),
+                title: Text(
+                  'Choose from Gallery',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   _pickImages(fromCamera: false);
@@ -255,7 +306,10 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     List<XFile> pickedFiles = [];
 
     if (fromCamera) {
-      final image = await picker.pickImage(source: ImageSource.camera, imageQuality: 70);
+      final image = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 70,
+      );
       if (image != null) pickedFiles.add(image);
     } else {
       final images = await picker.pickMultiImage(imageQuality: 70);
@@ -278,7 +332,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
     if (filesDropped && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Some images skipped (exceeded 5MB limit).', style: GoogleFonts.inter()), backgroundColor: Colors.orange),
+        SnackBar(
+          content: Text(
+            'Some images skipped (exceeded 5MB limit).',
+            style: GoogleFonts.inter(),
+          ),
+          backgroundColor: Colors.orange,
+        ),
       );
     }
     setState(() => _selectedImages.addAll(validImages));
@@ -289,7 +349,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     final authProv = context.watch<AuthProvider>();
     final ticketProv = context.watch<TicketProvider>();
     final isAdmin = (authProv.activeRole == 'admin');
-    final isCompleting = isEditing && !isAdmin && currentStatus == 'IN_PROGRESS';
+    final isCompleting =
+        isEditing && !isAdmin && currentStatus == 'IN_PROGRESS';
 
     final bool readOnlyFields = isTicketClosed || (isEditing && !isAdmin);
     final showCameraBox = (!isEditing || isCompleting) && !isTicketClosed;
@@ -298,12 +359,17 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     String activeKitchenId = "";
 
     if (!isEditing && authProv.assignedKitchens.isNotEmpty) {
-      int activeIndex = authProv.assignedKitchens.indexWhere((k) => k['id'].toString() == ticketProv.kitchenFilter);
-      final activeK = activeIndex != -1 ? authProv.assignedKitchens[activeIndex] : authProv.assignedKitchens.first;
+      int activeIndex = authProv.assignedKitchens.indexWhere(
+        (k) => k['id'].toString() == ticketProv.kitchenFilter,
+      );
+      final activeK = activeIndex != -1
+          ? authProv.assignedKitchens[activeIndex]
+          : authProv.assignedKitchens.first;
       activeKitchenName = activeK['name']?.toString() ?? 'Unknown Kitchen';
       activeKitchenId = activeK['id']?.toString() ?? "";
     } else if (isEditing) {
-      activeKitchenName = widget.ticket?['m_kitchen']?['name']?.toString() ?? 'Unknown Kitchen';
+      activeKitchenName =
+          widget.ticket?['m_kitchen']?['name']?.toString() ?? 'Unknown Kitchen';
       activeKitchenId = widget.ticket?['kitchen_id']?.toString() ?? "";
     }
 
@@ -316,8 +382,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           backgroundColor: Colors.white,
           foregroundColor: navy,
           title: Text(
-            isEditing ? (widget.ticket!['ticket_no'] ?? 'Ticket Details') : "Raise New Issue",
-            style: GoogleFonts.inter(fontWeight: FontWeight.w800, letterSpacing: -0.5),
+            isEditing
+                ? (widget.ticket!['ticket_no'] ?? 'Ticket Details')
+                : "Raise New Issue",
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
           ),
         ),
         body: SingleChildScrollView(
@@ -333,7 +404,10 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 ],
 
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
@@ -357,8 +431,14 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                           if (showCameraBox) ...[
                             if (isEditing) const Divider(height: 32),
                             Text(
-                              isCompleting ? "Upload Completion Photos *" : "Add Issue Photos",
-                              style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.grey.shade700, fontSize: 13),
+                              isCompleting
+                                  ? "Upload Completion Photos *"
+                                  : "Add Issue Photos",
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade700,
+                                fontSize: 13,
+                              ),
                             ),
                             const SizedBox(height: 12),
                             _buildImageUploader(isCompleting),
@@ -368,39 +448,48 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                       const SizedBox(height: 12),
 
                       _buildSleekAutocomplete(
-                          hint: "Search Area *",
-                          icon: Icons.place_outlined,
-                          controller: _areaSearchController,
-                          focusNode: _areaFocusNode,
-                          options: _allAreas,
-                          isDisabled: readOnlyFields,
-                          onSelected: (val) {
-                            setState(() {
-                              _selectedAreaId = val['id'].toString();
-                              _selectedEquipments.clear();
-                              _equipSearchController.clear();
-                            });
-                          },
-                          onCleared: () {
-                            setState(() {
-                              _selectedAreaId = null;
-                              _selectedEquipments.clear();
-                              _equipSearchController.clear();
-                            });
-                          }
+                        hint: "Search Area *",
+                        icon: Icons.place_outlined,
+                        controller: _areaSearchController,
+                        focusNode: _areaFocusNode,
+                        options: _allAreas,
+                        isDisabled: readOnlyFields,
+                        onSelected: (val) {
+                          setState(() {
+                            _selectedAreaId = val['id'].toString();
+                            _selectedEquipments.clear();
+                            _equipSearchController.clear();
+                          });
+                        },
+                        onCleared: () {
+                          setState(() {
+                            _selectedAreaId = null;
+                            _selectedEquipments.clear();
+                            _equipSearchController.clear();
+                          });
+                        },
                       ),
                       const SizedBox(height: 12),
 
                       _buildSleekAutocomplete(
-                        hint: _selectedAreaId == null ? "Select an Area first" : "Search Equipment *",
+                        hint: _selectedAreaId == null
+                            ? "Select an Area first"
+                            : "Search Equipment *",
                         icon: Icons.precision_manufacturing_outlined,
                         controller: _equipSearchController,
                         focusNode: _equipFocusNode,
-                        options: _allEquipment.where((e) => e['area_id']?.toString() == _selectedAreaId).toList(),
+                        options: _allEquipment
+                            .where(
+                              (e) =>
+                                  e['area_id']?.toString() == _selectedAreaId,
+                            )
+                            .toList(),
                         isDisabled: readOnlyFields || _selectedAreaId == null,
                         onSelected: (val) {
                           setState(() {
-                            if (!_selectedEquipments.any((e) => e['id'] == val['id'])) {
+                            if (!_selectedEquipments.any(
+                              (e) => e['id'] == val['id'],
+                            )) {
                               _selectedEquipments.add(val);
                             }
                             _equipSearchController.clear();
@@ -413,15 +502,33 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: _selectedEquipments.map((eq) => Chip(
-                            backgroundColor: navy.withOpacity(0.05),
-                            side: const BorderSide(color: navy),
-                            label: Text(eq['name'], style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: navy)),
-                            deleteIcon: const Icon(Icons.close, size: 16),
-                            onDeleted: readOnlyFields ? null : () {
-                              setState(() => _selectedEquipments.removeWhere((e) => e['id'] == eq['id']));
-                            },
-                          )).toList(),
+                          children: _selectedEquipments
+                              .map(
+                                (eq) => Chip(
+                                  backgroundColor: navy.withOpacity(0.05),
+                                  side: const BorderSide(color: navy),
+                                  label: Text(
+                                    eq['name'],
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: navy,
+                                    ),
+                                  ),
+                                  deleteIcon: const Icon(Icons.close, size: 16),
+                                  onDeleted: readOnlyFields
+                                      ? null
+                                      : () {
+                                          setState(
+                                            () =>
+                                                _selectedEquipments.removeWhere(
+                                                  (e) => e['id'] == eq['id'],
+                                                ),
+                                          );
+                                        },
+                                ),
+                              )
+                              .toList(),
                         ),
                       ],
                       const SizedBox(height: 12),
@@ -430,7 +537,26 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         "Priority *",
                         ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
                         _priority,
-                        readOnlyFields ? null : (val) => setState(() => _priority = val!),
+                        readOnlyFields
+                            ? null
+                            : (val) => setState(() => _priority = val!),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // ==========================================
+                      // NEW: Category Dropdown added
+                      // ==========================================
+                      _buildDropdown(
+                        "Category *",
+                        [
+                          'In Running Condition',
+                          'In Breakdown Condition',
+                          'Running at Risk',
+                        ],
+                        _category,
+                        readOnlyFields
+                            ? null
+                            : (val) => setState(() => _category = val!),
                       ),
                       const SizedBox(height: 12),
 
@@ -458,21 +584,26 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // ==========================================
-                // FIX: Strictly restricted to Editing + Admin
-                // ==========================================
                 if (isEditing && isAdmin) ...[
                   Container(
                     padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
                     child: _buildSleekAutocomplete(
                       hint: "Search & Assign Worker",
                       icon: Icons.engineering_outlined,
                       controller: _workerSearchController,
                       focusNode: _workerFocusNode,
                       options: _workers.where((w) {
-                        final assignedKitchensList = w['user_kitchens'] as List<dynamic>? ?? [];
-                        return assignedKitchensList.any((uk) => uk['kitchen_id'].toString() == activeKitchenId);
+                        final assignedKitchensList =
+                            w['user_kitchens'] as List<dynamic>? ?? [];
+                        return assignedKitchensList.any(
+                          (uk) =>
+                              uk['kitchen_id'].toString() == activeKitchenId,
+                        );
                       }).toList(),
                       isDisabled: isTicketClosed,
                       onSelected: (val) {
@@ -487,13 +618,15 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                       },
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 84),
                 ],
               ],
             ),
           ),
         ),
-        bottomNavigationBar: isEditing ? _buildContextualActionButton(isAdmin) : _buildSubmitNewButton(),
+        bottomNavigationBar: isEditing
+            ? _buildContextualActionButton(isAdmin)
+            : _buildSubmitNewButton(),
       ),
     );
   }
@@ -502,7 +635,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   Widget _buildStatusBanner() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.orange.shade300, width: 2)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.orange.shade300, width: 2),
+      ),
       child: Row(
         children: [
           const Icon(Icons.info_rounded, color: Colors.orange, size: 28),
@@ -511,8 +648,22 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Current Status", style: GoogleFonts.inter(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
-                Text(currentStatus, style: GoogleFonts.inter(fontWeight: FontWeight.w900, fontSize: 18, color: Colors.orange.shade700)),
+                Text(
+                  "Current Status",
+                  style: GoogleFonts.inter(
+                    color: Colors.grey,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  currentStatus,
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
+                    color: Colors.orange.shade700,
+                  ),
+                ),
               ],
             ),
           ),
@@ -535,41 +686,93 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       readOnly: isReadOnly,
       maxLines: maxLines,
       textCapitalization: textCapitalization,
-      validator: isRequired ? (val) => val == null || val.trim().isEmpty ? 'Required' : null : null,
-      style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: isReadOnly ? Colors.grey.shade700 : navy, fontSize: 14),
+      validator: isRequired
+          ? (val) => val == null || val.trim().isEmpty ? 'Required' : null
+          : null,
+      style: GoogleFonts.inter(
+        fontWeight: FontWeight.w600,
+        color: isReadOnly ? Colors.grey.shade700 : navy,
+        fontSize: 14,
+      ),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
-        prefixIcon: Padding(padding: EdgeInsets.only(bottom: maxLines > 1 ? 48.0 : 0), child: Icon(icon, color: Colors.grey.shade400, size: 20)),
+        labelStyle: GoogleFonts.inter(
+          color: Colors.grey.shade500,
+          fontSize: 13,
+        ),
+        prefixIcon: Padding(
+          padding: EdgeInsets.only(bottom: maxLines > 1 ? 48.0 : 0),
+          child: Icon(icon, color: Colors.grey.shade400, size: 20),
+        ),
         filled: true,
         fillColor: isReadOnly ? Colors.grey.shade100 : Colors.grey.shade50,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: golden, width: 2)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: golden, width: 2),
+        ),
       ),
     );
   }
 
-  Widget _buildDropdown(String label, List<String> items, String? val, Function(String?)? onChanged) {
+  Widget _buildDropdown(
+    String label,
+    List<String> items,
+    String? val,
+    Function(String?)? onChanged,
+  ) {
     return DropdownButtonFormField<String>(
       value: val,
       isExpanded: true,
       dropdownColor: Colors.white,
       borderRadius: BorderRadius.circular(12),
       icon: const Icon(Icons.keyboard_arrow_down, color: navy, size: 20),
-      style: GoogleFonts.inter(color: navy, fontWeight: FontWeight.w600, fontSize: 14),
+      style: GoogleFonts.inter(
+        color: navy,
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
+      ),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
+        labelStyle: GoogleFonts.inter(
+          color: Colors.grey.shade500,
+          fontSize: 13,
+        ),
         filled: true,
-        fillColor: onChanged == null ? Colors.grey.shade100 : Colors.grey.shade50,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: golden, width: 2)),
+        fillColor: onChanged == null
+            ? Colors.grey.shade100
+            : Colors.grey.shade50,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: golden, width: 2),
+        ),
       ),
-      items: items.map((i) => DropdownMenuItem(value: i, child: Text(i))).toList(),
+      items: items
+          .map((i) => DropdownMenuItem(value: i, child: Text(i)))
+          .toList(),
       onChanged: onChanged,
     );
   }
@@ -591,7 +794,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         if (val.text.isEmpty) {
           return options;
         }
-        return options.where((opt) => opt['display_name'].toString().toLowerCase().contains(val.text.toLowerCase()));
+        return options.where(
+          (opt) => opt['display_name'].toString().toLowerCase().contains(
+            val.text.toLowerCase(),
+          ),
+        );
       },
       displayStringForOption: (opt) => opt['display_name'].toString(),
       onSelected: (sel) {
@@ -602,24 +809,45 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         controller: ctrl,
         focusNode: fNode,
         enabled: !isDisabled,
-        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: isDisabled ? Colors.grey.shade700 : navy),
+        style: GoogleFonts.inter(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: isDisabled ? Colors.grey.shade700 : navy,
+        ),
         decoration: InputDecoration(
           labelText: hint,
-          labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
+          labelStyle: GoogleFonts.inter(
+            color: Colors.grey.shade500,
+            fontSize: 13,
+          ),
           prefixIcon: Icon(icon, color: Colors.grey.shade400, size: 20),
           filled: true,
           fillColor: isDisabled ? Colors.grey.shade100 : Colors.grey.shade50,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: golden, width: 2)),
-          suffixIcon: ctrl.text.isNotEmpty && !isDisabled ? IconButton(
-            icon: const Icon(Icons.clear, size: 16, color: Colors.grey),
-            onPressed: () {
-              ctrl.clear();
-              if (onCleared != null) onCleared();
-            },
-          ) : null,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: golden, width: 2),
+          ),
+          suffixIcon: ctrl.text.isNotEmpty && !isDisabled
+              ? IconButton(
+                  icon: const Icon(Icons.clear, size: 16, color: Colors.grey),
+                  onPressed: () {
+                    ctrl.clear();
+                    if (onCleared != null) onCleared();
+                  },
+                )
+              : null,
         ),
       ),
       optionsViewBuilder: (ctx, onSel, opts) => Align(
@@ -628,16 +856,30 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           elevation: 4.0,
           borderRadius: BorderRadius.circular(10),
           child: Container(
-            constraints: BoxConstraints(maxHeight: 200, maxWidth: MediaQuery.of(context).size.width - 72),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
+            constraints: BoxConstraints(
+              maxHeight: 200,
+              maxWidth: MediaQuery.of(context).size.width - 72,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: ListView.separated(
               padding: EdgeInsets.zero,
               shrinkWrap: true,
               itemCount: opts.length,
-              separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
+              separatorBuilder: (_, __) =>
+                  Divider(height: 1, color: Colors.grey.shade200),
               itemBuilder: (ctx, idx) => ListTile(
                 dense: true,
-                title: Text(opts.elementAt(idx)['display_name'], style: GoogleFonts.inter(fontSize: 13, color: navy, fontWeight: FontWeight.w500)),
+                title: Text(
+                  opts.elementAt(idx)['display_name'],
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: navy,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 onTap: () => onSel(opts.elementAt(idx)),
               ),
             ),
@@ -661,7 +903,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 child: Container(
                   width: 100,
                   margin: const EdgeInsets.only(left: 8),
-                  decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade300)),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
                   child: const Icon(Icons.add_a_photo, color: Colors.grey),
                 ),
               );
@@ -674,16 +920,27 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: kIsWeb
-                        ? Image.network(_selectedImages[index].path, fit: BoxFit.cover)
-                        : Image.file(File(_selectedImages[index].path), fit: BoxFit.cover),
+                        ? Image.network(
+                            _selectedImages[index].path,
+                            fit: BoxFit.cover,
+                          )
+                        : Image.file(
+                            File(_selectedImages[index].path),
+                            fit: BoxFit.cover,
+                          ),
                   ),
                 ),
                 Positioned(
                   top: 4,
                   right: 12,
                   child: GestureDetector(
-                    onTap: () => setState(() => _selectedImages.removeAt(index)),
-                    child: const CircleAvatar(radius: 12, backgroundColor: Colors.red, child: Icon(Icons.close, size: 14, color: Colors.white)),
+                    onTap: () =>
+                        setState(() => _selectedImages.removeAt(index)),
+                    child: const CircleAvatar(
+                      radius: 12,
+                      backgroundColor: Colors.red,
+                      child: Icon(Icons.close, size: 14, color: Colors.white),
+                    ),
                   ),
                 ),
               ],
@@ -701,14 +958,28 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         decoration: BoxDecoration(
           color: Colors.grey.shade50,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isCompleting ? Colors.red.shade300 : Colors.grey.shade300, style: BorderStyle.solid),
+          border: Border.all(
+            color: isCompleting ? Colors.red.shade300 : Colors.grey.shade300,
+            style: BorderStyle.solid,
+          ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_photo_alternate_rounded, size: 40, color: isCompleting ? Colors.red : navy),
+            Icon(
+              Icons.add_photo_alternate_rounded,
+              size: 40,
+              color: isCompleting ? Colors.red : navy,
+            ),
             const SizedBox(height: 8),
-            Text("Tap to add photos\n(Camera or Gallery)", textAlign: TextAlign.center, style: GoogleFonts.inter(color: isCompleting ? Colors.red : Colors.grey.shade600, fontSize: 13)),
+            Text(
+              "Tap to add photos\n(Camera or Gallery)",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                color: isCompleting ? Colors.red : Colors.grey.shade600,
+                fontSize: 13,
+              ),
+            ),
           ],
         ),
       ),
@@ -716,14 +987,60 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   }
 
   Widget _buildMediaGallery() {
-    if (_isLoadingMedia) return const Center(child: Padding(padding: EdgeInsets.all(16.0), child: CircularProgressIndicator(color: golden)));
-    if (_beforeUrls.isEmpty && _afterUrls.isEmpty) return Text("No photos attached yet.", style: GoogleFonts.inter(color: Colors.grey.shade500, fontStyle: FontStyle.italic));
+    if (_isLoadingMedia)
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: CircularProgressIndicator(color: golden),
+        ),
+      );
+    if (_beforeUrls.isEmpty && _afterUrls.isEmpty)
+      return Text(
+        "No photos attached yet.",
+        style: GoogleFonts.inter(
+          color: Colors.grey.shade500,
+          fontStyle: FontStyle.italic,
+        ),
+      );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (_beforeUrls.isNotEmpty) ...[Text("BEFORE (Issue Raised)", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.redAccent, fontSize: 12)), const SizedBox(height: 8), _buildImageRow(_beforeUrls)],
-        if (_beforeUrls.isNotEmpty && _afterUrls.isNotEmpty) ...[const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Icon(Icons.arrow_downward_rounded, size: 28, color: Colors.green)))],
-        if (_afterUrls.isNotEmpty) ...[Text("AFTER (Work Completed)", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 12)), const SizedBox(height: 8), _buildImageRow(_afterUrls)],
+        if (_beforeUrls.isNotEmpty) ...[
+          Text(
+            "BEFORE (Issue Raised)",
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.bold,
+              color: Colors.redAccent,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildImageRow(_beforeUrls),
+        ],
+        if (_beforeUrls.isNotEmpty && _afterUrls.isNotEmpty) ...[
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Icon(
+                Icons.arrow_downward_rounded,
+                size: 28,
+                color: Colors.green,
+              ),
+            ),
+          ),
+        ],
+        if (_afterUrls.isNotEmpty) ...[
+          Text(
+            "AFTER (Work Completed)",
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.bold,
+              color: Colors.green,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildImageRow(_afterUrls),
+        ],
       ],
     );
   }
@@ -739,7 +1056,15 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
             onTap: () => _openImageViewer(context, urls[index]),
             child: Padding(
               padding: const EdgeInsets.only(right: 8.0),
-              child: ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(urls[index], height: 100, width: 100, fit: BoxFit.cover)),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  urls[index],
+                  height: 100,
+                  width: 100,
+                  fit: BoxFit.cover,
+                ),
+              ),
             ),
           );
         },
@@ -748,7 +1073,27 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   }
 
   void _openImageViewer(BuildContext context, String imageUrl) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(backgroundColor: Colors.black, appBar: AppBar(backgroundColor: Colors.black, iconTheme: const IconThemeData(color: Colors.white), elevation: 0), body: Center(child: InteractiveViewer(panEnabled: true, minScale: 0.5, maxScale: 4.0, child: Image.network(imageUrl))))));
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            iconTheme: const IconThemeData(color: Colors.white),
+            elevation: 0,
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              panEnabled: true,
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Image.network(imageUrl),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   // --- SUBMIT LOGIC ---
@@ -757,12 +1102,15 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
     for (var img in _selectedImages) {
       final fileExt = img.name.contains('.') ? img.name.split('.').last : 'jpg';
-      final fileName = '${stage.toLowerCase()}_${DateTime.now().microsecondsSinceEpoch}.$fileExt';
+      final fileName =
+          '${stage.toLowerCase()}_${DateTime.now().microsecondsSinceEpoch}.$fileExt';
       final storagePath = '$ticketId/$fileName';
 
       final imageBytes = await img.readAsBytes();
 
-      await _supabase.storage.from('ticket-media').uploadBinary(storagePath, imageBytes);
+      await _supabase.storage
+          .from('ticket-media')
+          .uploadBinary(storagePath, imageBytes);
 
       await _supabase.from('ticket_media').insert({
         'ticket_id': ticketId,
@@ -778,8 +1126,18 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
     _titleController.text = _formatToCamelCase(_titleController.text);
 
-    if (!_formKey.currentState!.validate() || _selectedAreaId == null || _selectedEquipments.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select an Area and at least one Equipment.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
+    if (!_formKey.currentState!.validate() ||
+        _selectedAreaId == null ||
+        _selectedEquipments.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please select an Area and at least one Equipment.',
+            style: GoogleFonts.inter(),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
     setState(() => _isLoading = true);
@@ -792,11 +1150,19 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       dynamic exactKitchenId;
 
       if (authProv.assignedKitchens.isNotEmpty) {
-        int index = authProv.assignedKitchens.indexWhere((k) => k['id'].toString() == ticketProv.kitchenFilter);
-        final activeKitchen = index != -1 ? authProv.assignedKitchens[index] : authProv.assignedKitchens.first;
+        int index = authProv.assignedKitchens.indexWhere(
+          (k) => k['id'].toString() == ticketProv.kitchenFilter,
+        );
+        final activeKitchen = index != -1
+            ? authProv.assignedKitchens[index]
+            : authProv.assignedKitchens.first;
         exactKitchenId = activeKitchen['id'];
       } else {
-        final kitchenResp = await _supabase.from('m_kitchen').select('id').limit(1).single();
+        final kitchenResp = await _supabase
+            .from('m_kitchen')
+            .select('id')
+            .limit(1)
+            .single();
         exactKitchenId = kitchenResp['id'];
       }
 
@@ -804,33 +1170,48 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         'title': _titleController.text,
         'cause_of_issue': _causeController.text,
         'priority': _priority,
+        'category': _category, // NEW: Include category on Insert
         'area_id': _selectedAreaId,
         'kitchen_id': exactKitchenId,
         'raised_by_id': userId,
       };
 
-      // ==========================================
-      // FIX: Ensure no worker injection during creation!
-      // ==========================================
+      final newTicket = await _supabase
+          .from('tickets')
+          .insert(insertData)
+          .select()
+          .single();
 
-      final newTicket = await _supabase.from('tickets').insert(insertData).select().single();
-
-      final equipmentInserts = _selectedEquipments.map((eq) => {
-        'ticket_id': newTicket['id'],
-        'equipment_id': eq['id']
-      }).toList();
+      final equipmentInserts = _selectedEquipments
+          .map((eq) => {'ticket_id': newTicket['id'], 'equipment_id': eq['id']})
+          .toList();
 
       await _supabase.from('ticket_equipments').insert(equipmentInserts);
 
-      if (_selectedImages.isNotEmpty) await _uploadImages(newTicket['id'], 'RAISED');
+      if (_selectedImages.isNotEmpty)
+        await _uploadImages(newTicket['id'], 'RAISED');
 
       if (mounted) {
         context.read<TicketProvider>().refreshTickets();
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ticket Raised successfully!', style: GoogleFonts.inter()), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Ticket Raised successfully!',
+              style: GoogleFonts.inter(),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e', style: GoogleFonts.inter()), backgroundColor: Colors.red));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e', style: GoogleFonts.inter()),
+            backgroundColor: Colors.red,
+          ),
+        );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -842,19 +1223,30 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     _titleController.text = _formatToCamelCase(_titleController.text);
 
     if (nextStatus == 'COMPLETED' && _selectedImages.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please upload Completion Photos.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please upload Completion Photos.',
+            style: GoogleFonts.inter(),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
     setState(() => _isLoading = true);
     try {
-      final updates = <String, dynamic>{'updated_at': DateTime.now().toIso8601String()};
+      final updates = <String, dynamic>{
+        'updated_at': DateTime.now().toIso8601String(),
+      };
       if (nextStatus != null) updates['status'] = nextStatus;
 
       if (isAdmin && !isTicketClosed) {
         updates['title'] = _titleController.text;
         updates['cause_of_issue'] = _causeController.text;
         updates['priority'] = _priority;
+        updates['category'] = _category; // NEW: Include category on Update
         updates['area_id'] = _selectedAreaId;
 
         if (_selectedWorker != null) {
@@ -863,16 +1255,26 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         }
 
         if (_selectedEquipments.isNotEmpty) {
-          await _supabase.from('ticket_equipments').delete().eq('ticket_id', widget.ticket!['id']);
-          final newMappings = _selectedEquipments.map((eq) => {
-            'ticket_id': widget.ticket!['id'],
-            'equipment_id': eq['id'],
-          }).toList();
+          await _supabase
+              .from('ticket_equipments')
+              .delete()
+              .eq('ticket_id', widget.ticket!['id']);
+          final newMappings = _selectedEquipments
+              .map(
+                (eq) => {
+                  'ticket_id': widget.ticket!['id'],
+                  'equipment_id': eq['id'],
+                },
+              )
+              .toList();
           await _supabase.from('ticket_equipments').insert(newMappings);
         }
       }
 
-      await _supabase.from('tickets').update(updates).eq('id', widget.ticket!['id']);
+      await _supabase
+          .from('tickets')
+          .update(updates)
+          .eq('id', widget.ticket!['id']);
 
       if (nextStatus == 'COMPLETED' && _selectedImages.isNotEmpty) {
         await _uploadImages(widget.ticket!['id'], 'COMPLETED');
@@ -883,7 +1285,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e', style: GoogleFonts.inter()), backgroundColor: Colors.red));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e', style: GoogleFonts.inter()),
+            backgroundColor: Colors.red,
+          ),
+        );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -923,9 +1331,27 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         child: SizedBox(
           height: 54,
           child: ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: navy, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
-            onPressed: _isLoading ? null : () => _updateTicketStatus(nextStatus, isAdmin),
-            child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(buttonText, style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.5)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: navy,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 0,
+            ),
+            onPressed: _isLoading
+                ? null
+                : () => _updateTicketStatus(nextStatus, isAdmin),
+            child: _isLoading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : Text(
+                    buttonText,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
           ),
         ),
       ),
@@ -939,9 +1365,25 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         child: SizedBox(
           height: 54,
           child: ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: navy, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: navy,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 0,
+            ),
             onPressed: _isLoading ? null : _submitNewTicket,
-            child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text("SUBMIT TICKET", style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.5)),
+            child: _isLoading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : Text(
+                    "SUBMIT TICKET",
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
           ),
         ),
       ),
