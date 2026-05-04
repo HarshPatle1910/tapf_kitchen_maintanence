@@ -12,7 +12,12 @@ class TicketProvider with ChangeNotifier {
   String _searchQuery = '';
   String _statusFilter = 'ALL';
   String _priorityFilter = 'ALL';
-  String _kitchenFilter = 'ALL'; // FIX: New Kitchen Filter state
+  String _kitchenFilter = 'ALL';
+
+  // NEW FILTERS
+  String _zoneFilter = 'ALL';
+  bool _assignedToMeFilter = false;
+
   DateTime? _startDate;
   DateTime? _endDate;
   String _sortBy = 'DATE_DESC';
@@ -24,7 +29,6 @@ class TicketProvider with ChangeNotifier {
   int _completed = 0;
   int _verified = 0;
 
-  // Allowed kitchen contexts
   List<String> _allowedKitchenIds = [];
   RealtimeChannel? _ticketChannel;
 
@@ -34,6 +38,11 @@ class TicketProvider with ChangeNotifier {
   String get statusFilter => _statusFilter;
   String get priorityFilter => _priorityFilter;
   String get kitchenFilter => _kitchenFilter;
+
+  // NEW GETTERS
+  String get zoneFilter => _zoneFilter;
+  bool get assignedToMeFilter => _assignedToMeFilter;
+
   DateTime? get startDate => _startDate;
   DateTime? get endDate => _endDate;
   String get sortBy => _sortBy;
@@ -44,16 +53,11 @@ class TicketProvider with ChangeNotifier {
   int get completed => _completed;
   int get verified => _verified;
 
-  // FIX: Initialize with a LIST of allowed kitchens instead of one
   Future<void> initialize(List<String> kitchenIds) async {
     if (kitchenIds.isEmpty) return;
-
-    // Prevent re-initializing if nothing changed
-    if (_allowedKitchenIds.length == kitchenIds.length &&
-        _allowedKitchenIds.every((id) => kitchenIds.contains(id))) {
+    if (_allowedKitchenIds.length == kitchenIds.length && _allowedKitchenIds.every((id) => kitchenIds.contains(id))) {
       return;
     }
-
     _allowedKitchenIds = kitchenIds;
     _initRealtime();
     refreshTickets();
@@ -86,10 +90,13 @@ class TicketProvider with ChangeNotifier {
     refreshTickets();
   }
 
+  // ADDED zoneId and assignedToMe to the setter
   void setFilters({
     String? status,
     String? priority,
     String? kitchenId,
+    String? zoneId,
+    bool? assignedToMe,
     DateTime? start,
     DateTime? end,
     String? sort,
@@ -97,11 +104,13 @@ class TicketProvider with ChangeNotifier {
     if (status != null) _statusFilter = status;
     if (priority != null) _priorityFilter = priority;
     if (kitchenId != null) _kitchenFilter = kitchenId;
+    if (zoneId != null) _zoneFilter = zoneId;
+    if (assignedToMe != null) _assignedToMeFilter = assignedToMe;
     if (start != null) _startDate = start;
     if (end != null) _endDate = end;
     if (sort != null) _sortBy = sort;
 
-    if (start == null && end == null && sort == null && status == null && priority == null && kitchenId == null) {
+    if (start == null && end == null && sort == null && status == null && priority == null && kitchenId == null && zoneId == null && assignedToMe == null) {
       _startDate = null;
       _endDate = null;
     }
@@ -119,25 +128,27 @@ class TicketProvider with ChangeNotifier {
 
   Future<void> _fetchGlobalStats() async {
     if (_allowedKitchenIds.isEmpty) return;
-
     try {
       var query = _supabase.from('tickets').select('status');
 
-      // Filter by ALL allowed kitchens or specific selected kitchen
       if (_kitchenFilter == 'ALL') {
         query = query.inFilter('kitchen_id', _allowedKitchenIds);
       } else {
         query = query.eq('kitchen_id', _kitchenFilter);
       }
 
-      final statsData = await query;
+      // Filter stats by 'Assigned to Me' if active
+      if (_assignedToMeFilter) {
+        final userId = _supabase.auth.currentUser?.id;
+        if (userId != null) query = query.eq('assigned_to_id', userId);
+      }
 
+      final statsData = await query;
       _total = statsData.length;
       _toDo = statsData.where((t) => t['status'] == 'RAISED').length;
       _inProgress = statsData.where((t) => t['status'] == 'IN_PROGRESS' || t['status'] == 'ASSIGNED').length;
       _completed = statsData.where((t) => t['status'] == 'COMPLETED').length;
       _verified = statsData.where((t) => t['status'] == 'VERIFIED').length;
-
       notifyListeners();
     } catch (e) {
       debugPrint("Error fetching stats: $e");
@@ -154,9 +165,7 @@ class TicketProvider with ChangeNotifier {
     if (loadMore) _offset += _limit;
 
     try {
-      var query = _supabase
-          .from('tickets')
-          .select('''
+      var query = _supabase.from('tickets').select('''
             *, 
             m_kitchen(name),
             raised_by:m_user!raised_by_id(name),
@@ -171,7 +180,27 @@ class TicketProvider with ChangeNotifier {
         query = query.eq('kitchen_id', _kitchenFilter);
       }
 
-      // 2. Status Filter
+      // 2. NEW: Zone Filter (Tickets map to areas, areas map to zones)
+      if (_zoneFilter != 'ALL') {
+        final areas = await _supabase.from('m_area').select('id').eq('zone_id', _zoneFilter);
+        final List<String> areaIds = areas.map((a) => a['id'].toString()).toList();
+
+        if (areaIds.isEmpty) {
+          _tickets.clear();
+          _isLoading = false;
+          notifyListeners();
+          return; // Stop early if the zone has no areas (no tickets)
+        }
+        query = query.inFilter('area_id', areaIds);
+      }
+
+      // 3. NEW: Allocated to Me Filter
+      if (_assignedToMeFilter) {
+        final userId = _supabase.auth.currentUser?.id;
+        if (userId != null) query = query.eq('assigned_to_id', userId);
+      }
+
+      // 4. Status Filter
       if (_statusFilter != 'ALL') {
         if (_statusFilter == 'TO DO') {
           query = query.eq('status', 'RAISED');
@@ -186,12 +215,12 @@ class TicketProvider with ChangeNotifier {
         }
       }
 
-      // 3. Priority Filter
+      // 5. Priority Filter
       if (_priorityFilter != 'ALL') {
         query = query.eq('priority', _priorityFilter);
       }
 
-      // 4. Custom Date Range Filter
+      // 6. Custom Date Range Filter
       if (_startDate != null) {
         query = query.gte('ticket_raised_time', _startDate!.toIso8601String());
       }
@@ -200,19 +229,19 @@ class TicketProvider with ChangeNotifier {
         query = query.lte('ticket_raised_time', endOfDay.toIso8601String());
       }
 
-      // 5. Search Filter
+      // 7. Search Filter
       if (_searchQuery.isNotEmpty) {
         query = query.or('title.ilike.%$_searchQuery%,ticket_no.ilike.%$_searchQuery%');
       }
 
-      // 6. Execution
+      // Execution
       final bool isAscending = _sortBy == 'DATE_ASC';
       final response = await query.order('ticket_raised_time', ascending: isAscending).range(_offset, _offset + _limit - 1);
 
       if (!loadMore) _tickets.clear();
       _tickets.addAll(List<Map<String, dynamic>>.from(response));
 
-      // 7. Local Sorting Override
+      // Local Sorting Override
       if (_sortBy == 'PRIORITY_DESC') {
         _tickets.sort((a, b) {
           const pWeights = {'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1};
