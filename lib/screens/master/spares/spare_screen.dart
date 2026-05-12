@@ -538,7 +538,7 @@ class _SparesMasterScreenState extends State<SparesMasterScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverAppBar(
-              backgroundColor: background, elevation: 0, floating: true, snap: true, automaticallyImplyLeading: false, toolbarHeight: 0,
+              backgroundColor: background, elevation: 0, floating: true, snap: true, automaticallyImplyLeading: false, toolbarHeight: 5,
               bottom: PreferredSize(
                 preferredSize: const Size.fromHeight(160),
                 child: Column(
