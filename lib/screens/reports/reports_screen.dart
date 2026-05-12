@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:kitchen_maintanence/screens/master/equipment_master_screen.dart';
 import 'package:kitchen_maintanence/screens/reports/complaint_report_screen.dart';
 import 'package:kitchen_maintanence/screens/reports/master_equipment_report_screen.dart';
+import 'package:kitchen_maintanence/screens/reports/pm_checklist_screen.dart';
+import 'package:kitchen_maintanence/screens/reports/testing_equipment_screen.dart';
 
 // Import the new dedicated report screen
 import 'breakdown_report_screen.dart';
@@ -94,6 +96,28 @@ class ReportsScreen extends StatelessWidget {
             color: Colors.orange,
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const EquipmentReportScreen()));
+            },
+          ),
+
+          const SizedBox(height: 16),
+          _buildReportCard(
+            title: "Testing Equipment Master",
+            desc: "MT 03 Master List of Testing And Measuring Equipments.",
+            icon: Icons.build_circle_outlined,
+            color: Colors.orange,
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const TestingEquipmentScreen()));
+            },
+          ),
+
+          const SizedBox(height: 16),
+          _buildReportCard(
+            title: "Preventive Maintenance Checklist",
+            desc: "MT 06",
+            icon: Icons.build_circle_outlined,
+            color: Colors.orange,
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const PMChecklistScreen()));
             },
           ),
         ],
