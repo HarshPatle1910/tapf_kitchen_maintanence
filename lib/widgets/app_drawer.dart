@@ -12,6 +12,7 @@ import '../screens/master/zone_screen.dart';
 import '../screens/master/equipment_master_screen.dart';
 import '../screens/master/tools_screen.dart';
 import '../screens/master/user_management.dart';
+import '../screens/reports/reports_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   final AuthProvider authProv;
@@ -107,6 +108,7 @@ class AppDrawer extends StatelessWidget {
                     child: Text("ADMIN CONTROLS", style: GoogleFonts.inter(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
                   ),
                   const SizedBox(height: 8),
+                  _buildNavItem(context, Icons.analytics_outlined, 'Report Center', const ReportsScreen()),
                   _buildNavItem(context, Icons.people_outline, 'User Management', const UserManagementScreen()),
                   _buildNavItem(context, Icons.build_circle_outlined, 'Equipment Registry', const EquipmentMasterScreen()),
                   _buildNavItem(context, Icons.pan_tool, 'Spares', const SparesMasterScreen()),
@@ -115,6 +117,7 @@ class AppDrawer extends StatelessWidget {
                   _buildNavItem(context, Icons.person_pin_circle, 'Vendors', const VendorMasterScreen()),
                   _buildNavItem(context, Icons.directions_boat, 'Zone', const ZoneMasterScreen()),
                   _buildNavItem(context, Icons.kitchen, 'Kitchen', const KitchenMasterScreen()),
+
                 ],
               ],
             ),
