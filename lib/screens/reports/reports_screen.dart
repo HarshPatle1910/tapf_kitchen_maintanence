@@ -5,6 +5,7 @@ import 'package:kitchen_maintanence/screens/reports/complaint_report_screen.dart
 import 'package:kitchen_maintanence/screens/reports/master_equipment_report_screen.dart';
 import 'package:kitchen_maintanence/screens/reports/pm_checklist_screen.dart';
 import 'package:kitchen_maintanence/screens/reports/testing_equipment_screen.dart';
+import 'package:kitchen_maintanence/screens/reports/tools_tackles_screen.dart';
 
 // Import the new dedicated report screen
 import 'breakdown_report_screen.dart';
@@ -118,6 +119,16 @@ class ReportsScreen extends StatelessWidget {
             color: Colors.orange,
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const PMChecklistScreen()));
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildReportCard(
+            title: "Tools and Tackles Record",
+            desc: "MT 08",
+            icon: Icons.build_circle_outlined,
+            color: Colors.orange,
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ToolsTacklesScreen()));
             },
           ),
         ],
