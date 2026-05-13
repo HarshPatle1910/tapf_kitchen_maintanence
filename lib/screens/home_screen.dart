@@ -148,7 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
               SliverAppBar(
                 backgroundColor: Colors.transparent, elevation: 0, floating: true, snap: true, automaticallyImplyLeading: false, toolbarHeight: 0,
                 bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(155),
+                  preferredSize: const Size.fromHeight(160),
                   child: Container(
                     padding: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
