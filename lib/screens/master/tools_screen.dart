@@ -458,7 +458,7 @@ class _ToolsMasterScreenState extends State<ToolsMasterScreen> {
             SliverAppBar(
               backgroundColor: background, elevation: 0, floating: true, snap: true, automaticallyImplyLeading: false, toolbarHeight: 0,
               bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(160),
+                preferredSize: const Size.fromHeight(165),
                 child: Column(
                   children: [
                     Container(

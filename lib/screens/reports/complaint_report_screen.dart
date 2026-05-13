@@ -16,13 +16,14 @@ class ComplaintReportScreen extends StatefulWidget {
 }
 
 class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
-  static const Color navy = Color(0xFF26538D);
-  static const Color golden = Color(0xFFD4AF37);
-  static const Color background = Color(0xFFF8F9FA);
+  // Unified Minimalistic Color Palette
+  static const Color primary = Color(0xFF26538D);
+  static const Color background = Color(0xFFFFFFFF);
+  static const Color surface = Color(0xFFF8FAFC);
 
   String get _pythonApiBaseUrl {
     if (kIsWeb) return 'http://127.0.0.1:8000/api';
-    if (Platform.isAndroid) return 'http://192.168.0.45:8000/api'; // Make sure IP matches your PC
+    if (Platform.isAndroid) return 'http://192.168.0.45:8000/api';
     if (Platform.isIOS) return 'http://127.0.0.1:8000/api';
     return 'http://127.0.0.1:8000/api';
   }
@@ -77,13 +78,14 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
   }
 
   Future<void> _pickDate(bool isStart) async {
+    FocusScope.of(context).unfocus();
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: isStart ? (_startDate ?? DateTime.now()) : (_endDate ?? DateTime.now()),
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
       builder: (context, child) => Theme(
-        data: ThemeData.light().copyWith(colorScheme: const ColorScheme.light(primary: navy)),
+        data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: primary)),
         child: child!,
       ),
     );
@@ -120,7 +122,7 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
 
     showDialog(
       context: context, barrierDismissible: false,
-      builder: (ctx) => const Center(child: CircularProgressIndicator(color: golden)),
+      builder: (ctx) => const Center(child: CircularProgressIndicator(color: primary)),
     );
 
     try {
@@ -129,41 +131,31 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
       if (response.statusCode == 200) {
         File? file;
 
-        // --------------------------------------------------------------------
-        // NEW DIRECTORY LOGIC: Save to Public Downloads Folder
-        // --------------------------------------------------------------------
         try {
           Directory? saveDir;
           if (Platform.isAndroid) {
-            // Standard path to Android Downloads folder
             saveDir = Directory('/storage/emulated/0/Download/Complaint Register');
           } else {
-            // iOS visible documents folder
             final docDir = await getApplicationDocumentsDirectory();
             saveDir = Directory('${docDir.path}/Complaint Register');
           }
 
-          // Create the folder if it doesn't exist
-          if (!await saveDir.exists()) {
-            await saveDir.create(recursive: true);
-          }
+          if (!await saveDir.exists()) await saveDir.create(recursive: true);
 
           file = File('${saveDir.path}/$finalFileName');
           await file.writeAsBytes(response.bodyBytes);
 
-          if (mounted) {
+          if (mounted && action == 'preview') {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Saved to Downloads/Complaint Register/'), backgroundColor: Colors.green),
+              const SnackBar(content: Text('Saved to Downloads/Complaint Register/'), backgroundColor: Colors.green),
             );
           }
         } catch (e) {
-          // FALLBACK: If storage permission fails, fall back to temporary directory
           final tempDir = await getTemporaryDirectory();
           file = File('${tempDir.path}/$finalFileName');
           await file.writeAsBytes(response.bodyBytes);
-          print("Saved to temp directory due to error: $e");
+          debugPrint("Saved to temp directory due to error: $e");
         }
-        // --------------------------------------------------------------------
 
         if (mounted) Navigator.pop(context); // Close loading dialog
 
@@ -189,6 +181,20 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
     return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
   }
 
+  // Minimalist Input Decoration
+  InputDecoration _minimalDecor(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
+      filled: true,
+      fillColor: surface,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: primary)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isReadyToExport = (_queryMode == 'ticket' && _selectedTicketData != null) ||
@@ -199,68 +205,68 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
       child: Scaffold(
         backgroundColor: background,
         appBar: AppBar(
-          backgroundColor: Colors.white, elevation: 0, foregroundColor: navy,
-          title: Text("Complaint Register", style: GoogleFonts.inter(fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+          backgroundColor: background, elevation: 0, foregroundColor: primary,
+          title: Text("Complaint Register", style: GoogleFonts.inter(fontWeight: FontWeight.w700, letterSpacing: -0.5)),
         ),
         body: _isLoadingTickets
-            ? const Center(child: CircularProgressIndicator(color: golden))
+            ? const Center(child: CircularProgressIndicator(color: primary))
             : SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text("Generate Report", style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 18, color: const Color(0xFF0F172A))),
+              const SizedBox(height: 4),
+              Text("Configure the timeframe and format for your MT-16 export.", style: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 14)),
+              const SizedBox(height: 32),
 
-              // 1. MODE TOGGLE
-              Container(
-                width: double.infinity, padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(12)),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _queryMode = 'ticket'),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: _queryMode == 'ticket' ? Colors.white : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: _queryMode == 'ticket' ? [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)] : [],
-                          ),
-                          child: Center(child: Text("Single Ticket", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: _queryMode == 'ticket' ? navy : Colors.grey.shade600))),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _queryMode = 'dateRange'),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: _queryMode == 'dateRange' ? Colors.white : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: _queryMode == 'dateRange' ? [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)] : [],
-                          ),
-                          child: Center(child: Text("Date Range", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: _queryMode == 'dateRange' ? navy : Colors.grey.shade600))),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              // 1. REPORT TYPE SECTION
+              Text("REPORT TYPE", style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 12, color: Colors.grey.shade400, letterSpacing: 1.2)),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  ChoiceChip(
+                    label: Text("Single Ticket", style: GoogleFonts.inter(fontWeight: _queryMode == 'ticket' ? FontWeight.w600 : FontWeight.normal)),
+                    selected: _queryMode == 'ticket',
+                    selectedColor: primary.withOpacity(0.1),
+                    backgroundColor: surface,
+                    side: BorderSide.none,
+                    showCheckmark: false,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    onSelected: (v) {
+                      setState(() => _queryMode = 'ticket');
+                      FocusScope.of(context).unfocus();
+                    },
+                  ),
+                  const SizedBox(width: 12),
+                  ChoiceChip(
+                    label: Text("Date Range", style: GoogleFonts.inter(fontWeight: _queryMode == 'dateRange' ? FontWeight.w600 : FontWeight.normal)),
+                    selected: _queryMode == 'dateRange',
+                    selectedColor: primary.withOpacity(0.1),
+                    backgroundColor: surface,
+                    side: BorderSide.none,
+                    showCheckmark: false,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    onSelected: (v) {
+                      setState(() => _queryMode = 'dateRange');
+                      FocusScope.of(context).unfocus();
+                    },
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
 
-              // 2. INPUT SECTION
+              // 2. INPUT CONFIGURATION SECTION
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.white, borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: Colors.grey.shade200),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Query Parameters", style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 16, color: navy)),
+                    Text(_queryMode == 'ticket' ? "Select Ticket" : "Select Timeframe", style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14, color: primary)),
                     const SizedBox(height: 16),
 
                     if (_queryMode == 'ticket') ...[
@@ -273,29 +279,43 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
                         displayStringForOption: (opt) => opt['ticket_no'].toString(),
                         onSelected: (sel) { setState(() => _selectedTicketData = sel); _focusNode.unfocus(); },
                         fieldViewBuilder: (ctx, ctrl, fNode, onSub) => TextFormField(
-                          controller: ctrl, focusNode: fNode, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: navy),
+                          controller: ctrl, focusNode: fNode,
+                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
                           decoration: InputDecoration(
-                            hintText: "Search Ticket No...", hintStyle: GoogleFonts.inter(color: Colors.grey.shade400),
-                            prefixIcon: const Icon(Icons.search, color: Colors.grey), filled: true, fillColor: Colors.grey.shade50,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: golden, width: 2)),
-                            suffixIcon: ctrl.text.isNotEmpty ? IconButton(icon: const Icon(Icons.clear, size: 16), onPressed: () { ctrl.clear(); setState(() => _selectedTicketData = null); }) : null,
+                            hintText: "Search Ticket No...", hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontWeight: FontWeight.normal),
+                            prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
+                            filled: true, fillColor: surface,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: primary)),
+                            suffixIcon: ctrl.text.isNotEmpty
+                                ? IconButton(
+                                icon: const Icon(Icons.clear, size: 20, color: Colors.grey),
+                                onPressed: () {
+                                  ctrl.clear();
+                                  setState(() => _selectedTicketData = null);
+                                  _focusNode.requestFocus();
+                                }
+                            )
+                                : null,
                           ),
+                          onChanged: (val) { if (val.isEmpty) setState(() => _selectedTicketData = null); },
                         ),
                         optionsViewBuilder: (ctx, onSel, opts) => Align(
                           alignment: Alignment.topLeft,
                           child: Material(
-                            elevation: 4.0, borderRadius: BorderRadius.circular(12),
+                            elevation: 2.0, borderRadius: BorderRadius.circular(10),
                             child: Container(
-                              constraints: BoxConstraints(maxHeight: 200, maxWidth: MediaQuery.of(context).size.width - 72),
-                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                              constraints: BoxConstraints(maxHeight: 200, maxWidth: MediaQuery.of(context).size.width - 80),
+                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.grey.shade100)),
                               child: ListView.separated(
                                 padding: EdgeInsets.zero, shrinkWrap: true, itemCount: opts.length,
-                                separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
+                                separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade100),
                                 itemBuilder: (ctx, idx) => ListTile(
-                                  title: Text(opts.elementAt(idx)['ticket_no'], style: GoogleFonts.inter(fontSize: 14, color: navy, fontWeight: FontWeight.bold)),
-                                  subtitle: Text(opts.elementAt(idx)['title'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontSize: 12)),
+                                  dense: true,
+                                  title: Text(opts.elementAt(idx)['ticket_no'], style: GoogleFonts.inter(fontSize: 14, color: primary, fontWeight: FontWeight.w600)),
+                                  subtitle: Text(opts.elementAt(idx)['title'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade500)),
                                   onTap: () => onSel(opts.elementAt(idx)),
                                 ),
                               ),
@@ -310,23 +330,9 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
                           Expanded(
                             child: InkWell(
                               onTap: () => _pickDate(true),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-                                decoration: BoxDecoration(color: Colors.grey.shade50, border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(10)),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text("Start Date", style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.bold)),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Icon(Icons.calendar_today, size: 14, color: _startDate == null ? Colors.grey : navy),
-                                        const SizedBox(width: 8),
-                                        Text(_formatDateLocal(_startDate), style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: _startDate == null ? Colors.grey : navy, fontSize: 13)),
-                                      ],
-                                    )
-                                  ],
-                                ),
+                              child: InputDecorator(
+                                decoration: _minimalDecor("Start Date"),
+                                child: Text(_formatDateLocal(_startDate), style: GoogleFonts.inter(fontWeight: FontWeight.w500, color: _startDate == null ? Colors.grey.shade400 : const Color(0xFF0F172A), fontSize: 14)),
                               ),
                             ),
                           ),
@@ -334,23 +340,9 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
                           Expanded(
                             child: InkWell(
                               onTap: _startDate == null ? null : () => _pickDate(false),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-                                decoration: BoxDecoration(color: _startDate == null ? Colors.grey.shade100 : Colors.grey.shade50, border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(10)),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text("End Date", style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.bold)),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Icon(Icons.calendar_today, size: 14, color: _endDate == null ? Colors.grey : navy),
-                                        const SizedBox(width: 8),
-                                        Text(_formatDateLocal(_endDate), style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: _endDate == null ? Colors.grey : navy, fontSize: 13)),
-                                      ],
-                                    )
-                                  ],
-                                ),
+                              child: InputDecorator(
+                                decoration: _minimalDecor("End Date"),
+                                child: Text(_formatDateLocal(_endDate), style: GoogleFonts.inter(fontWeight: FontWeight.w500, color: _endDate == null ? Colors.grey.shade400 : const Color(0xFF0F172A), fontSize: 14)),
                               ),
                             ),
                           ),
@@ -363,54 +355,33 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
               const SizedBox(height: 24),
 
               // 3. EXPORT SETTINGS SECTION
-              Text("Export Settings", style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey.shade500, letterSpacing: 1.2)),
+              Text("FORMAT", style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 12, color: Colors.grey.shade400, letterSpacing: 1.2)),
               const SizedBox(height: 12),
 
-              Container(
-                width: double.infinity, padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(12)),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedFormat = 'xlsx'),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: _selectedFormat == 'xlsx' ? Colors.white : Colors.transparent, borderRadius: BorderRadius.circular(10),
-                            boxShadow: _selectedFormat == 'xlsx' ? [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)] : [],
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.table_chart, size: 18, color: _selectedFormat == 'xlsx' ? Colors.green.shade700 : Colors.grey), const SizedBox(width: 8),
-                              Text("Excel (.xlsx)", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: _selectedFormat == 'xlsx' ? navy : Colors.grey)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedFormat = 'pdf'),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: _selectedFormat == 'pdf' ? Colors.white : Colors.transparent, borderRadius: BorderRadius.circular(10),
-                            boxShadow: _selectedFormat == 'pdf' ? [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)] : [],
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.picture_as_pdf, size: 18, color: _selectedFormat == 'pdf' ? Colors.red.shade700 : Colors.grey), const SizedBox(width: 8),
-                              Text("PDF (.pdf)", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: _selectedFormat == 'pdf' ? navy : Colors.grey)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              Row(
+                children: [
+                  ChoiceChip(
+                    label: Text("Excel (.xlsx)", style: GoogleFonts.inter(fontWeight: _selectedFormat == 'xlsx' ? FontWeight.w600 : FontWeight.normal)),
+                    selected: _selectedFormat == 'xlsx',
+                    selectedColor: primary.withOpacity(0.1),
+                    backgroundColor: surface,
+                    side: BorderSide.none,
+                    showCheckmark: false,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    onSelected: (v) => setState(() => _selectedFormat = 'xlsx'),
+                  ),
+                  const SizedBox(width: 12),
+                  ChoiceChip(
+                    label: Text("PDF (.pdf)", style: GoogleFonts.inter(fontWeight: _selectedFormat == 'pdf' ? FontWeight.w600 : FontWeight.normal)),
+                    selected: _selectedFormat == 'pdf',
+                    selectedColor: primary.withOpacity(0.1),
+                    backgroundColor: surface,
+                    side: BorderSide.none,
+                    showCheckmark: false,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    onSelected: (v) => setState(() => _selectedFormat = 'pdf'),
+                  ),
+                ],
               ),
             ],
           ),
@@ -420,7 +391,7 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
         bottomNavigationBar: !isReadyToExport ? null : SafeArea(
           child: Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))]),
+            decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey.shade100))),
             child: Row(
               children: [
                 Expanded(
@@ -428,12 +399,14 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
                     height: 54,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey.shade100, foregroundColor: navy,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0
+                          backgroundColor: surface,
+                          foregroundColor: primary,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0
                       ),
                       onPressed: () => _processReport("preview"),
-                      icon: const Icon(Icons.visibility_outlined),
-                      label: Text("PREVIEW", style: GoogleFonts.inter(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                      icon: const Icon(Icons.visibility_outlined, size: 20),
+                      label: Text("PREVIEW", style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14)),
                     ),
                   ),
                 ),
@@ -443,12 +416,14 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
                     height: 54,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                          backgroundColor: golden, foregroundColor: navy,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0
+                          backgroundColor: primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0
                       ),
                       onPressed: () => _processReport("share"),
-                      icon: const Icon(Icons.share),
-                      label: Text("SHARE", style: GoogleFonts.inter(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                      icon: const Icon(Icons.share_outlined, size: 20),
+                      label: Text("SHARE", style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14)),
                     ),
                   ),
                 ),

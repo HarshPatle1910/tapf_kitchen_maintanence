@@ -1,4 +1,4 @@
-import 'dart:io';
+  import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:open_filex/open_filex.dart';
@@ -15,9 +15,10 @@ class EquipmentReportScreen extends StatefulWidget {
 }
 
 class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
-  static const Color navy = Color(0xFF26538D);
-  static const Color golden = Color(0xFFD4AF37);
-  static const Color background = Color(0xFFF8F9FA);
+  // Unified Minimalistic Color Palette
+  static const Color primary = Color(0xFF26538D);
+  static const Color background = Color(0xFFFFFFFF);
+  static const Color surface = Color(0xFFF8FAFC);
 
   String get _pythonApiBaseUrl {
     if (kIsWeb) return 'http://127.0.0.1:8000/api';
@@ -61,8 +62,9 @@ class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
     final String finalFileName = 'Equipment_Master_${monthAbbr}_$_selectedYear.$_selectedFormat';
 
     showDialog(
-      context: context, barrierDismissible: false,
-      builder: (ctx) => const Center(child: CircularProgressIndicator(color: golden)),
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(child: CircularProgressIndicator(color: primary)),
     );
 
     try {
@@ -117,6 +119,18 @@ class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
     }
   }
 
+  // Helper for minimal dropdowns matching the new UI
+  InputDecoration _minimalDecor() {
+    return InputDecoration(
+      filled: true,
+      fillColor: surface,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Export is ready as long as a month and year are selected
@@ -125,82 +139,76 @@ class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
     return Scaffold(
       backgroundColor: background,
       appBar: AppBar(
-        backgroundColor: Colors.white, elevation: 0, foregroundColor: navy,
-        title: Text("Equipment Master", style: GoogleFonts.inter(fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+        backgroundColor: background, elevation: 0, foregroundColor: primary,
+        title: Text("Equipment Master", style: GoogleFonts.inter(fontWeight: FontWeight.w700, letterSpacing: -0.5)),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. INPUT SECTION (DROPDOWNS)
+            Text("Generate Report", style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 18, color: const Color(0xFF0F172A))),
+            const SizedBox(height: 4),
+            Text("Select the timeframe and format for your equipment master list export.", style: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 14)),
+            const SizedBox(height: 32),
+
+            // 1. INPUT SECTION
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white, borderRadius: BorderRadius.circular(16),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.grey.shade200),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Select Timeframe", style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 16, color: navy)),
+                  Text("Timeframe", style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14, color: primary)),
                   const SizedBox(height: 16),
                   Row(
                     children: [
                       // MONTH DROPDOWN
                       Expanded(
                         flex: 3,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<int>(
-                              value: _selectedMonth,
-                              isExpanded: true,
-                              hint: Text("Month", style: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13)),
-                              icon: const Icon(Icons.keyboard_arrow_down, color: navy),
-                              items: List.generate(_months.length, (index) {
-                                return DropdownMenuItem(
-                                  value: index + 1,
-                                  child: Text(_months[index], style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy, fontSize: 14)),
-                                );
-                              }),
-                              onChanged: (val) => setState(() => _selectedMonth = val),
-                            ),
-                          ),
+                        child: DropdownButtonFormField<int>(
+                          decoration: _minimalDecor(),
+                          value: _selectedMonth,
+                          isExpanded: true,
+                          // NEW: Added rounded corners to the dropdown menu list
+                          borderRadius: BorderRadius.circular(16),
+                          dropdownColor: Colors.white,
+                          hint: Text("Month", style: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 14)),
+                          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+                          items: List.generate(_months.length, (index) {
+                            return DropdownMenuItem(
+                              value: index + 1,
+                              child: Text(_months[index], style: GoogleFonts.inter(fontWeight: FontWeight.w500, color: primary, fontSize: 14)),
+                            );
+                          }),
+                          onChanged: (val) => setState(() => _selectedMonth = val),
                         ),
                       ),
                       const SizedBox(width: 12),
+
                       // YEAR DROPDOWN
                       Expanded(
                         flex: 2,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<int>(
-                              value: _selectedYear,
-                              isExpanded: true,
-                              hint: Text("Year", style: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13)),
-                              icon: const Icon(Icons.keyboard_arrow_down, color: navy),
-                              items: _years.map((year) {
-                                return DropdownMenuItem(
-                                  value: year,
-                                  child: Text(year.toString(), style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy, fontSize: 14)),
-                                );
-                              }).toList(),
-                              onChanged: (val) => setState(() => _selectedYear = val),
-                            ),
-                          ),
+                        child: DropdownButtonFormField<int>(
+                          decoration: _minimalDecor(),
+                          value: _selectedYear,
+                          isExpanded: true,
+                          // NEW: Added rounded corners to the dropdown menu list
+                          borderRadius: BorderRadius.circular(16),
+                          dropdownColor: Colors.white,
+                          hint: Text("Year", style: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 14)),
+                          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+                          items: _years.map((year) {
+                            return DropdownMenuItem(
+                              value: year,
+                              child: Text(year.toString(), style: GoogleFonts.inter(fontWeight: FontWeight.w500, color: primary, fontSize: 14)),
+                            );
+                          }).toList(),
+                          onChanged: (val) => setState(() => _selectedYear = val),
                         ),
                       ),
                     ],
@@ -211,54 +219,33 @@ class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
             const SizedBox(height: 24),
 
             // 2. EXPORT SETTINGS SECTION
-            Text("Export Settings", style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey.shade500, letterSpacing: 1.2)),
+            Text("FORMAT", style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 12, color: Colors.grey.shade400, letterSpacing: 1.2)),
             const SizedBox(height: 12),
 
-            Container(
-              width: double.infinity, padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(12)),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _selectedFormat = 'xlsx'),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: _selectedFormat == 'xlsx' ? Colors.white : Colors.transparent, borderRadius: BorderRadius.circular(10),
-                          boxShadow: _selectedFormat == 'xlsx' ? [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)] : [],
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.table_chart, size: 18, color: _selectedFormat == 'xlsx' ? Colors.green.shade700 : Colors.grey), const SizedBox(width: 8),
-                            Text("Excel (.xlsx)", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: _selectedFormat == 'xlsx' ? navy : Colors.grey)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _selectedFormat = 'pdf'),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: _selectedFormat == 'pdf' ? Colors.white : Colors.transparent, borderRadius: BorderRadius.circular(10),
-                          boxShadow: _selectedFormat == 'pdf' ? [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)] : [],
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.picture_as_pdf, size: 18, color: _selectedFormat == 'pdf' ? Colors.red.shade700 : Colors.grey), const SizedBox(width: 8),
-                            Text("PDF (.pdf)", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: _selectedFormat == 'pdf' ? navy : Colors.grey)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            Row(
+              children: [
+                ChoiceChip(
+                  label: Text("Excel (.xlsx)", style: GoogleFonts.inter(fontWeight: _selectedFormat == 'xlsx' ? FontWeight.w600 : FontWeight.normal)),
+                  selected: _selectedFormat == 'xlsx',
+                  selectedColor: primary.withOpacity(0.1),
+                  backgroundColor: surface,
+                  side: BorderSide.none,
+                  showCheckmark: false,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  onSelected: (v) => setState(() => _selectedFormat = 'xlsx'),
+                ),
+                const SizedBox(width: 12),
+                ChoiceChip(
+                  label: Text("PDF (.pdf)", style: GoogleFonts.inter(fontWeight: _selectedFormat == 'pdf' ? FontWeight.w600 : FontWeight.normal)),
+                  selected: _selectedFormat == 'pdf',
+                  selectedColor: primary.withOpacity(0.1),
+                  backgroundColor: surface,
+                  side: BorderSide.none,
+                  showCheckmark: false,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  onSelected: (v) => setState(() => _selectedFormat = 'pdf'),
+                ),
+              ],
             ),
           ],
         ),
@@ -267,7 +254,7 @@ class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
       bottomNavigationBar: !isReadyToExport ? null : SafeArea(
         child: Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))]),
+          decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey.shade100))),
           child: Row(
             children: [
               Expanded(
@@ -275,12 +262,14 @@ class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
                   height: 54,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey.shade100, foregroundColor: navy,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0
+                      backgroundColor: surface,
+                      foregroundColor: primary,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
                     ),
                     onPressed: () => _processReport("preview"),
-                    icon: const Icon(Icons.visibility_outlined),
-                    label: Text("PREVIEW", style: GoogleFonts.inter(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                    icon: const Icon(Icons.visibility_outlined, size: 20),
+                    label: Text("PREVIEW", style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14)),
                   ),
                 ),
               ),
@@ -290,12 +279,14 @@ class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
                   height: 54,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: golden, foregroundColor: navy,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0
+                      backgroundColor: primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
                     ),
                     onPressed: () => _processReport("share"),
-                    icon: const Icon(Icons.share),
-                    label: Text("SHARE", style: GoogleFonts.inter(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                    icon: const Icon(Icons.share_outlined, size: 20),
+                    label: Text("SHARE", style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14)),
                   ),
                 ),
               ),

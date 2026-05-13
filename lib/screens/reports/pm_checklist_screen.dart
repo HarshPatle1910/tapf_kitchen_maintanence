@@ -8,7 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 // ============================================================================
-// 1. DASHBOARD SCREEN (Lists Checklists & Handles Exports)
+// 1. DASHBOARD SCREEN (Minimalistic UI)
 // ============================================================================
 class PMChecklistScreen extends StatefulWidget {
   const PMChecklistScreen({super.key});
@@ -18,9 +18,9 @@ class PMChecklistScreen extends StatefulWidget {
 }
 
 class _PMChecklistScreenState extends State<PMChecklistScreen> {
-  static const Color navy = Color(0xFF26538D);
-  static const Color golden = Color(0xFFD4AF37);
-  static const Color background = Color(0xFFF8F9FA);
+  static const Color primary = Color(0xFF26538D);
+  static const Color background = Color(0xFFFFFFFF);
+  static const Color surface = Color(0xFFF8FAFC);
 
   final _supabase = Supabase.instance.client;
   List<Map<String, dynamic>> _checklists = [];
@@ -29,11 +29,18 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
 
   // Search State
   String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _fetchData();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchData() async {
@@ -82,40 +89,75 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
     String format = 'xlsx';
 
     final List<String> months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-    // Controllers for Autocomplete
     final TextEditingController searchCtrl = TextEditingController();
     final FocusNode focusNode = FocusNode();
+
+    InputDecoration _minimalDialogDecor(String label) {
+      return InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
+        filled: true, fillColor: surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: primary)),
+      );
+    }
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text("Export MT-06 Reports", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: navy)),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text("Export MT-06 Reports", style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: primary)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text("Filter Mode", style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.grey.shade500)),
+                const SizedBox(height: 8),
                 Row(
                   children: [
-                    Expanded(child: RadioListTile<String>(title: Text("By Month", style: GoogleFonts.inter(fontSize: 13)), value: 'month', groupValue: exportMode, onChanged: (v) => setDialogState(() => exportMode = v!), contentPadding: EdgeInsets.zero)),
-                    Expanded(child: RadioListTile<String>(title: Text("By Machine", style: GoogleFonts.inter(fontSize: 13)), value: 'machine', groupValue: exportMode, onChanged: (v) => setDialogState(() => exportMode = v!), contentPadding: EdgeInsets.zero)),
+                    ChoiceChip(
+                      label: Text("By Month", style: GoogleFonts.inter(fontWeight: exportMode == 'month' ? FontWeight.bold : FontWeight.normal)),
+                      selected: exportMode == 'month', selectedColor: primary.withOpacity(0.1), showCheckmark: false, side: BorderSide.none, backgroundColor: surface,
+                      onSelected: (v) => setDialogState(() => exportMode = 'month'),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: Text("By Machine", style: GoogleFonts.inter(fontWeight: exportMode == 'machine' ? FontWeight.bold : FontWeight.normal)),
+                      selected: exportMode == 'machine', selectedColor: primary.withOpacity(0.1), showCheckmark: false, side: BorderSide.none, backgroundColor: surface,
+                      onSelected: (v) => setDialogState(() => exportMode = 'machine'),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
                 if (exportMode == 'month') ...[
                   Row(
                     children: [
-                      Expanded(child: DropdownButtonFormField<int>(decoration: InputDecoration(labelText: "Month", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), value: selectedMonth, items: List.generate(12, (i) => DropdownMenuItem(value: i + 1, child: Text(months[i]))), onChanged: (v) => setDialogState(() => selectedMonth = v!))),
+                      Expanded(
+                          child: DropdownButtonFormField<int>(
+                            decoration: _minimalDialogDecor("Month"),
+                            value: selectedMonth, borderRadius: BorderRadius.circular(16), dropdownColor: Colors.white,
+                            items: List.generate(12, (i) => DropdownMenuItem(value: i + 1, child: Text(months[i], style: GoogleFonts.inter(fontSize: 14)))),
+                            onChanged: (v) => setDialogState(() => selectedMonth = v!),
+                          )
+                      ),
                       const SizedBox(width: 8),
-                      Expanded(child: DropdownButtonFormField<int>(decoration: InputDecoration(labelText: "Year", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), value: selectedYear, items: [2024, 2025, 2026].map((y) => DropdownMenuItem(value: y, child: Text(y.toString()))).toList(), onChanged: (v) => setDialogState(() => selectedYear = v!))),
+                      Expanded(
+                          child: DropdownButtonFormField<int>(
+                            decoration: _minimalDialogDecor("Year"),
+                            value: selectedYear, borderRadius: BorderRadius.circular(16), dropdownColor: Colors.white,
+                            items: [2024, 2025, 2026].map((y) => DropdownMenuItem(value: y, child: Text(y.toString(), style: GoogleFonts.inter(fontSize: 14)))).toList(),
+                            onChanged: (v) => setDialogState(() => selectedYear = v!),
+                          )
+                      ),
                     ],
                   )
                 ] else ...[
-                  // NEW: Searchable RawAutocomplete in Export Dialog
                   RawAutocomplete<Map<String, dynamic>>(
                     textEditingController: searchCtrl, focusNode: focusNode,
                     optionsBuilder: (val) {
@@ -126,26 +168,22 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
                     onSelected: (sel) { setDialogState(() => selectedMachineId = sel['id']); focusNode.unfocus(); },
                     fieldViewBuilder: (ctx, ctrl, fNode, onSub) => TextFormField(
                       controller: ctrl, focusNode: fNode,
-                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: navy),
-                      decoration: InputDecoration(
-                        labelText: "Search Machine",
-                        prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                        filled: true, fillColor: Colors.grey.shade50,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      ),
+                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: primary),
+                      decoration: _minimalDialogDecor("Search Machine").copyWith(prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20)),
                     ),
                     optionsViewBuilder: (ctx, onSel, opts) => Align(
                       alignment: Alignment.topLeft,
                       child: Material(
-                        elevation: 4.0, borderRadius: BorderRadius.circular(12),
+                        elevation: 2.0, borderRadius: BorderRadius.circular(10),
                         child: Container(
                           constraints: const BoxConstraints(maxHeight: 200, maxWidth: 250),
-                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.grey.shade100)),
                           child: ListView.separated(
                             padding: EdgeInsets.zero, shrinkWrap: true, itemCount: opts.length,
-                            separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
+                            separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade100),
                             itemBuilder: (ctx, idx) => ListTile(
-                              title: Text(opts.elementAt(idx)['name'], style: GoogleFonts.inter(fontSize: 13, color: navy, fontWeight: FontWeight.w600)),
+                              dense: true,
+                              title: Text(opts.elementAt(idx)['name'], style: GoogleFonts.inter(fontSize: 13, color: primary, fontWeight: FontWeight.w500)),
                               onTap: () => onSel(opts.elementAt(idx)),
                             ),
                           ),
@@ -156,26 +194,35 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
                 ],
 
                 const SizedBox(height: 16),
-                Text("Format:", style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                Text("Format", style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.grey.shade500)),
+                const SizedBox(height: 8),
                 Row(
                   children: [
-                    ChoiceChip(label: const Text("Excel"), selected: format == 'xlsx', onSelected: (v) => setDialogState(() => format = 'xlsx')),
+                    ChoiceChip(
+                        label: Text("Excel", style: GoogleFonts.inter(fontWeight: format == 'xlsx' ? FontWeight.bold : FontWeight.normal)),
+                        selected: format == 'xlsx', selectedColor: primary.withOpacity(0.1), showCheckmark: false, side: BorderSide.none, backgroundColor: surface,
+                        onSelected: (v) => setDialogState(() => format = 'xlsx')
+                    ),
                     const SizedBox(width: 8),
-                    ChoiceChip(label: const Text("PDF"), selected: format == 'pdf', onSelected: (v) => setDialogState(() => format = 'pdf')),
+                    ChoiceChip(
+                        label: Text("PDF", style: GoogleFonts.inter(fontWeight: format == 'pdf' ? FontWeight.bold : FontWeight.normal)),
+                        selected: format == 'pdf', selectedColor: primary.withOpacity(0.1), showCheckmark: false, side: BorderSide.none, backgroundColor: surface,
+                        onSelected: (v) => setDialogState(() => format = 'pdf')
+                    ),
                   ],
                 )
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text("CANCEL", style: GoogleFonts.inter(color: Colors.grey.shade600))),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: navy, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), foregroundColor: golden),
+              style: ElevatedButton.styleFrom(backgroundColor: primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), elevation: 0),
               onPressed: () {
                 Navigator.pop(ctx);
                 _executeExport(exportMode, selectedMonth, selectedYear, selectedMachineId, format);
               },
-              child: const Text("GENERATE"),
+              child: Text("GENERATE", style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
             )
           ],
         ),
@@ -189,7 +236,7 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
       return;
     }
 
-    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator(color: golden)));
+    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator(color: primary)));
 
     try {
       String queryParams = "?format=$format";
@@ -234,113 +281,133 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Filter checklists based on search query
     final filteredChecklists = _checklists.where((c) {
       final machineName = (c['equipment']?['name'] ?? '').toString().toLowerCase();
       return machineName.contains(_searchQuery.toLowerCase());
     }).toList();
 
-    return Scaffold(
-      backgroundColor: background,
-      appBar: AppBar(
-        backgroundColor: Colors.white, foregroundColor: navy, elevation: 0,
-        title: Text("MT-06 Checklists", style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.file_download, color: navy),
-            tooltip: "Export Reports",
-            onPressed: _showExportDialog,
-          )
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: golden))
-          : Column(
-        children: [
-          // NEW: Search Bar
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: TextField(
-              onChanged: (val) => setState(() => _searchQuery = val),
-              decoration: InputDecoration(
-                hintText: "Search by Machine Name...",
-                hintStyle: GoogleFonts.inter(color: Colors.grey.shade400),
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                filled: true, fillColor: Colors.grey.shade50,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade200)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade200)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: golden)),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: background,
+        appBar: AppBar(
+          backgroundColor: background, foregroundColor: primary, elevation: 0,
+          title: Text("MT-06 Checklists", style: GoogleFonts.inter(fontWeight: FontWeight.w700, letterSpacing: -0.5)),
+          actions: [
+            IconButton(icon: const Icon(Icons.download_outlined, color: primary), tooltip: "Export", onPressed: _showExportDialog)
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: primary))
+            : Column(
+          children: [
+            // Clean Search Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (val) => setState(() => _searchQuery = val),
+                style: GoogleFonts.inter(fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: "Search by Machine Name...",
+                  hintStyle: GoogleFonts.inter(color: Colors.grey.shade400),
+                  prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                    icon: const Icon(Icons.clear, color: Colors.grey, size: 20),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _searchQuery = '');
+                      FocusScope.of(context).unfocus();
+                    },
+                  )
+                      : null,
+                  filled: true, fillColor: surface,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
               ),
             ),
-          ),
-          Expanded(
-            child: filteredChecklists.isEmpty
-                ? Center(child: Text("No checklists found.", style: GoogleFonts.inter(color: Colors.grey)))
-                : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: filteredChecklists.length,
-              itemBuilder: (ctx, i) {
-                final item = filteredChecklists[i];
-                return Card(
-                  elevation: 2,
-                  shadowColor: Colors.black.withOpacity(0.05),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
+
+            Expanded(
+              child: filteredChecklists.isEmpty
+                  ? Center(child: Text("No checklists found.", style: GoogleFonts.inter(color: Colors.grey)))
+                  : ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: filteredChecklists.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (ctx, i) {
+                  final item = filteredChecklists[i];
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(12),
                     onTap: () async {
                       final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => CreatePMChecklistScreen(existingChecklist: item)));
                       if (result == true) _fetchData();
                     },
-                    child: Padding(
+                    child: Container(
                       padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
                             padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(color: navy.withOpacity(0.05), shape: BoxShape.circle),
-                            child: const Icon(Icons.engineering, color: navy),
+                            decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.grey.shade100)),
+                            child: const Icon(Icons.engineering_outlined, color: primary, size: 24),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(item['equipment']?['name'] ?? 'Unknown Machine', style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: navy, fontSize: 15)),
-                                const SizedBox(height: 4),
-                                Text("Date: ${item['date']} • Freq: ${item['frequency']}", style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 13)),
+                                Text(item['equipment']?['name'] ?? 'Unknown Machine', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: const Color(0xFF0F172A), fontSize: 15)),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Icon(Icons.calendar_today_outlined, size: 12, color: Colors.grey.shade500),
+                                    const SizedBox(width: 4),
+                                    Text("${item['date']}", style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 12, fontWeight: FontWeight.w500)),
+                                    const SizedBox(width: 12),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(color: primary.withOpacity(0.08), borderRadius: BorderRadius.circular(4)),
+                                      child: Text(item['frequency'], style: GoogleFonts.inter(color: primary, fontSize: 10, fontWeight: FontWeight.bold)),
+                                    )
+                                  ],
+                                ),
                               ],
                             ),
                           ),
-                          const Icon(Icons.edit_note, color: Colors.grey),
+                          const Icon(Icons.chevron_right, color: Colors.grey),
                         ],
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: golden,
-        elevation: 4,
-        icon: const Icon(Icons.add, color: navy),
-        label: Text("NEW CHECKLIST", style: GoogleFonts.inter(color: navy, fontWeight: FontWeight.bold)),
-        onPressed: () async {
-          final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => const CreatePMChecklistScreen()));
-          if (result == true) _fetchData();
-        },
+          ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: primary,
+          elevation: 0,
+          child: const Icon(Icons.add, color: Colors.white),
+          onPressed: () async {
+            final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => const CreatePMChecklistScreen()));
+            if (result == true) _fetchData();
+          },
+        ),
       ),
     );
   }
 }
 
 // ============================================================================
-// 2. CREATE / EDIT FORM SCREEN
+// 2. CREATE / EDIT FORM SCREEN (Minimalistic UI)
 // ============================================================================
 class CreatePMChecklistScreen extends StatefulWidget {
   final Map<String, dynamic>? existingChecklist;
@@ -351,25 +418,22 @@ class CreatePMChecklistScreen extends StatefulWidget {
 }
 
 class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
-  static const Color navy = Color(0xFF26538D);
-  static const Color golden = Color(0xFFD4AF37);
+  static const Color primary = Color(0xFF26538D);
+  static const Color surface = Color(0xFFF8FAFC);
 
   final _supabase = Supabase.instance.client;
   List<Map<String, dynamic>> _equipments = [];
   bool _isLoading = true;
   bool _isSaving = false;
 
-  // Header State
   String? _selectedEquipmentId;
   DateTime _selectedDate = DateTime.now();
   String _selectedFrequency = 'Monthly';
   final List<String> _frequencies = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly'];
 
-  // Detail State (Dynamic Activities)
   final List<Map<String, TextEditingController>> _activities = [];
   final List<String> _statusOptions = ['OK', 'Needs Repair', 'Failed', 'Completed', 'Needs Top-up'];
 
-  // Search Controllers
   final TextEditingController _machineSearchCtrl = TextEditingController();
   final FocusNode _machineFocusNode = FocusNode();
 
@@ -413,15 +477,11 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
       return;
     }
 
-    // Load Header
     _selectedEquipmentId = widget.existingChecklist!['equipment_id'];
     _selectedDate = DateTime.tryParse(widget.existingChecklist!['date']) ?? DateTime.now();
     _selectedFrequency = widget.existingChecklist!['frequency'] ?? 'Monthly';
-
-    // Set the locked controller text
     _machineSearchCtrl.text = widget.existingChecklist!['equipment']?['name'] ?? 'Unknown Machine';
 
-    // Load Activities
     try {
       final res = await _supabase
           .from('preventive_maintenance_activity')
@@ -483,7 +543,6 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
       String checklistId;
 
       if (widget.existingChecklist == null) {
-        // --- CREATE NEW CHECKLIST ---
         final headerRes = await _supabase.from('preventive_maintenance_checklist').insert({
           'date': _selectedDate.toIso8601String().split('T')[0],
           'equipment_id': _selectedEquipmentId,
@@ -491,21 +550,16 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
         }).select('id').single();
         checklistId = headerRes['id'];
       } else {
-        // --- EDIT EXISTING CHECKLIST ---
         checklistId = widget.existingChecklist!['id'];
-
-        // 1. Update Header
         await _supabase.from('preventive_maintenance_checklist').update({
           'date': _selectedDate.toIso8601String().split('T')[0],
           'equipment_id': _selectedEquipmentId,
           'frequency': _selectedFrequency,
         }).eq('id', checklistId);
 
-        // 2. Clear Old Activities
         await _supabase.from('preventive_maintenance_activity').delete().eq('checklist_id', checklistId);
       }
 
-      // Insert All Activities
       if (_activities.isNotEmpty) {
         final List<Map<String, dynamic>> activitiesToInsert = _activities.map((a) => {
           'checklist_id': checklistId,
@@ -528,202 +582,226 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
     }
   }
 
+  InputDecoration _minimalDecor(String label, {bool isLocked = false, String? hint}) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 14),
+      filled: true,
+      fillColor: isLocked ? Colors.grey.shade100 : surface,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      // UPDATED: Added visible borders here
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: primary, width: 1.5)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator(color: golden)));
+    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator(color: primary)));
 
     final bool isEditing = widget.existingChecklist != null;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: Colors.white, foregroundColor: navy, elevation: 0,
-        title: Text(isEditing ? "Edit PM Checklist" : "New PM Checklist", style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- HEADER SECTION ---
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                  color: Colors.white, borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))]
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    // WRAPPED IN GESTURE DETECTOR TO DISMISS KEYBOARD ON TAP
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      behavior: HitTestBehavior.opaque,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.white, foregroundColor: primary, elevation: 0,
+          title: Text(isEditing ? "Edit PM Checklist" : "New PM Checklist", style: GoogleFonts.inter(fontWeight: FontWeight.w700, letterSpacing: -0.5)),
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- HEADER SECTION ---
+              Text("Header Details", style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14, color: primary)),
+              const SizedBox(height: 16),
+
+              if (isEditing) ...[
+                TextFormField(
+                  initialValue: _machineSearchCtrl.text,
+                  enabled: false,
+                  style: GoogleFonts.inter(color: Colors.grey.shade600, fontWeight: FontWeight.w600, fontSize: 14),
+                  decoration: _minimalDecor("Machine / Equipment", isLocked: true).copyWith(
+                    prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey, size: 18),
+                  ),
+                ),
+              ] else ...[
+                RawAutocomplete<Map<String, dynamic>>(
+                  textEditingController: _machineSearchCtrl, focusNode: _machineFocusNode,
+                  optionsBuilder: (val) {
+                    if (val.text.isEmpty) return _equipments;
+                    return _equipments.where((e) => e['name'].toString().toLowerCase().contains(val.text.toLowerCase()));
+                  },
+                  displayStringForOption: (e) => e['name'],
+                  onSelected: (sel) { setState(() => _selectedEquipmentId = sel['id']); _machineFocusNode.unfocus(); },
+                  fieldViewBuilder: (ctx, ctrl, fNode, onSub) => TextFormField(
+                    controller: ctrl, focusNode: fNode,
+                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+                    decoration: _minimalDecor("Search Machine").copyWith(
+                      prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
+                      suffixIcon: _machineSearchCtrl.text.isNotEmpty
+                          ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.grey, size: 20),
+                        onPressed: () {
+                          ctrl.clear();
+                          setState(() => _selectedEquipmentId = null);
+                        },
+                      )
+                          : null,
+                    ),
+                    onChanged: (val) { if (val.isEmpty) setState(() => _selectedEquipmentId = null); },
+                  ),
+                  optionsViewBuilder: (ctx, onSel, opts) => Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      elevation: 2.0, borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        constraints: BoxConstraints(maxHeight: 200, maxWidth: MediaQuery.of(context).size.width - 40),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.grey.shade100)),
+                        child: ListView.separated(
+                          padding: EdgeInsets.zero, shrinkWrap: true, itemCount: opts.length,
+                          separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade100),
+                          itemBuilder: (ctx, idx) => ListTile(
+                            dense: true,
+                            title: Text(opts.elementAt(idx)['name'], style: GoogleFonts.inter(fontSize: 14, color: primary, fontWeight: FontWeight.w500)),
+                            onTap: () => onSel(opts.elementAt(idx)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+
+              Row(
                 children: [
-                  Text("Checklist Details", style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 16, color: navy)),
-                  const SizedBox(height: 16),
-
-                  // NEW: Searchable RawAutocomplete or Locked Text Field
-                  if (isEditing) ...[
-                    TextFormField(
-                      initialValue: _machineSearchCtrl.text,
-                      enabled: false,
-                      style: GoogleFonts.inter(color: Colors.grey.shade600, fontWeight: FontWeight.bold),
-                      decoration: InputDecoration(
-                        labelText: "Machine / Equipment",
-                        filled: true, fillColor: Colors.grey.shade200, // Locked appearance
-                        prefixIcon: const Icon(Icons.lock, color: Colors.grey),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      ),
-                    ),
-                  ] else ...[
-                    RawAutocomplete<Map<String, dynamic>>(
-                      textEditingController: _machineSearchCtrl, focusNode: _machineFocusNode,
-                      optionsBuilder: (val) {
-                        if (val.text.isEmpty) return _equipments;
-                        return _equipments.where((e) => e['name'].toString().toLowerCase().contains(val.text.toLowerCase()));
+                  Expanded(
+                    child: InkWell(
+                      onTap: () async {
+                        FocusScope.of(context).unfocus(); // Dismiss keyboard when opening date picker
+                        final picked = await showDatePicker(
+                          context: context, initialDate: _selectedDate, firstDate: DateTime(2020), lastDate: DateTime.now(),
+                          builder: (context, child) => Theme(data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: primary)), child: child!),
+                        );
+                        if (picked != null) setState(() => _selectedDate = picked);
                       },
-                      displayStringForOption: (e) => e['name'],
-                      onSelected: (sel) { setState(() => _selectedEquipmentId = sel['id']); _machineFocusNode.unfocus(); },
-                      fieldViewBuilder: (ctx, ctrl, fNode, onSub) => TextFormField(
-                        controller: ctrl, focusNode: fNode,
-                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: navy),
-                        decoration: InputDecoration(
-                          labelText: "Search Machine",
-                          prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                          filled: true, fillColor: Colors.grey.shade50,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: golden, width: 2)),
-                        ),
-                      ),
-                      optionsViewBuilder: (ctx, onSel, opts) => Align(
-                        alignment: Alignment.topLeft,
-                        child: Material(
-                          elevation: 4.0, borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            constraints: BoxConstraints(maxHeight: 200, maxWidth: MediaQuery.of(context).size.width - 72),
-                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                            child: ListView.separated(
-                              padding: EdgeInsets.zero, shrinkWrap: true, itemCount: opts.length,
-                              separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
-                              itemBuilder: (ctx, idx) => ListTile(
-                                title: Text(opts.elementAt(idx)['name'], style: GoogleFonts.inter(fontSize: 14, color: navy, fontWeight: FontWeight.bold)),
-                                onTap: () => onSel(opts.elementAt(idx)),
-                              ),
-                            ),
-                          ),
-                        ),
+                      child: InputDecorator(
+                        decoration: _minimalDecor("Date"),
+                        child: Text("${_selectedDate.day.toString().padLeft(2, '0')}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.year}", style: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 14, color: const Color(0xFF0F172A))),
                       ),
                     ),
-                  ],
-
-                  const SizedBox(height: 16),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: () async {
-                            final picked = await showDatePicker(context: context, initialDate: _selectedDate, firstDate: DateTime(2020), lastDate: DateTime.now());
-                            if (picked != null) setState(() => _selectedDate = picked);
-                          },
-                          child: InputDecorator(
-                            decoration: InputDecoration(labelText: "Date", filled: true, fillColor: Colors.grey.shade50, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300))),
-                            child: Text("${_selectedDate.day}-${_selectedDate.month}-${_selectedDate.year}", style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          decoration: InputDecoration(labelText: "Frequency", filled: true, fillColor: Colors.grey.shade50, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300))),
-                          value: _selectedFrequency,
-                          items: _frequencies.map((f) => DropdownMenuItem(value: f, child: Text(f, style: GoogleFonts.inter(fontWeight: FontWeight.w600)))).toList(),
-                          onChanged: (v) => setState(() => _selectedFrequency = v!),
-                        ),
-                      ),
-                    ],
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      decoration: _minimalDecor("Frequency"),
+                      value: _selectedFrequency,
+                      borderRadius: BorderRadius.circular(16), dropdownColor: Colors.white,
+                      icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                      items: _frequencies.map((f) => DropdownMenuItem(value: f, child: Text(f, style: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 14, color: const Color(0xFF0F172A))))).toList(),
+                      onChanged: (v) => setState(() => _selectedFrequency = v!),
+                    ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 32),
 
-            // --- ACTIVITIES SECTION ---
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text("Activities", style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 16, color: navy)),
-                TextButton.icon(
-                  onPressed: _addEmptyActivityRow,
-                  icon: const Icon(Icons.add_circle, color: golden),
-                  label: Text("Add Row", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: navy)),
-                )
-              ],
-            ),
-            const SizedBox(height: 8),
+              // --- ACTIVITIES SECTION ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text("Activities", style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14, color: primary)),
+                  TextButton.icon(
+                    onPressed: () {
+                      FocusScope.of(context).unfocus();
+                      _addEmptyActivityRow();
+                    },
+                    icon: const Icon(Icons.add_circle_outline, color: primary, size: 18),
+                    label: Text("Add Row", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: primary)),
+                  )
+                ],
+              ),
+              const SizedBox(height: 8),
 
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _activities.length,
-              itemBuilder: (ctx, i) {
-                final activity = _activities[i];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  elevation: 2,
-                  shadowColor: Colors.black.withOpacity(0.05),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  child: Padding(
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _activities.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 16),
+                itemBuilder: (ctx, i) {
+                  final activity = _activities[i];
+                  return Container(
                     padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: Colors.grey.shade200),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Column(
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(color: navy.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                              child: Text("Task ${i + 1}", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: navy, fontSize: 12)),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(6), border: Border.all(color: Colors.grey.shade200)),
+                              child: Text("Task ${i + 1}", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.grey.shade700, fontSize: 12)),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.red),
-                              onPressed: () => _removeActivityRow(i),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
+                              icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                              onPressed: () {
+                                FocusScope.of(context).unfocus();
+                                _removeActivityRow(i);
+                              },
+                              padding: EdgeInsets.zero, constraints: const BoxConstraints(),
                             )
                           ],
                         ),
+                        const SizedBox(height: 16),
+                        TextField(controller: activity['activity'], style: GoogleFonts.inter(fontSize: 14), decoration: _minimalDecor("Schedule Activity", hint: "e.g. Check Oil")),
                         const SizedBox(height: 12),
-                        TextField(controller: activity['activity'], decoration: InputDecoration(labelText: "Schedule Activity (e.g. Check Oil)", isDense: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))),
-                        const SizedBox(height: 12),
-                        TextField(controller: activity['condition'], decoration: InputDecoration(labelText: "Standard Condition", isDense: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))),
+                        TextField(controller: activity['condition'], style: GoogleFonts.inter(fontSize: 14), decoration: _minimalDecor("Standard Condition")),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          decoration: InputDecoration(labelText: "Status", isDense: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+                          decoration: _minimalDecor("Status"),
                           value: activity['status']!.text,
-                          items: _statusOptions.map((s) => DropdownMenuItem(value: s, child: Text(s, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold)))).toList(),
+                          borderRadius: BorderRadius.circular(16), dropdownColor: Colors.white,
+                          icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                          items: _statusOptions.map((s) => DropdownMenuItem(value: s, child: Text(s, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500)))).toList(),
                           onChanged: (v) => setState(() => activity['status']!.text = v!),
                         ),
-                        SizedBox(height: 12,),
-                        TextField(controller: activity['observation'], decoration: InputDecoration(labelText: "Observation", isDense: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))),
+                        const SizedBox(height: 12),
+                        TextField(controller: activity['observation'], style: GoogleFonts.inter(fontSize: 14), decoration: _minimalDecor("Observation")),
                       ],
                     ),
-                  ),
-                );
-              },
-            )
-          ],
+                  );
+                },
+              )
+            ],
+          ),
         ),
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))]),
-          child: SizedBox(
-            height: 54,
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
             child: ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: navy, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-              onPressed: _isSaving ? null : _saveChecklist,
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: primary, minimumSize: const Size(double.infinity, 54), elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+              ),
+              onPressed: _isSaving ? null : () {
+                FocusScope.of(context).unfocus();
+                _saveChecklist();
+              },
               child: _isSaving
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : Text(isEditing ? "UPDATE CHECKLIST" : "SAVE CHECKLIST", style: GoogleFonts.inter(fontWeight: FontWeight.bold, letterSpacing: 1, color: Colors.white)),
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text(isEditing ? "Save Changes" : "Save Checklist", style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.white)),
             ),
           ),
         ),
