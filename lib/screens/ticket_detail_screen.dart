@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,7 +11,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/ticket_provider.dart';
 
-// Import newly separated UI components
 import '../../widgets/ticket/ticket_status_banner.dart';
 import '../../widgets/ticket/ticket_timeline.dart';
 import '../../widgets/ticket/ticket_form_fields.dart';
@@ -99,7 +100,10 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       _breakdownTime = DateTime.now();
     }
 
-    _fetchDropdownData();
+    // Delay fetching dropdowns to ensure context providers are fully mounted
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchDropdownData();
+    });
   }
 
   @override
@@ -119,6 +123,39 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     _spareFocusNode.dispose();
     _toolFocusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _triggerNotification({
+    required String action,
+    required String ticketId,
+    required String ticketNo,
+    required String kitchenId,
+    String? assignedToId,
+  }) async {
+    try {
+      String getPythonApiBaseUrl() {
+        if (kIsWeb) return 'http://127.0.0.1:8000/api';
+        if (Platform.isAndroid) return 'http://192.168.2.143:8000/api';
+        if (Platform.isIOS) return 'http://127.0.0.1:8000/api';
+        return 'http://127.0.0.1:8000/api';
+      }
+
+      final url = Uri.parse('${getPythonApiBaseUrl()}/notifications/trigger');
+
+      await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "action": action,
+          "ticket_id": ticketId,
+          "ticket_no": ticketNo,
+          "kitchen_id": kitchenId,
+          "assigned_to_id": assignedToId,
+        }),
+      );
+    } catch (e) {
+      debugPrint("Failed to trigger notification API: $e");
+    }
   }
 
   String _formatToCamelCase(String text) {
@@ -185,35 +222,68 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
   Future<void> _fetchDropdownData() async {
     try {
-      final areasData = await _supabase.from('m_area').select().eq('status', true);
+      final authProv = context.read<AuthProvider>();
+      final ticketProv = context.read<TicketProvider>();
+
+      String targetKitchenId = "";
+
+      // Determine the active kitchen context
+      if (isEditing) {
+        targetKitchenId = widget.ticket!['kitchen_id']?.toString() ?? "";
+      } else {
+        if (authProv.assignedKitchens.isNotEmpty) {
+          int index = authProv.assignedKitchens.indexWhere((k) => k['id'].toString() == ticketProv.kitchenFilter);
+          final activeKitchen = index != -1 ? authProv.assignedKitchens[index] : authProv.assignedKitchens.first;
+          targetKitchenId = activeKitchen['id']?.toString() ?? "";
+        }
+      }
+
+      if (targetKitchenId.isEmpty) return;
+
+      // 1. Fetch Zones for this specific kitchen
+      final zonesData = await _supabase.from('m_zone').select('id').eq('kitchen_id', targetKitchenId).eq('status', true);
+      final List<String> validZoneIds = zonesData.map((z) => z['id'].toString()).toList();
+
+      // 2. Fetch Areas ONLY belonging to those Zones
+      List<dynamic> areasData = [];
+      if (validZoneIds.isNotEmpty) {
+        areasData = await _supabase.from('m_area').select().eq('status', true).inFilter('zone_id', validZoneIds);
+      }
+
+      // 3. Fetch Equipment (This gets filtered down locally based on the selected area in the UI)
       final equipsData = await _supabase.from('m_equipment').select().eq('status', true);
+
+      // 4. Fetch the rest of the generic resources
       final staffData = await _supabase.from('m_user').select('*, user_kitchens(kitchen_id)').eq('status', true);
-
-      final kitchenId = isEditing ? widget.ticket!['kitchen_id'] : context.read<AuthProvider>().assignedKitchens.firstOrNull?['id'];
-
-      final sparesData = await _supabase.from('m_spares').select('*, m_vendor(name), spare_tracker(current_qty)').eq('status', true).eq('kitchen_id', kitchenId ?? '');
-      final toolsData = await _supabase.from('m_tools').select('*').eq('status', true).eq('kitchen_id', kitchenId ?? '');
+      final sparesData = await _supabase.from('m_spares').select('*, m_vendor(name), spare_tracker(current_qty)').eq('status', true).eq('kitchen_id', targetKitchenId);
+      final toolsData = await _supabase.from('m_tools').select('*').eq('status', true).eq('kitchen_id', targetKitchenId);
 
       if (mounted) {
         setState(() {
+          // Parse Areas
           _allAreas = List<Map<String, dynamic>>.from(areasData);
           for (var a in _allAreas) { a['display_name'] = a['area_name']; }
 
+          // Parse Equipment
           _allEquipment = List<Map<String, dynamic>>.from(equipsData);
           for (var e in _allEquipment) { e['display_name'] = e['name']; }
 
+          // Parse Workers
           _workers = List<Map<String, dynamic>>.from(staffData);
           for (var w in _workers) { w['display_name'] = w['name']; }
 
+          // Parse Spares
           _availableSpares = List<Map<String, dynamic>>.from(sparesData);
           for (var s in _availableSpares) {
             String vendorName = s['m_vendor']?['name'] != null ? " (${s['m_vendor']['name']})" : "";
             s['display_name'] = "${s['spare_name']}$vendorName";
           }
 
+          // Parse Tools
           _availableTools = List<Map<String, dynamic>>.from(toolsData);
           for (var t in _availableTools) { t['display_name'] = t['tool_name']; }
 
+          // Prefill text fields if editing
           if (isEditing && _selectedWorker != null) {
             final worker = _workers.firstWhere((w) => w['id'].toString() == _selectedWorker, orElse: () => <String, dynamic>{});
             if (worker.isNotEmpty) _workerSearchController.text = worker['display_name'];
@@ -227,7 +297,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           }
         });
       }
-    } catch (e) { debugPrint("Dropdown Fetch Error: $e"); }
+    } catch (e) {
+      debugPrint("Dropdown Fetch Error: $e");
+    }
   }
 
   Future<void> _fetchLinkedEquipments() async {
@@ -420,6 +492,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
       if (_selectedImages.isNotEmpty) await _uploadImages(newTicket['id'], 'RAISED');
 
+      await _triggerNotification(
+        action: 'RAISED',
+        ticketId: newTicket['id'],
+        ticketNo: newTicket['ticket_no'] ?? 'NEW TICKET',
+        kitchenId: exactKitchenId,
+      );
+
       if (mounted) {
         context.read<TicketProvider>().refreshTickets();
         Navigator.pop(context);
@@ -505,6 +584,23 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
       await _supabase.from('tickets').update(updates).eq('id', widget.ticket!['id']);
       if (nextStatus == 'COMPLETED' && _selectedImages.isNotEmpty) await _uploadImages(widget.ticket!['id'], 'COMPLETED');
+
+      if (nextStatus == 'ASSIGNED' && _selectedWorker != null) {
+        await _triggerNotification(
+          action: 'ASSIGNED',
+          ticketId: widget.ticket!['id'],
+          ticketNo: widget.ticket!['ticket_no'],
+          kitchenId: widget.ticket!['kitchen_id'],
+          assignedToId: _selectedWorker,
+        );
+      } else if (nextStatus == 'COMPLETED') {
+        await _triggerNotification(
+          action: 'COMPLETED',
+          ticketId: widget.ticket!['id'],
+          ticketNo: widget.ticket!['ticket_no'],
+          kitchenId: widget.ticket!['kitchen_id'],
+        );
+      }
 
       if (mounted) {
         if (widget.ticket != null) widget.ticket!.addAll(updates);

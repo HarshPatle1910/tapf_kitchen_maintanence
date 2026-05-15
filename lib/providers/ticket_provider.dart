@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http; // <-- ADDED FOR NOTIFICATIONS
 
 class TicketProvider with ChangeNotifier {
   final _supabase = Supabase.instance.client;
@@ -14,7 +18,6 @@ class TicketProvider with ChangeNotifier {
   String _priorityFilter = 'ALL';
   String _kitchenFilter = 'ALL';
 
-  // NEW FILTERS
   String _zoneFilter = 'ALL';
   bool _assignedToMeFilter = false;
 
@@ -39,7 +42,6 @@ class TicketProvider with ChangeNotifier {
   String get priorityFilter => _priorityFilter;
   String get kitchenFilter => _kitchenFilter;
 
-  // NEW GETTERS
   String get zoneFilter => _zoneFilter;
   bool get assignedToMeFilter => _assignedToMeFilter;
 
@@ -52,6 +54,46 @@ class TicketProvider with ChangeNotifier {
   int get inProgress => _inProgress;
   int get completed => _completed;
   int get verified => _verified;
+
+  // ============================================================================
+  // NOTIFICATION TRIGGER LOGIC
+  // ============================================================================
+  String get _pythonApiBaseUrl {
+    if (kIsWeb) return 'http://127.0.0.1:8000/api';
+    if (Platform.isAndroid) return 'http://192.168.2.143:8000/api'; // Matches your python server IP
+    if (Platform.isIOS) return 'http://127.0.0.1:8000/api';
+    return 'http://127.0.0.1:8000/api';
+  }
+
+  /// Call this right after you successfully Insert or Update a ticket in Supabase!
+  Future<void> sendInstantNotification({
+    required String action, // Must be: "RAISED", "ASSIGNED", or "COMPLETED"
+    required String ticketId,
+    required String ticketNo,
+    required String kitchenId,
+    String? assignedToId,
+  }) async {
+    try {
+      final url = Uri.parse('$_pythonApiBaseUrl/notifications/trigger');
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "action": action,
+          "ticket_id": ticketId,
+          "ticket_no": ticketNo,
+          "kitchen_id": kitchenId,
+          "assigned_to_id": assignedToId,
+        }),
+      );
+
+      debugPrint('Notification Triggered: ${response.statusCode} - ${response.body}');
+    } catch (e) {
+      debugPrint("Failed to trigger notification: $e");
+    }
+  }
+  // ============================================================================
 
   Future<void> initialize(List<String> kitchenIds) async {
     if (kitchenIds.isEmpty) return;
@@ -90,7 +132,6 @@ class TicketProvider with ChangeNotifier {
     refreshTickets();
   }
 
-  // ADDED zoneId and assignedToMe to the setter
   void setFilters({
     String? status,
     String? priority,
@@ -137,7 +178,6 @@ class TicketProvider with ChangeNotifier {
         query = query.eq('kitchen_id', _kitchenFilter);
       }
 
-      // Filter stats by 'Assigned to Me' if active
       if (_assignedToMeFilter) {
         final userId = _supabase.auth.currentUser?.id;
         if (userId != null) query = query.eq('assigned_to_id', userId);
@@ -173,14 +213,12 @@ class TicketProvider with ChangeNotifier {
             ticket_equipments(m_equipment(name))
           ''');
 
-      // 1. Kitchen Context Filter
       if (_kitchenFilter == 'ALL') {
         query = query.inFilter('kitchen_id', _allowedKitchenIds);
       } else {
         query = query.eq('kitchen_id', _kitchenFilter);
       }
 
-      // 2. NEW: Zone Filter (Tickets map to areas, areas map to zones)
       if (_zoneFilter != 'ALL') {
         final areas = await _supabase.from('m_area').select('id').eq('zone_id', _zoneFilter);
         final List<String> areaIds = areas.map((a) => a['id'].toString()).toList();
@@ -189,18 +227,16 @@ class TicketProvider with ChangeNotifier {
           _tickets.clear();
           _isLoading = false;
           notifyListeners();
-          return; // Stop early if the zone has no areas (no tickets)
+          return;
         }
         query = query.inFilter('area_id', areaIds);
       }
 
-      // 3. NEW: Allocated to Me Filter
       if (_assignedToMeFilter) {
         final userId = _supabase.auth.currentUser?.id;
         if (userId != null) query = query.eq('assigned_to_id', userId);
       }
 
-      // 4. Status Filter
       if (_statusFilter != 'ALL') {
         if (_statusFilter == 'TO DO') {
           query = query.eq('status', 'RAISED');
@@ -215,12 +251,10 @@ class TicketProvider with ChangeNotifier {
         }
       }
 
-      // 5. Priority Filter
       if (_priorityFilter != 'ALL') {
         query = query.eq('priority', _priorityFilter);
       }
 
-      // 6. Custom Date Range Filter
       if (_startDate != null) {
         query = query.gte('ticket_raised_time', _startDate!.toIso8601String());
       }
@@ -229,19 +263,16 @@ class TicketProvider with ChangeNotifier {
         query = query.lte('ticket_raised_time', endOfDay.toIso8601String());
       }
 
-      // 7. Search Filter
       if (_searchQuery.isNotEmpty) {
         query = query.or('title.ilike.%$_searchQuery%,ticket_no.ilike.%$_searchQuery%');
       }
 
-      // Execution
       final bool isAscending = _sortBy == 'DATE_ASC';
       final response = await query.order('ticket_raised_time', ascending: isAscending).range(_offset, _offset + _limit - 1);
 
       if (!loadMore) _tickets.clear();
       _tickets.addAll(List<Map<String, dynamic>>.from(response));
 
-      // Local Sorting Override
       if (_sortBy == 'PRIORITY_DESC') {
         _tickets.sort((a, b) {
           const pWeights = {'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1};

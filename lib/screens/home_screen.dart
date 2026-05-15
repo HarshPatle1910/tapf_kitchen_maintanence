@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../providers/ticket_provider.dart';
 
 import 'ticket_detail_screen.dart';
+import '../core/services/notification_service.dart';
 
 // NEW WIDGET IMPORTS (Ensure these paths match your folder setup)
 import '../widgets/ticket_card.dart';
@@ -33,6 +34,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    NotificationService().initNotifications(
+
+    );
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
         context.read<TicketProvider>().fetchTickets(loadMore: true);
