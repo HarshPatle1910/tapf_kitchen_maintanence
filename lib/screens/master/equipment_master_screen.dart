@@ -60,7 +60,7 @@ class _EquipmentMasterScreenState extends State<EquipmentMasterScreen> {
     return activeId;
   }
 
-  // FIX: Fetch ONLY areas that belong to the active kitchen
+  // Fetch ONLY areas that belong to the active kitchen
   Future<void> _fetchAreas() async {
     try {
       final kitchenId = _getActiveKitchenId();
@@ -85,7 +85,7 @@ class _EquipmentMasterScreenState extends State<EquipmentMasterScreen> {
     }
   }
 
-  // FIX: Fetch ONLY equipment that belongs to the active kitchen
+  // Fetch ONLY equipment that belongs to the active kitchen
   Future<void> _fetchEquipment() async {
     setState(() => _isLoading = true);
     try {
@@ -100,7 +100,8 @@ class _EquipmentMasterScreenState extends State<EquipmentMasterScreen> {
           .eq('m_area.m_zone.kitchen_id', kitchenId);
 
       if (_searchQuery.isNotEmpty) {
-        query = query.ilike('name', '%$_searchQuery%');
+        // Search across name, equipment code, and model
+        query = query.or('name.ilike.%$_searchQuery%,equipment_code.ilike.%$_searchQuery%,model.ilike.%$_searchQuery%');
       }
 
       final response = await query.order('created_at', ascending: false);
@@ -126,7 +127,8 @@ class _EquipmentMasterScreenState extends State<EquipmentMasterScreen> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => _searchFocusNode.unfocus(),
+      // Global unfocus to dismiss keyboard when tapping outside
+      onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
         appBar: AppBar(
@@ -161,7 +163,7 @@ class _EquipmentMasterScreenState extends State<EquipmentMasterScreen> {
                   onChanged: _onSearchChanged,
                   style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy),
                   decoration: InputDecoration(
-                    hintText: "Search equipment...",
+                    hintText: "Search name, code, or model...",
                     hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontWeight: FontWeight.w500),
                     prefixIcon: Icon(Icons.search, color: _searchFocusNode.hasFocus ? navy : Colors.grey),
                     suffixIcon: _searchQuery.isNotEmpty
@@ -238,15 +240,17 @@ class _EquipmentMasterScreenState extends State<EquipmentMasterScreen> {
 
   void _showAddEquipmentDialog(BuildContext context) {
     final formKey = GlobalKey<FormState>();
+
+    // Form Controllers
     final nameCtrl = TextEditingController();
+    final codeCtrl = TextEditingController(); // NEW: Equipment Code
+    final modelCtrl = TextEditingController();
+    final remarksCtrl = TextEditingController();
 
     // Autocomplete logic variables
     final areaCtrl = TextEditingController();
     final areaFocusNode = FocusNode();
     String? selectedAreaId;
-
-    final modelCtrl = TextEditingController();
-    final remarksCtrl = TextEditingController();
     DateTime? commissionedDate;
 
     showModalBottomSheet(
@@ -256,136 +260,158 @@ class _EquipmentMasterScreenState extends State<EquipmentMasterScreen> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 24, right: 24, top: 12),
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 24), decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
-                  Text("Register Equipment", style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: navy)),
-                  const SizedBox(height: 24),
+          return GestureDetector(
+            // Unfocus when tapping empty space inside the bottom sheet
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 24, right: 24, top: 12),
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 24), decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
+                    Text("Register Equipment", style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: navy)),
+                    const SizedBox(height: 24),
 
-                  _buildInputField(
-                    ctrl: nameCtrl, label: "Equipment Name *", icon: Icons.precision_manufacturing, isRequired: true,
-                  ),
-                  const SizedBox(height: 16),
+                    _buildInputField(
+                      ctrl: nameCtrl, label: "Equipment Name *", icon: Icons.precision_manufacturing, isRequired: true,
+                    ),
+                    const SizedBox(height: 16),
 
-                  // FIX: Sleek Autocomplete replacing the manual Area ID field
-                  _buildSleekAutocomplete(
-                    hint: "Search Area *",
-                    icon: Icons.place_outlined,
-                    controller: areaCtrl,
-                    focusNode: areaFocusNode,
-                    options: _allAreas,
-                    isDisabled: false,
-                    onSelected: (val) {
-                      setModalState(() {
-                        selectedAreaId = val['id'].toString();
-                      });
-                    },
-                    onCleared: () {
-                      setModalState(() {
-                        selectedAreaId = null;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
+                    _buildSleekAutocomplete(
+                      hint: "Search Area *",
+                      icon: Icons.place_outlined,
+                      controller: areaCtrl,
+                      focusNode: areaFocusNode,
+                      options: _allAreas,
+                      isDisabled: false,
+                      onSelected: (val) {
+                        setModalState(() {
+                          selectedAreaId = val['id'].toString();
+                        });
+                      },
+                      onCleared: () {
+                        setModalState(() {
+                          selectedAreaId = null;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
 
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildInputField(ctrl: modelCtrl, label: "Model No.", icon: Icons.tag),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: InkWell(
-                          onTap: () async {
-                            final picked = await showDatePicker(
-                              context: context, initialDate: commissionedDate ?? DateTime.now(),
-                              firstDate: DateTime(2000), lastDate: DateTime.now(),
-                              builder: (context, child) => Theme(
-                                data: ThemeData.light().copyWith(colorScheme: const ColorScheme.light(primary: navy, onPrimary: Colors.white, onSurface: navy)),
-                                child: child!,
-                              ),
-                            );
-                            if (picked != null) {
-                              setModalState(() => commissionedDate = picked);
-                            }
-                          },
-                          borderRadius: BorderRadius.circular(10),
-                          child: InputDecorator(
-                            isEmpty: commissionedDate == null,
-                            decoration: InputDecoration(
-                              labelText: "Commissioned",
-                              labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
-                              suffixIcon: const Icon(Icons.calendar_today, color: navy, size: 18),
-                              filled: true, fillColor: Colors.grey.shade50,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                            ),
-                            child: Text(
-                              commissionedDate == null ? "" : "${commissionedDate!.year}-${commissionedDate!.month.toString().padLeft(2, '0')}-${commissionedDate!.day.toString().padLeft(2, '0')}",
-                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: navy), maxLines: 1,
-                            ),
-                          ),
+                    // NEW: Equipment Code and Model No in the same row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildInputField(ctrl: codeCtrl, label: "Eq. Code", icon: Icons.qr_code_2_rounded),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildInputField(ctrl: modelCtrl, label: "Model No.", icon: Icons.tag),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
 
-                  _buildInputField(ctrl: remarksCtrl, label: "Remarks", icon: Icons.notes_rounded, maxLines: 2),
-                  const SizedBox(height: 32),
-
-                  SizedBox(
-                    width: double.infinity, height: 50,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: navy, foregroundColor: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                      onPressed: () async {
-                        if (!formKey.currentState!.validate()) return;
-
-                        if (selectedAreaId == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select an Area from the list.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
-                          return;
-                        }
-
-                        setState(() => _isLoading = true);
-
-                        try {
-                          await _supabase.from('m_equipment').insert({
-                            'name': nameCtrl.text,
-                            'area_id': selectedAreaId,
-                            'model': modelCtrl.text,
-                            'date_of_commision': commissionedDate?.toIso8601String().split('T')[0],
-                            'remarks': remarksCtrl.text,
-                          });
-
-                          if (context.mounted) {
-                            Navigator.pop(ctx);
-                            _fetchEquipment();
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Equipment saved successfully!', style: GoogleFonts.inter()), backgroundColor: Colors.green));
-                          }
-                        } catch (e) {
-                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving data: $e', style: GoogleFonts.inter()), backgroundColor: Colors.red));
-                        } finally {
-                          setState(() => _isLoading = false);
+                    // Commissioned Date taking full width or paired with remarks
+                    InkWell(
+                      onTap: () async {
+                        // Dismiss keyboard before opening date picker
+                        FocusScope.of(context).unfocus();
+                        final picked = await showDatePicker(
+                          context: context, initialDate: commissionedDate ?? DateTime.now(),
+                          firstDate: DateTime(2000), lastDate: DateTime.now(),
+                          builder: (context, child) => Theme(
+                            data: ThemeData.light().copyWith(colorScheme: const ColorScheme.light(primary: navy, onPrimary: Colors.white, onSurface: navy)),
+                            child: child!,
+                          ),
+                        );
+                        if (picked != null) {
+                          setModalState(() => commissionedDate = picked);
                         }
                       },
-                      child: Text("SAVE EQUIPMENT", style: GoogleFonts.inter(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                      borderRadius: BorderRadius.circular(10),
+                      child: InputDecorator(
+                        isEmpty: commissionedDate == null,
+                        decoration: InputDecoration(
+                          labelText: "Commissioned Date",
+                          labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
+                          prefixIcon: const Icon(Icons.calendar_today, color: Colors.grey, size: 20),
+                          filled: true, fillColor: Colors.grey.shade50,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+                        ),
+                        child: Text(
+                          commissionedDate == null ? "" : "${commissionedDate!.year}-${commissionedDate!.month.toString().padLeft(2, '0')}-${commissionedDate!.day.toString().padLeft(2, '0')}",
+                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: navy), maxLines: 1,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
+                    const SizedBox(height: 16),
+
+                    _buildInputField(ctrl: remarksCtrl, label: "Remarks", icon: Icons.notes_rounded, maxLines: 2),
+                    const SizedBox(height: 32),
+
+                    SizedBox(
+                      width: double.infinity, height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: navy, foregroundColor: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                        onPressed: () async {
+                          // Unfocus before saving
+                          FocusScope.of(context).unfocus();
+
+                          if (!formKey.currentState!.validate()) return;
+
+                          if (selectedAreaId == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select an Area from the list.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
+                            return;
+                          }
+
+                          setState(() => _isLoading = true);
+
+                          try {
+                            await _supabase.from('m_equipment').insert({
+                              'name': nameCtrl.text,
+                              'area_id': selectedAreaId,
+                              'equipment_code': codeCtrl.text.trim().isEmpty ? null : codeCtrl.text.trim(),
+                              'model': modelCtrl.text.trim().isEmpty ? null : modelCtrl.text.trim(),
+                              'date_of_commision': commissionedDate?.toIso8601String().split('T')[0],
+                              'remarks': remarksCtrl.text.trim().isEmpty ? null : remarksCtrl.text.trim(),
+                            });
+
+                            if (context.mounted) {
+                              Navigator.pop(ctx);
+                              _fetchEquipment();
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Equipment saved successfully!', style: GoogleFonts.inter()), backgroundColor: Colors.green));
+                            }
+                          } catch (e) {
+                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving data: $e', style: GoogleFonts.inter()), backgroundColor: Colors.red));
+                          } finally {
+                            setState(() => _isLoading = false);
+                          }
+                        },
+                        child: Text("SAVE EQUIPMENT", style: GoogleFonts.inter(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
             ),
           );
         },
       ),
-    );
+    ).whenComplete(() {
+      // Clean up controllers when modal is closed
+      nameCtrl.dispose();
+      codeCtrl.dispose();
+      modelCtrl.dispose();
+      remarksCtrl.dispose();
+      areaCtrl.dispose();
+      areaFocusNode.dispose();
+    });
   }
 
   // --- WIDGETS ---
@@ -468,6 +494,7 @@ class _EquipmentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final areaName = item['m_area'] != null ? item['m_area']['area_name'] : 'No Area Assigned';
+    final String? eqCode = item['equipment_code'];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -484,10 +511,26 @@ class _EquipmentCard extends StatelessWidget {
           leading: Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: navy.withOpacity(0.05), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.precision_manufacturing_rounded, color: navy)),
           title: Text(item['name'] ?? 'Unnamed', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16, color: navy)),
           subtitle: Padding(
-            padding: const EdgeInsets.only(top: 4.0),
+            padding: const EdgeInsets.only(top: 6.0),
             child: Row(
               children: [
-                Icon(Icons.place_outlined, size: 14, color: Colors.grey.shade500), const SizedBox(width: 4),
+                // Highlight Equipment Code in Subtitle if it exists
+                if (eqCode != null && eqCode.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: navy.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      eqCode,
+                      style: GoogleFonts.inter(color: navy, fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Icon(Icons.place_outlined, size: 14, color: Colors.grey.shade500),
+                const SizedBox(width: 4),
                 Flexible(child: Text(areaName, style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 12), overflow: TextOverflow.ellipsis)),
               ],
             ),
@@ -553,7 +596,16 @@ class _InfoItem extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, size: 16, color: Colors.grey.shade400), const SizedBox(width: 8),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w600)), const SizedBox(height: 2), Text(value, style: GoogleFonts.inter(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w600))])),
+        Expanded(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 2),
+                  Text(value, style: GoogleFonts.inter(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w600))
+                ]
+            )
+        ),
       ],
     );
   }

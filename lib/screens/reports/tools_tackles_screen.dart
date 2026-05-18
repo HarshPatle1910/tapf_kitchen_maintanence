@@ -6,8 +6,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:share_plus/share_plus.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/constants/api_constants.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/ticket_provider.dart';
 
 class ToolsTacklesScreen extends StatefulWidget {
   const ToolsTacklesScreen({super.key});
@@ -35,7 +39,10 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    // Fetch data after widget builds to safely access providers
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchData();
+    });
   }
 
   @override
@@ -44,11 +51,34 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
     super.dispose();
   }
 
+  // --- GET ACTIVE KITCHEN HELPER ---
+  String? _getActiveKitchenId() {
+    final authProv = context.read<AuthProvider>();
+    final ticketProv = context.read<TicketProvider>();
+    String targetKitchenId = ticketProv.kitchenFilter;
+
+    if (targetKitchenId == 'ALL' || targetKitchenId.isEmpty) {
+      if (authProv.assignedKitchens.isNotEmpty) {
+        return authProv.assignedKitchens.first['id'].toString();
+      }
+      return null;
+    }
+    return targetKitchenId;
+  }
+
   Future<void> _fetchData() async {
+    setState(() => _isLoading = true);
+
+    final targetKitchenId = _getActiveKitchenId();
+    if (targetKitchenId == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+
     try {
-      // Fetch master tools and history logs concurrently
-      final toolsFuture = _supabase.from('m_tools').select('id, tool_name').eq('status', true).order('tool_name');
-      final logsFuture = _supabase.from('v_tools_tackles_report').select().order('taken_time', ascending: false);
+      // Fetch master tools and history logs concurrently, filtered by kitchen_id
+      final toolsFuture = _supabase.from('m_tools').select('id, tool_name').eq('status', true).eq('kitchen_id', targetKitchenId).order('tool_name');
+      final logsFuture = _supabase.from('v_tools_tackles_report').select().eq('kitchen_id', targetKitchenId).order('taken_time', ascending: false);
 
       final results = await Future.wait([toolsFuture, logsFuture]);
 
@@ -79,7 +109,7 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
 
     final List<String> months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-    InputDecoration _minimalDialogDecor(String label) {
+    InputDecoration minimalDialogDecor(String label) {
       return InputDecoration(
         labelText: label,
         labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
@@ -132,7 +162,7 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
                       if (picked != null) setDialogState(() => selectedDate = picked);
                     },
                     child: InputDecorator(
-                      decoration: _minimalDialogDecor("Select Date"),
+                      decoration: minimalDialogDecor("Select Date"),
                       child: Text("${selectedDate.day.toString().padLeft(2, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.year}", style: GoogleFonts.inter(fontWeight: FontWeight.w500, color: const Color(0xFF0F172A), fontSize: 14)),
                     ),
                   )
@@ -141,7 +171,7 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<int>(
-                          decoration: _minimalDialogDecor("Month"), value: selectedMonth, borderRadius: BorderRadius.circular(16), dropdownColor: Colors.white,
+                          decoration: minimalDialogDecor("Month"), value: selectedMonth, borderRadius: BorderRadius.circular(16), dropdownColor: Colors.white,
                           icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
                           items: List.generate(12, (i) => DropdownMenuItem(value: i + 1, child: Text(months[i], style: GoogleFonts.inter(fontSize: 14)))),
                           onChanged: (v) => setDialogState(() => selectedMonth = v!),
@@ -150,7 +180,7 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: DropdownButtonFormField<int>(
-                          decoration: _minimalDialogDecor("Year"), value: selectedYear, borderRadius: BorderRadius.circular(16), dropdownColor: Colors.white,
+                          decoration: minimalDialogDecor("Year"), value: selectedYear, borderRadius: BorderRadius.circular(16), dropdownColor: Colors.white,
                           icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
                           items: [2024, 2025, 2026, 2027].map((y) => DropdownMenuItem(value: y, child: Text(y.toString(), style: GoogleFonts.inter(fontSize: 14)))).toList(),
                           onChanged: (v) => setDialogState(() => selectedYear = v!),
@@ -198,6 +228,12 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
   }
 
   Future<void> _executeExport(String mode, DateTime date, int month, int year, String format) async {
+    final targetKitchenId = _getActiveKitchenId();
+    if (targetKitchenId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No active kitchen available!'), backgroundColor: Colors.red));
+      return;
+    }
+
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator(color: primary)));
 
     try {
@@ -206,11 +242,13 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
 
       if (mode == 'daily') {
         final dateStr = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-        url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/tools/$dateStr?format=$format');
+        // --- ADDED KITCHEN_ID TO URL ---
+        url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/tools/$dateStr?kitchen_id=$targetKitchenId&format=$format');
         expectedFilename = 'Daily_Tools_Report_$dateStr.$format';
       } else {
         final monthStr = "$year-${month.toString().padLeft(2, '0')}";
-        url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/tools/monthly/$monthStr?format=$format');
+        // --- ADDED KITCHEN_ID TO URL ---
+        url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/tools/monthly/$monthStr?kitchen_id=$targetKitchenId&format=$format');
         expectedFilename = 'Monthly_Tools_Report_$monthStr.$format';
       }
 
@@ -227,7 +265,9 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
 
         if (mounted) Navigator.pop(context);
         OpenFilex.open(file.path);
-      } else throw Exception("Server returned ${response.statusCode}");
+      } else {
+        throw Exception("Server returned ${response.statusCode}");
+      }
     } catch (e) {
       if (mounted) Navigator.pop(context);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export Failed: $e'), backgroundColor: Colors.red));

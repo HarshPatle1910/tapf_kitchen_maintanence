@@ -53,24 +53,25 @@ class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
   Future<void> _processReport(String action) async {
     if (_selectedMonth == null || _selectedYear == null) return;
 
-    // Grab the active kitchen ID from the providers
+    // 1. SILENTLY FETCH THE TARGET KITCHEN FROM THE HOME SCREEN STATE
     final authProv = context.read<AuthProvider>();
     final ticketProv = context.read<TicketProvider>();
-    String activeKitchenId = ticketProv.kitchenFilter;
+    String targetKitchenId = ticketProv.kitchenFilter;
 
-    if (activeKitchenId == 'ALL' || activeKitchenId.isEmpty) {
+    // If 'ALL' is selected on the dashboard, default to their first assigned kitchen
+    if (targetKitchenId == 'ALL' || targetKitchenId.isEmpty) {
       if (authProv.assignedKitchens.isNotEmpty) {
-        activeKitchenId = authProv.assignedKitchens.first['id'].toString();
+        targetKitchenId = authProv.assignedKitchens.first['id'].toString();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No active kitchen selected!'), backgroundColor: Colors.red),
+          const SnackBar(content: Text('No active kitchen available!'), backgroundColor: Colors.red),
         );
         return;
       }
     }
 
     // Append kitchen_id to the Railway API call
-    final url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/equipment_master?kitchen_id=$activeKitchenId&month=$_selectedMonth&year=$_selectedYear&format=$_selectedFormat');
+    final url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/equipment_master?kitchen_id=$targetKitchenId&month=$_selectedMonth&year=$_selectedYear&format=$_selectedFormat');
 
     // Creating a local filename that matches the server's clean naming scheme
     final monthAbbr = _months[_selectedMonth! - 1].substring(0, 3);
@@ -125,6 +126,8 @@ class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open file. Viewer app missing?'), backgroundColor: Colors.orange));
           }
         }
+      } else if (response.statusCode == 404) {
+        throw Exception("No equipment found for this kitchen in the selected timeframe.");
       } else {
         throw Exception("Server Error: ${response.statusCode}");
       }
@@ -178,8 +181,9 @@ class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // TIMEFRAME DROPDOWNS
                   Text("Timeframe", style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14, color: primary)),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       // MONTH DROPDOWN

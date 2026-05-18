@@ -5,7 +5,12 @@ import 'package:open_filex/open_filex.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:provider/provider.dart'; // <-- FIXED: Added missing import
+
+import '../../core/constants/api_constants.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/ticket_provider.dart';
+
 
 // ============================================================================
 // 1. DASHBOARD SCREEN (Minimalistic UI)
@@ -45,10 +50,19 @@ class _TestingEquipmentScreenState extends State<TestingEquipmentScreen> {
   }
 
   Future<void> _fetchData() async {
+    setState(() => _isLoading = true);
+
+    final targetKitchenId = _getActiveKitchenId();
+    if (targetKitchenId == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+
     try {
       final res = await _supabase
           .from('v_testing_equipment_master')
           .select()
+          .eq('kitchen_id', targetKitchenId) // <--- Added Filter
           .order('next_due_date', ascending: true);
 
       if (mounted) {
@@ -66,14 +80,21 @@ class _TestingEquipmentScreenState extends State<TestingEquipmentScreen> {
     }
   }
 
-  // --- EXPORT LOGIC ---
-  String get _pythonApiBaseUrl {
-    if (kIsWeb) return 'http://127.0.0.1:8000/api';
-    if (Platform.isAndroid) return 'http://192.168.0.45:8000/api';
-    if (Platform.isIOS) return 'http://127.0.0.1:8000/api';
-    return 'http://127.0.0.1:8000/api';
+  String? _getActiveKitchenId() {
+    final authProv = context.read<AuthProvider>();
+    final ticketProv = context.read<TicketProvider>();
+    String targetKitchenId = ticketProv.kitchenFilter;
+
+    if (targetKitchenId == 'ALL' || targetKitchenId.isEmpty) {
+      if (authProv.assignedKitchens.isNotEmpty) {
+        return authProv.assignedKitchens.first['id'].toString();
+      }
+      return null;
+    }
+    return targetKitchenId;
   }
 
+  // --- EXPORT LOGIC ---
   void _showExportDialog() {
     String format = 'docx';
 
@@ -131,9 +152,13 @@ class _TestingEquipmentScreenState extends State<TestingEquipmentScreen> {
   }
 
   Future<void> _executeExport(String format) async {
+    final targetKitchenId = _getActiveKitchenId();
+    if (targetKitchenId == null) return;
+
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator(color: primary)));
     try {
-      final url = Uri.parse('$_pythonApiBaseUrl/reports/testing-equipments?format=$format');
+      final url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/testing-equipments?kitchen_id=$targetKitchenId&format=$format');
+
       final response = await http.get(url);
       if (response.statusCode == 200) {
         String expectedFilename = 'MT03_Master_List_Testing_Equipments.$format';

@@ -7,8 +7,11 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:share_plus/share_plus.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/constants/api_constants.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/ticket_provider.dart';
 
 class BreakdownReportScreen extends StatefulWidget {
   const BreakdownReportScreen({super.key});
@@ -35,7 +38,7 @@ class _BreakdownReportScreenState extends State<BreakdownReportScreen> {
   int? _selectedMonth;
   int? _selectedYear;
 
-  // Search Controllers initialized properly
+  // Search Controllers
   final TextEditingController _searchCtrl = TextEditingController();
   final FocusNode _focusNode = FocusNode();
 
@@ -54,7 +57,11 @@ class _BreakdownReportScreenState extends State<BreakdownReportScreen> {
     super.initState();
     _selectedMonth = DateTime.now().month;
     _selectedYear = DateTime.now().year;
-    _fetchCompletedTickets();
+
+    // Fetch tickets after the widget tree is built so we can access providers
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchCompletedTickets();
+    });
   }
 
   @override
@@ -64,13 +71,37 @@ class _BreakdownReportScreenState extends State<BreakdownReportScreen> {
     super.dispose();
   }
 
+  // --- GET ACTIVE KITCHEN HELPER ---
+  String? _getActiveKitchenId() {
+    final authProv = context.read<AuthProvider>();
+    final ticketProv = context.read<TicketProvider>();
+    String targetKitchenId = ticketProv.kitchenFilter;
+
+    if (targetKitchenId == 'ALL' || targetKitchenId.isEmpty) {
+      if (authProv.assignedKitchens.isNotEmpty) {
+        return authProv.assignedKitchens.first['id'].toString();
+      }
+      return null;
+    }
+    return targetKitchenId;
+  }
+
   Future<void> _fetchCompletedTickets() async {
+    setState(() => _isLoadingTickets = true);
+
+    final targetKitchenId = _getActiveKitchenId();
+    if (targetKitchenId == null) {
+      if (mounted) setState(() => _isLoadingTickets = false);
+      return;
+    }
+
     try {
       final response = await _supabase
           .from('tickets')
           .select('*, m_kitchen(name), raised_by:m_user!tickets_raised_by_id_fkey(name)')
           .inFilter('status', ['COMPLETED', 'VERIFIED'])
           .eq('category', 'In Breakdown Condition')
+          .eq('kitchen_id', targetKitchenId) // <--- Only fetch tickets for this kitchen
           .order('updated_at', ascending: false);
 
       if (mounted) {
@@ -86,18 +117,28 @@ class _BreakdownReportScreenState extends State<BreakdownReportScreen> {
   }
 
   Future<void> _processReport(String action) async {
+    final targetKitchenId = _getActiveKitchenId();
+
+    if (targetKitchenId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No active kitchen available!'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
     Uri url;
     String finalFileName;
 
     if (_queryMode == 'ticket') {
       if (_selectedTicketData == null) return;
       final ticketNo = _selectedTicketData!['ticket_no'];
-      url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/breakdown/$ticketNo?format=$_selectedFormat');
+      // --- ADDED KITCHEN_ID TO SINGLE TICKET API ---
+      url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/breakdown/$ticketNo?kitchen_id=$targetKitchenId&format=$_selectedFormat');
       finalFileName = 'Breakdown_$ticketNo.$_selectedFormat';
     } else {
       if (_selectedMonth == null || _selectedYear == null) return;
-      url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/breakdowns/monthly?month=$_selectedMonth&year=$_selectedYear&format=$_selectedFormat');
-
+      // --- ADDED KITCHEN_ID TO MONTHLY API ---
+      url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/breakdowns/monthly?kitchen_id=$targetKitchenId&month=$_selectedMonth&year=$_selectedYear&format=$_selectedFormat');
       final monthAbbr = _months[_selectedMonth! - 1].substring(0, 3);
       finalFileName = 'Breakdown_Reports_${monthAbbr}_$_selectedYear.$_selectedFormat';
     }
@@ -156,6 +197,8 @@ class _BreakdownReportScreenState extends State<BreakdownReportScreen> {
             );
           }
         }
+      } else if (response.statusCode == 404) {
+        throw Exception("No breakdown reports found for this selection.");
       } else {
         throw Exception("Server Error: ${response.statusCode}");
       }
@@ -301,6 +344,11 @@ class _BreakdownReportScreenState extends State<BreakdownReportScreen> {
                           ),
                         ),
                       ),
+                      if (_completedTickets.isEmpty && _queryMode == 'ticket')
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text("No completed breakdown tickets found for this kitchen.", style: GoogleFonts.inter(color: Colors.red.shade400, fontSize: 12)),
+                        )
                     ] else ...[
                       Row(
                         children: [

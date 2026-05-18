@@ -7,8 +7,11 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:share_plus/share_plus.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/constants/api_constants.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/ticket_provider.dart';
 
 class ComplaintReportScreen extends StatefulWidget {
   const ComplaintReportScreen({super.key});
@@ -43,7 +46,10 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchTickets();
+    // Fetch tickets after the widget tree is built to safely access providers
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchTickets();
+    });
   }
 
   @override
@@ -53,11 +59,35 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
     super.dispose();
   }
 
+  // --- GET ACTIVE KITCHEN HELPER ---
+  String? _getActiveKitchenId() {
+    final authProv = context.read<AuthProvider>();
+    final ticketProv = context.read<TicketProvider>();
+    String targetKitchenId = ticketProv.kitchenFilter;
+
+    if (targetKitchenId == 'ALL' || targetKitchenId.isEmpty) {
+      if (authProv.assignedKitchens.isNotEmpty) {
+        return authProv.assignedKitchens.first['id'].toString();
+      }
+      return null;
+    }
+    return targetKitchenId;
+  }
+
   Future<void> _fetchTickets() async {
+    setState(() => _isLoadingTickets = true);
+
+    final targetKitchenId = _getActiveKitchenId();
+    if (targetKitchenId == null) {
+      if (mounted) setState(() => _isLoadingTickets = false);
+      return;
+    }
+
     try {
       final response = await _supabase
           .from('tickets')
           .select('*, m_kitchen(name), raised_by:m_user!tickets_raised_by_id_fkey(name)')
+          .eq('kitchen_id', targetKitchenId) // <--- Only fetch tickets for this kitchen
           .order('updated_at', ascending: false);
 
       if (mounted) {
@@ -98,20 +128,31 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
   }
 
   Future<void> _processReport(String action) async {
+    final targetKitchenId = _getActiveKitchenId();
+
+    if (targetKitchenId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No active kitchen available!'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
     Uri url;
     String finalFileName;
 
     if (_queryMode == 'ticket') {
       if (_selectedTicketData == null) return;
       final ticketNo = _selectedTicketData!['ticket_no'];
-      url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/complaint/$ticketNo?format=$_selectedFormat');
+      // --- ADDED KITCHEN_ID TO SINGLE TICKET API ---
+      url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/complaint/$ticketNo?kitchen_id=$targetKitchenId&format=$_selectedFormat');
       finalFileName = 'Complaint_Register_$ticketNo.$_selectedFormat';
     } else {
       if (_startDate == null || _endDate == null) return;
       final startIso = _startDate!.toIso8601String().split('T')[0];
       final endIso = _endDate!.toIso8601String().split('T')[0];
 
-      url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/complaints/range?start=$startIso&end=$endIso&format=$_selectedFormat');
+      // --- ADDED KITCHEN_ID TO DATE RANGE API ---
+      url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/complaints/range?kitchen_id=$targetKitchenId&start=$startIso&end=$endIso&format=$_selectedFormat');
       finalFileName = 'Complaint_Register_${startIso}_to_$endIso.$_selectedFormat';
     }
 
@@ -162,6 +203,8 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open file. Viewer app missing?'), backgroundColor: Colors.orange));
           }
         }
+      } else if (response.statusCode == 404) {
+        throw Exception("No complaints found for this selection.");
       } else {
         throw Exception("Server Error: ${response.statusCode}");
       }
@@ -318,6 +361,11 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
                           ),
                         ),
                       ),
+                      if (_allTickets.isEmpty && _queryMode == 'ticket')
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text("No tickets found for this kitchen.", style: GoogleFonts.inter(color: Colors.red.shade400, fontSize: 12)),
+                        )
                     ] else ...[
                       // DATE RANGE PICKERS
                       Row(
