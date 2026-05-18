@@ -8,6 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/constants/api_constants.dart';
+
 class ComplaintReportScreen extends StatefulWidget {
   const ComplaintReportScreen({super.key});
 
@@ -20,13 +22,6 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
   static const Color primary = Color(0xFF26538D);
   static const Color background = Color(0xFFFFFFFF);
   static const Color surface = Color(0xFFF8FAFC);
-
-  String get _pythonApiBaseUrl {
-    if (kIsWeb) return 'http://127.0.0.1:8000/api';
-    if (Platform.isAndroid) return 'http://192.168.0.45:8000/api';
-    if (Platform.isIOS) return 'http://127.0.0.1:8000/api';
-    return 'http://127.0.0.1:8000/api';
-  }
 
   final _supabase = Supabase.instance.client;
   List<Map<String, dynamic>> _allTickets = [];
@@ -109,14 +104,14 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
     if (_queryMode == 'ticket') {
       if (_selectedTicketData == null) return;
       final ticketNo = _selectedTicketData!['ticket_no'];
-      url = Uri.parse('$_pythonApiBaseUrl/reports/complaint/$ticketNo?format=$_selectedFormat');
+      url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/complaint/$ticketNo?format=$_selectedFormat');
       finalFileName = 'Complaint_Register_$ticketNo.$_selectedFormat';
     } else {
       if (_startDate == null || _endDate == null) return;
       final startIso = _startDate!.toIso8601String().split('T')[0];
       final endIso = _endDate!.toIso8601String().split('T')[0];
 
-      url = Uri.parse('$_pythonApiBaseUrl/reports/complaints/range?start=$startIso&end=$endIso&format=$_selectedFormat');
+      url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/complaints/range?start=$startIso&end=$endIso&format=$_selectedFormat');
       finalFileName = 'Complaint_Register_${startIso}_to_$endIso.$_selectedFormat';
     }
 

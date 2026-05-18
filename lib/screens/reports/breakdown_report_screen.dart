@@ -8,6 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/constants/api_constants.dart';
+
 class BreakdownReportScreen extends StatefulWidget {
   const BreakdownReportScreen({super.key});
 
@@ -20,13 +22,6 @@ class _BreakdownReportScreenState extends State<BreakdownReportScreen> {
   static const Color primary = Color(0xFF26538D);
   static const Color background = Color(0xFFFFFFFF);
   static const Color surface = Color(0xFFF8FAFC);
-
-  String get _pythonApiBaseUrl {
-    if (kIsWeb) return 'http://127.0.0.1:8000/api';
-    if (Platform.isAndroid) return 'http://192.168.0.45:8000/api';
-    if (Platform.isIOS) return 'http://127.0.0.1:8000/api';
-    return 'http://127.0.0.1:8000/api';
-  }
 
   final _supabase = Supabase.instance.client;
   List<Map<String, dynamic>> _completedTickets = [];
@@ -97,11 +92,11 @@ class _BreakdownReportScreenState extends State<BreakdownReportScreen> {
     if (_queryMode == 'ticket') {
       if (_selectedTicketData == null) return;
       final ticketNo = _selectedTicketData!['ticket_no'];
-      url = Uri.parse('$_pythonApiBaseUrl/reports/breakdown/$ticketNo?format=$_selectedFormat');
+      url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/breakdown/$ticketNo?format=$_selectedFormat');
       finalFileName = 'Breakdown_$ticketNo.$_selectedFormat';
     } else {
       if (_selectedMonth == null || _selectedYear == null) return;
-      url = Uri.parse('$_pythonApiBaseUrl/reports/breakdowns/monthly?month=$_selectedMonth&year=$_selectedYear&format=$_selectedFormat');
+      url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/breakdowns/monthly?month=$_selectedMonth&year=$_selectedYear&format=$_selectedFormat');
 
       final monthAbbr = _months[_selectedMonth! - 1].substring(0, 3);
       finalFileName = 'Breakdown_Reports_${monthAbbr}_$_selectedYear.$_selectedFormat';

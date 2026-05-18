@@ -1,4 +1,4 @@
-  import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:open_filex/open_filex.dart';
@@ -6,6 +6,11 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:share_plus/share_plus.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/constants/api_constants.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/ticket_provider.dart';
 
 class EquipmentReportScreen extends StatefulWidget {
   const EquipmentReportScreen({super.key});
@@ -19,13 +24,6 @@ class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
   static const Color primary = Color(0xFF26538D);
   static const Color background = Color(0xFFFFFFFF);
   static const Color surface = Color(0xFFF8FAFC);
-
-  String get _pythonApiBaseUrl {
-    if (kIsWeb) return 'http://127.0.0.1:8000/api';
-    if (Platform.isAndroid) return 'http://192.168.0.45:8000/api';
-    if (Platform.isIOS) return 'http://127.0.0.1:8000/api';
-    return 'http://127.0.0.1:8000/api';
-  }
 
   String _selectedFormat = 'xlsx';
 
@@ -55,7 +53,24 @@ class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
   Future<void> _processReport(String action) async {
     if (_selectedMonth == null || _selectedYear == null) return;
 
-    final url = Uri.parse('$_pythonApiBaseUrl/reports/equipment?month=$_selectedMonth&year=$_selectedYear&format=$_selectedFormat');
+    // Grab the active kitchen ID from the providers
+    final authProv = context.read<AuthProvider>();
+    final ticketProv = context.read<TicketProvider>();
+    String activeKitchenId = ticketProv.kitchenFilter;
+
+    if (activeKitchenId == 'ALL' || activeKitchenId.isEmpty) {
+      if (authProv.assignedKitchens.isNotEmpty) {
+        activeKitchenId = authProv.assignedKitchens.first['id'].toString();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No active kitchen selected!'), backgroundColor: Colors.red),
+        );
+        return;
+      }
+    }
+
+    // Append kitchen_id to the Railway API call
+    final url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/equipment_master?kitchen_id=$activeKitchenId&month=$_selectedMonth&year=$_selectedYear&format=$_selectedFormat');
 
     // Creating a local filename that matches the server's clean naming scheme
     final monthAbbr = _months[_selectedMonth! - 1].substring(0, 3);
@@ -174,7 +189,6 @@ class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
                           decoration: _minimalDecor(),
                           value: _selectedMonth,
                           isExpanded: true,
-                          // NEW: Added rounded corners to the dropdown menu list
                           borderRadius: BorderRadius.circular(16),
                           dropdownColor: Colors.white,
                           hint: Text("Month", style: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 14)),
@@ -197,7 +211,6 @@ class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
                           decoration: _minimalDecor(),
                           value: _selectedYear,
                           isExpanded: true,
-                          // NEW: Added rounded corners to the dropdown menu list
                           borderRadius: BorderRadius.circular(16),
                           dropdownColor: Colors.white,
                           hint: Text("Year", style: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 14)),

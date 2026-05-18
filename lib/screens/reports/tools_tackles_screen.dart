@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
+import '../../core/constants/api_constants.dart';
+
 class ToolsTacklesScreen extends StatefulWidget {
   const ToolsTacklesScreen({super.key});
 
@@ -67,12 +69,6 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
   }
 
   // --- EXPORT LOGIC ---
-  String get _pythonApiBaseUrl {
-    if (kIsWeb) return 'http://127.0.0.1:8000/api';
-    if (Platform.isAndroid) return 'http://192.168.0.45:8000/api';
-    if (Platform.isIOS) return 'http://127.0.0.1:8000/api';
-    return 'http://127.0.0.1:8000/api';
-  }
 
   void _showExportDialog() {
     String exportMode = 'daily';
@@ -210,11 +206,11 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
 
       if (mode == 'daily') {
         final dateStr = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-        url = Uri.parse('$_pythonApiBaseUrl/reports/tools/$dateStr?format=$format');
+        url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/tools/$dateStr?format=$format');
         expectedFilename = 'Daily_Tools_Report_$dateStr.$format';
       } else {
         final monthStr = "$year-${month.toString().padLeft(2, '0')}";
-        url = Uri.parse('$_pythonApiBaseUrl/reports/tools/monthly/$monthStr?format=$format');
+        url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/tools/monthly/$monthStr?format=$format');
         expectedFilename = 'Monthly_Tools_Report_$monthStr.$format';
       }
 

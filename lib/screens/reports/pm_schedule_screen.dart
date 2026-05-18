@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
+import '../../core/constants/api_constants.dart';
+
 // ============================================================================
 // 1. DASHBOARD SCREEN
 // ============================================================================
@@ -70,13 +72,6 @@ class _PMScheduleScreenState extends State<PMScheduleScreen> {
   }
 
   // --- EXPORT LOGIC ---
-  String get _pythonApiBaseUrl {
-    if (kIsWeb) return 'http://127.0.0.1:8000/api';
-    if (Platform.isAndroid) return 'http://192.168.0.45:8000/api';
-    if (Platform.isIOS) return 'http://127.0.0.1:8000/api';
-    return 'http://127.0.0.1:8000/api';
-  }
-
   void _showExportDialog() {
     int selectedMonth = DateTime.now().month;
     int selectedYear = DateTime.now().year;
@@ -300,7 +295,7 @@ class _PMScheduleScreenState extends State<PMScheduleScreen> {
     try {
       final monthStr = "$year-${month.toString().padLeft(2, '0')}";
       final url = Uri.parse(
-        '$_pythonApiBaseUrl/reports/preventive-maintenance/$monthStr?format=$format',
+        '${ApiConstants.pythonApiBaseUrl}/reports/preventive-maintenance/$monthStr?format=$format',
       );
       final response = await http.get(url);
 

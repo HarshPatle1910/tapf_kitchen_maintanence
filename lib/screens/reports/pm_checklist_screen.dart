@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
+import '../../core/constants/api_constants.dart';
+
 // ============================================================================
 // 1. DASHBOARD SCREEN (Minimalistic UI)
 // ============================================================================
@@ -74,12 +76,6 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
   }
 
   // --- EXPORT DIALOG & LOGIC ---
-  String get _pythonApiBaseUrl {
-    if (kIsWeb) return 'http://127.0.0.1:8000/api';
-    if (Platform.isAndroid) return 'http://192.168.0.45:8000/api';
-    if (Platform.isIOS) return 'http://127.0.0.1:8000/api';
-    return 'http://127.0.0.1:8000/api';
-  }
 
   void _showExportDialog() {
     String exportMode = 'month'; // 'month' or 'machine'
@@ -246,7 +242,7 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
         queryParams += "&machine_id=$machineId";
       }
 
-      final url = Uri.parse('$_pythonApiBaseUrl/reports/pm-checklists$queryParams');
+      final url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/pm-checklists$queryParams');
       final response = await http.get(url);
 
       if (response.statusCode == 200) {

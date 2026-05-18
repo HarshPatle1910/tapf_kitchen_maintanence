@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:http/http.dart' as http; // <-- ADDED FOR NOTIFICATIONS
+import 'package:http/http.dart' as http;
+
+import '../core/constants/api_constants.dart'; // <-- ADDED FOR NOTIFICATIONS
 
 class TicketProvider with ChangeNotifier {
   final _supabase = Supabase.instance.client;
@@ -58,12 +60,6 @@ class TicketProvider with ChangeNotifier {
   // ============================================================================
   // NOTIFICATION TRIGGER LOGIC
   // ============================================================================
-  String get _pythonApiBaseUrl {
-    if (kIsWeb) return 'http://127.0.0.1:8000/api';
-    if (Platform.isAndroid) return 'http://192.168.2.143:8000/api'; // Matches your python server IP
-    if (Platform.isIOS) return 'http://127.0.0.1:8000/api';
-    return 'http://127.0.0.1:8000/api';
-  }
 
   /// Call this right after you successfully Insert or Update a ticket in Supabase!
   Future<void> sendInstantNotification({
@@ -74,7 +70,7 @@ class TicketProvider with ChangeNotifier {
     String? assignedToId,
   }) async {
     try {
-      final url = Uri.parse('$_pythonApiBaseUrl/notifications/trigger');
+      final url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/notifications/trigger');
 
       final response = await http.post(
         url,
