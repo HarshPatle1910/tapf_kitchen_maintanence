@@ -39,10 +39,8 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch data after widget builds to safely access providers
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchData();
-    });
+    // Fetch data after widget builds to safely access context providers
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchData());
   }
 
   @override
@@ -68,7 +66,6 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
 
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
-
     final targetKitchenId = _getActiveKitchenId();
     if (targetKitchenId == null) {
       if (mounted) setState(() => _isLoading = false);
@@ -76,7 +73,7 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
     }
 
     try {
-      // 1. Fetch Checklists specifically for this kitchen using an inner join
+      // Fetch checklists filtered to this kitchen via inner join on m_equipment relations
       final checklistRes = await _supabase
           .from('preventive_maintenance_checklist')
           .select('*, equipment:m_equipment!inner(name, m_area!inner(m_zone!inner(kitchen_id)))')
@@ -84,7 +81,7 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
           .eq('equipment.m_area.m_zone.kitchen_id', targetKitchenId)
           .order('date', ascending: false);
 
-      // 2. Fetch Equipments specifically for this kitchen
+      // Fetch equipment items belonging to this kitchen
       final equipRes = await _supabase
           .from('m_equipment')
           .select('id, name, m_area!inner(m_zone!inner(kitchen_id))')
@@ -109,7 +106,6 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
   }
 
   // --- EXPORT DIALOG & LOGIC ---
-
   void _showExportDialog() {
     String exportMode = 'month'; // 'month' or 'machine'
     int selectedMonth = DateTime.now().month;
@@ -121,7 +117,7 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
     final TextEditingController searchCtrl = TextEditingController();
     final FocusNode focusNode = FocusNode();
 
-    InputDecoration minimalDialogDecor(String label) {
+    InputDecoration _minimalDialogDecor(String label) {
       return InputDecoration(
         labelText: label,
         labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
@@ -169,7 +165,7 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
                     children: [
                       Expanded(
                           child: DropdownButtonFormField<int>(
-                            decoration: minimalDialogDecor("Month"),
+                            decoration: _minimalDialogDecor("Month"),
                             value: selectedMonth, borderRadius: BorderRadius.circular(16), dropdownColor: Colors.white,
                             items: List.generate(12, (i) => DropdownMenuItem(value: i + 1, child: Text(months[i], style: GoogleFonts.inter(fontSize: 14)))),
                             onChanged: (v) => setDialogState(() => selectedMonth = v!),
@@ -178,9 +174,9 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                           child: DropdownButtonFormField<int>(
-                            decoration: minimalDialogDecor("Year"),
+                            decoration: _minimalDialogDecor("Year"),
                             value: selectedYear, borderRadius: BorderRadius.circular(16), dropdownColor: Colors.white,
-                            items: [2024, 2025, 2026].map((y) => DropdownMenuItem(value: y, child: Text(y.toString(), style: GoogleFonts.inter(fontSize: 14)))).toList(),
+                            items: [2024, 2025, 2026, 2027].map((y) => DropdownMenuItem(value: y, child: Text(y.toString(), style: GoogleFonts.inter(fontSize: 14)))).toList(),
                             onChanged: (v) => setDialogState(() => selectedYear = v!),
                           )
                       ),
@@ -198,7 +194,7 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
                     fieldViewBuilder: (ctx, ctrl, fNode, onSub) => TextFormField(
                       controller: ctrl, focusNode: fNode,
                       style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: primary),
-                      decoration: minimalDialogDecor("Search Machine").copyWith(prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20)),
+                      decoration: _minimalDialogDecor("Search Machine").copyWith(prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20)),
                     ),
                     optionsViewBuilder: (ctx, onSel, opts) => Align(
                       alignment: Alignment.topLeft,
@@ -274,7 +270,7 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator(color: primary)));
 
     try {
-      // --- APPEND KITCHEN_ID TO THE API QUERY ---
+      // FIXED: Added missing query parameter 'kitchen_id' to satisfy FastAPI requirements
       String queryParams = "?kitchen_id=$targetKitchenId&format=$format";
       if (mode == 'month') {
         queryParams += "&month=$month&year=$year";
@@ -292,12 +288,10 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
           filename = contentDisposition.split('filename=')[1].replaceAll('"', '');
         }
 
-        Directory? saveDir;
-        if (Platform.isAndroid) {
-          saveDir = Directory('/storage/emulated/0/Download/PM Checklists');
-        } else {
-          saveDir = Directory('${(await getApplicationDocumentsDirectory()).path}/PM Checklists');
-        }
+        Directory? saveDir = Platform.isAndroid
+            ? Directory('/storage/emulated/0/Download/PM Checklists')
+            : Directory('${(await getApplicationDocumentsDirectory()).path}/PM Checklists');
+
         if (!await saveDir.exists()) await saveDir.create(recursive: true);
 
         final file = File('${saveDir.path}/$filename');
@@ -306,7 +300,7 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
         if (mounted) Navigator.pop(context);
         OpenFilex.open(file.path);
       } else {
-        throw Exception("Server returned ${response.statusCode}");
+        throw Exception("Server returned ${response.statusCode}: ${response.body}");
       }
     } catch (e) {
       if (mounted) Navigator.pop(context);
@@ -337,7 +331,6 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
             ? const Center(child: CircularProgressIndicator(color: primary))
             : Column(
           children: [
-            // Clean Search Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: TextField(
@@ -468,7 +461,7 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
   final List<String> _frequencies = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly'];
 
   final List<Map<String, TextEditingController>> _activities = [];
-  final List<String> _statusOptions = ['OK', 'Needs Repair', 'Failed', 'Completed', 'Needs Top-up'];
+  final List<String> _statusOptions = ['OK', 'Not OK'];
 
   final TextEditingController _machineSearchCtrl = TextEditingController();
   final FocusNode _machineFocusNode = FocusNode();
@@ -476,9 +469,8 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initData();
-    });
+    // Safely load active equipments via builders context inside frame cycle
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initData());
   }
 
   @override
@@ -494,17 +486,12 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
     super.dispose();
   }
 
-  // --- GET ACTIVE KITCHEN HELPER ---
   String? _getActiveKitchenId() {
     final authProv = context.read<AuthProvider>();
     final ticketProv = context.read<TicketProvider>();
     String targetKitchenId = ticketProv.kitchenFilter;
-
     if (targetKitchenId == 'ALL' || targetKitchenId.isEmpty) {
-      if (authProv.assignedKitchens.isNotEmpty) {
-        return authProv.assignedKitchens.first['id'].toString();
-      }
-      return null;
+      return authProv.assignedKitchens.isNotEmpty ? authProv.assignedKitchens.first['id'].toString() : null;
     }
     return targetKitchenId;
   }
@@ -512,21 +499,19 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
   Future<void> _initData() async {
     await _fetchEquipments();
     await _loadExistingData();
-    setState(() => _isLoading = false);
+    if (mounted) setState(() => _isLoading = false);
   }
 
   Future<void> _fetchEquipments() async {
+    final targetKitchenId = _getActiveKitchenId();
+    if (targetKitchenId == null) return;
     try {
-      final targetKitchenId = _getActiveKitchenId();
-      if (targetKitchenId == null) return;
-
       final res = await _supabase
           .from('m_equipment')
           .select('id, name, m_area!inner(m_zone!inner(kitchen_id))')
           .eq('status', true)
           .eq('m_area.m_zone.kitchen_id', targetKitchenId)
           .order('name');
-
       _equipments = List<Map<String, dynamic>>.from(res);
     } catch (e) {
       debugPrint("Error fetching machines: $e");
@@ -646,11 +631,9 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
 
   InputDecoration _minimalDecor(String label, {bool isLocked = false, String? hint}) {
     return InputDecoration(
-      labelText: label,
-      hintText: hint,
+      labelText: label, hintText: hint,
       labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 14),
-      filled: true,
-      fillColor: isLocked ? Colors.grey.shade100 : surface,
+      filled: true, fillColor: isLocked ? Colors.grey.shade100 : surface,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
@@ -664,7 +647,6 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
 
     final bool isEditing = widget.existingChecklist != null;
 
-    // WRAPPED IN GESTURE DETECTOR TO DISMISS KEYBOARD ON TAP
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       behavior: HitTestBehavior.opaque,
@@ -679,7 +661,6 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- HEADER SECTION ---
               Text("Header Details", style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14, color: primary)),
               const SizedBox(height: 16),
 
@@ -746,7 +727,7 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
                   Expanded(
                     child: InkWell(
                       onTap: () async {
-                        FocusScope.of(context).unfocus(); // Dismiss keyboard when opening date picker
+                        FocusScope.of(context).unfocus();
                         final picked = await showDatePicker(
                           context: context, initialDate: _selectedDate, firstDate: DateTime(2020), lastDate: DateTime.now(),
                           builder: (context, child) => Theme(data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: primary)), child: child!),
@@ -774,7 +755,6 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
               ),
               const SizedBox(height: 32),
 
-              // --- ACTIVITIES SECTION ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -801,9 +781,7 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
                   return Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: Colors.grey.shade200),
-                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.white, border: Border.all(color: Colors.grey.shade200), borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
                       children: [
