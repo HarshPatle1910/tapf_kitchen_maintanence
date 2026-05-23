@@ -7,6 +7,7 @@ import 'package:kitchen_maintanence/screens/reports/pm_schedule_screen.dart';
 import 'package:kitchen_maintanence/screens/reports/testing_equipment_screen.dart';
 import 'package:kitchen_maintanence/screens/reports/tools_tackles_screen.dart';
 import 'breakdown_report_screen.dart';
+import 'dg_log_screen.dart';
 
 class ReportsScreen extends StatelessWidget {
   const ReportsScreen({super.key});
@@ -222,6 +223,16 @@ class ReportsScreen extends StatelessWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ToolsTacklesScreen()),
+            ),
+          ),
+          _buildReportCard(
+            title: "DG SET Report",
+            code: "MT-14",
+            desc: "DG SET: 250 KVA (Rated Voltage: 415 V) (Rated Current: 347 A)",
+            icon: Icons.handyman_outlined,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DGLogListScreen()),
             ),
           ),
           _buildReportCard(
