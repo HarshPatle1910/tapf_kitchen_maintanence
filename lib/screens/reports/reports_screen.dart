@@ -7,6 +7,7 @@ import 'package:kitchen_maintanence/screens/reports/pm_schedule_screen.dart';
 import 'package:kitchen_maintanence/screens/reports/testing_equipment_screen.dart';
 import 'package:kitchen_maintanence/screens/reports/tools_tackles_screen.dart';
 import 'breakdown_report_screen.dart';
+import 'critical_spares_report_screen.dart';
 import 'dg_log_screen.dart';
 
 class ReportsScreen extends StatelessWidget {
@@ -233,6 +234,16 @@ class ReportsScreen extends StatelessWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const DGLogListScreen()),
+            ),
+          ),
+          _buildReportCard(
+            title: "Critical Spare Part",
+            code: "MT-15",
+            desc: "Get a list of critical spare parts for maintenance",
+            icon: Icons.handyman_outlined,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CriticalSparesReportScreen()),
             ),
           ),
           _buildReportCard(
