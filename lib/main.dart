@@ -1,21 +1,20 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:kitchen_maintanence/screens/updates/app_update_wrapper.dart';
+import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
+import 'package:google_fonts/google_fonts.dart';
 import 'package:kitchen_maintanence/screens/authentication/pending_approval_screen.dart';
 import 'package:kitchen_maintanence/screens/authentication/register_screen.dart';
 import 'package:kitchen_maintanence/screens/home_screen.dart';
 import 'package:kitchen_maintanence/screens/authentication/login_screen.dart';
-// Make sure to import your TicketDetailScreen!
 import 'package:kitchen_maintanence/screens/ticket_detail_screen.dart';
-import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
-import 'package:google_fonts/google_fonts.dart';
 
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/ticket_provider.dart';
 
-// 1. THIS IS REQUIRED FOR BACKGROUND NOTIFICATION ROUTING
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
@@ -79,21 +78,18 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Plant Maintenance',
       debugShowCheckedModeBanner: false,
-      navigatorKey: navigatorKey, // 2. ATTACH THE KEY HERE
+      navigatorKey: navigatorKey,
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: navy, primary: navy, secondary: golden),
         textTheme: GoogleFonts.interTextTheme(),
         appBarTheme: const AppBarTheme(backgroundColor: Colors.white, foregroundColor: navy, elevation: 0),
       ),
-      home: homeWidget,
-
-      // 3. HANDLE THE NOTIFICATION CLICK ROUTING HERE
+      // WRAP YOUR HOME WIDGET WITH THE UPDATE CHECKER
+      home: AppUpdateWrapper(child: homeWidget),
       onGenerateRoute: (settings) {
         if (settings.name == '/ticket-details') {
           final args = settings.arguments as Map<String, dynamic>;
-          // Since we just have the ID from the notification, we pass it to the screen
-          // Make sure your TicketDetailScreen can handle fetching by ID if the full map isn't passed!
           return MaterialPageRoute(
             builder: (context) => TicketDetailScreen(ticket: {'id': args['id']}),
           );
