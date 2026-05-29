@@ -45,17 +45,24 @@ class NotificationService {
   }
 
   Future<void> _saveTokenToDatabase(String token) async {
-    final user = _supabase.auth.currentUser;
-    print("🔥 FCM TOKEN: $token");
-    print("🔥 CURRENT USER: ${user?.id}");
-    if (user == null) {
-      print("❌ FAILED: User is null, cannot save token.");
+    // 1. Force a refresh of the auth session
+    final session = _supabase.auth.currentSession;
+    if (session == null) {
+      print("❌ FAILED: No active session found.");
       return;
     }
+
+    final userId = session.user.id;
+    print("🔥 Saving FCM token for User: $userId");
+
     try {
+      // 2. Use insert/upsert with the user ID explicitly
       await _supabase.from('user_fcm_tokens').upsert({
-        'user_id': user.id, 'token': token, 'updated_at': DateTime.now().toIso8601String(),
+        'user_id': userId,
+        'token': token,
+        'updated_at': DateTime.now().toIso8601String(),
       }, onConflict: 'token');
+      print("✅ Token saved successfully!");
     } catch (e) {
       debugPrint("Error saving FCM token: $e");
     }
