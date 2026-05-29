@@ -1,24 +1,15 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiConstants {
-  // =========================================================
-  // 🎛️ ENVIRONMENT TOGGLE
-  // Set to TRUE to use Railway. Set to FALSE to use your Mac.
-  // =========================================================
-  static const bool isProduction = false;
+  // Read the environment toggle from .env
+  static bool get isProduction => dotenv.env['IS_PRODUCTION'] == 'true';
 
-  // ☁️ LIVE: Your Railway Domain (Make sure there is no trailing slash)
-  static const String _railwayUrl = 'https://tapfkitchenmaintanancebackend-production.up.railway.app/api';
+  // Read URLs from .env, providing fallbacks just in case
+  static String get _railwayUrl => dotenv.env['RAILWAY_URL'] ?? '';
+  static String get _localIp => dotenv.env['LOCAL_IP'] ?? '';
 
-  // 💻 LOCAL: Your Mac's Wi-Fi IP Address (Required for testing on a real phone)
-  static const String _localIp = 'http://192.168.2.143:8000/api';
-
-
-  // =========================================================
-  // SMART URL ROUTER
-  // Every file in your app will call this getter.
-  // =========================================================
   static String get pythonApiBaseUrl {
     if (isProduction) {
       return _railwayUrl;
