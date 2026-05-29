@@ -9,11 +9,17 @@ import '../providers/ticket_provider.dart';
 import 'ticket_detail_screen.dart';
 import '../core/services/notification_service.dart';
 
-// NEW WIDGET IMPORTS (Ensure these paths match your folder setup)
 import '../widgets/ticket_card.dart';
-import '../widgets/app_drawer.dart';
 import '../widgets/filter_bottom_sheet.dart';
 
+// --- Screen Imports for Navigation ---
+import 'reports/reports_screen.dart';
+import 'master/user_management.dart';
+import 'more_screen.dart';
+
+// ============================================================================
+// ROOT WRAPPER WITH BOTTOM NAVIGATION BAR
+// ============================================================================
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -22,6 +28,74 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const Color navy = Color(0xFF26538D);
+  int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    NotificationService().initNotifications();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authProv = context.watch<AuthProvider>();
+    final bool isAdmin = authProv.activeRole == 'admin';
+
+    // Dynamically build tabs based on user role
+    final List<Widget> pages = [
+      const _HomeTicketView(),
+      const ReportsScreen(),
+      if (isAdmin) const UserManagementScreen(),
+      const MoreScreen(),
+    ];
+
+    final List<BottomNavigationBarItem> navItems = [
+      const BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
+      const BottomNavigationBarItem(icon: Icon(Icons.analytics_outlined), activeIcon: Icon(Icons.analytics), label: 'Reports'),
+      if (isAdmin) const BottomNavigationBarItem(icon: Icon(Icons.people_outline), activeIcon: Icon(Icons.people), label: 'Users'),
+      const BottomNavigationBarItem(icon: Icon(Icons.menu), activeIcon: Icon(Icons.menu_open), label: 'More'),
+    ];
+
+    return Scaffold(
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: pages,
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5)),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: (index) => setState(() => _selectedIndex = index),
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          selectedItemColor: navy,
+          unselectedItemColor: Colors.grey.shade400,
+          selectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 11),
+          unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 11),
+          elevation: 0,
+          items: navItems,
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// THE ACTUAL TICKET DASHBOARD
+// ============================================================================
+class _HomeTicketView extends StatefulWidget {
+  const _HomeTicketView();
+
+  @override
+  State<_HomeTicketView> createState() => _HomeTicketViewState();
+}
+
+class _HomeTicketViewState extends State<_HomeTicketView> {
   static const Color navy = Color(0xFF26538D);
   static const Color golden = Color(0xFFD4AF37);
 
@@ -34,9 +108,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    NotificationService().initNotifications(
-
-    );
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
         context.read<TicketProvider>().fetchTickets(loadMore: true);
@@ -44,42 +115,45 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = context.read<AuthProvider>();
-      final ticketProvider = context.read<TicketProvider>();
+      final authProv = context.read<AuthProvider>();
+      if (authProv.assignedKitchens.isNotEmpty) {
+        final ticketProv = context.read<TicketProvider>();
 
-      ticketProvider.initialize(authProvider.activeKitchenIds);
+        // Force selection of the first kitchen if it's currently set to 'ALL'
+        if (ticketProv.kitchenFilter == 'ALL') {
+          ticketProv.setFilters(kitchenId: authProv.assignedKitchens.first['id'].toString());
+        }
 
-      if (ticketProvider.kitchenFilter == 'ALL' && authProvider.assignedKitchens.isNotEmpty) {
-        final firstKitchenId = authProvider.assignedKitchens.first['id'].toString();
-        ticketProvider.setFilters(kitchenId: firstKitchenId);
-        _fetchZonesForFilter(firstKitchenId);
-      } else {
-        _fetchZonesForFilter(ticketProvider.kitchenFilter);
+        final List<String> kIds = authProv.assignedKitchens.map((k) => k['id'].toString()).toList();
+        ticketProv.initialize(kIds);
+        _fetchKitchenZones();
       }
     });
   }
 
-  Future<void> _fetchZonesForFilter(String kitchenId) async {
-    if (kitchenId == 'ALL' || kitchenId.isEmpty) {
-      setState(() => _kitchenZones = []);
-      return;
-    }
+  Future<void> _fetchKitchenZones() async {
     try {
-      final response = await Supabase.instance.client
-          .from('m_zone')
-          .select('id, name')
-          .eq('kitchen_id', kitchenId)
-          .eq('status', true)
-          .order('name');
+      final ticketProv = context.read<TicketProvider>();
+      final authProv = context.read<AuthProvider>();
+      final supabase = Supabase.instance.client;
 
+      String targetKitchenId = ticketProv.kitchenFilter;
+      if (targetKitchenId == 'ALL' || !authProv.assignedKitchens.any((k) => k['id'].toString() == targetKitchenId)) {
+        if (authProv.assignedKitchens.isNotEmpty) {
+          targetKitchenId = authProv.assignedKitchens.first['id'].toString();
+        } else {
+          return;
+        }
+      }
+
+      final res = await supabase.from('m_zone').select('id, name').eq('kitchen_id', targetKitchenId).eq('status', true);
       if (mounted) {
         setState(() {
-          _kitchenZones = List<Map<String, dynamic>>.from(response);
-          for (var z in _kitchenZones) { z['display_name'] = z['name']; }
+          _kitchenZones = List<Map<String, dynamic>>.from(res).map((z) => {'id': z['id'], 'name': z['name'], 'display_name': z['name']}).toList();
         });
       }
     } catch (e) {
-      debugPrint("Error fetching zones for filter: $e");
+      debugPrint("Error fetching zones: $e");
     }
   }
 
@@ -91,59 +165,105 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  Widget _buildStatCard(String label, int count, Color baseColor, String targetStatus, TicketProvider provider) {
-    final isSelected = provider.statusFilter == targetStatus;
-    return InkWell(
-      onTap: () => provider.setFilters(status: targetStatus),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? baseColor.withOpacity(0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: isSelected ? baseColor : Colors.grey.shade200, width: 1.5),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(count.toString(), style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900, color: isSelected ? baseColor : navy)),
-            const SizedBox(height: 2),
-            Text(label, style: GoogleFonts.inter(fontSize: 10, color: isSelected ? baseColor : Colors.grey.shade600, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final ticketProvider = context.watch<TicketProvider>();
-    final authProvider = context.watch<AuthProvider>();
-    final isAdmin = authProvider.activeRole == 'admin';
+    final authProv = context.watch<AuthProvider>();
+
+    String? validDropdownValue = ticketProvider.kitchenFilter;
+    if (validDropdownValue == 'ALL' || !authProv.assignedKitchens.any((k) => k['id'].toString() == validDropdownValue)) {
+      validDropdownValue = authProv.assignedKitchens.isNotEmpty ? authProv.assignedKitchens.first['id'].toString() : null;
+    }
 
     final bool hasActiveFilters = ticketProvider.priorityFilter != 'ALL' || ticketProvider.startDate != null || ticketProvider.zoneFilter != 'ALL' || ticketProvider.assignedToMeFilter || ticketProvider.raisedByMeFilter;
+
+    // Show dropdown only if there is more than 1 kitchen assigned
+    final bool isSingleKitchen = authProv.assignedKitchens.length <= 1;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
-        drawerScrimColor: Colors.black45,
         appBar: AppBar(
-          elevation: 0, backgroundColor: Colors.white, foregroundColor: navy,
-          title: Text("Maintenance Dashboard", style: GoogleFonts.inter(fontWeight: FontWeight.w800, letterSpacing: -0.5)),
-          centerTitle: false,
+          backgroundColor: Colors.white,
+          elevation: 0,
+          toolbarHeight: 75,
+          title: Row(
+            children: [
+              Container(
+                width: 45, height: 45,
+                decoration: BoxDecoration(color: navy.withOpacity(0.08), borderRadius: BorderRadius.circular(12)),
+                child: Image.asset("assets/icon/app_logo.png", fit: BoxFit.cover,),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text("Selected Kitchen", style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey.shade500, letterSpacing: 0.5)),
+                    const SizedBox(height: 2),
+                    if (isSingleKitchen)
+                      Text(
+                        authProv.assignedKitchens.isNotEmpty ? authProv.assignedKitchens.first['name'] ?? 'Unknown Kitchen' : 'No Kitchens',
+                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: navy, letterSpacing: -0.2),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    else
+                      Container(
+                        height: 32,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            borderRadius: const BorderRadius.all(Radius.circular(12)),
+                            value: validDropdownValue,
+                            isDense: true,
+                            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: navy, size: 20),
+                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: navy),
+                            items: authProv.assignedKitchens.map((k) =>
+                                DropdownMenuItem(value: k['id'].toString(), child: Text(k['name'] ?? 'Unknown', style: GoogleFonts.inter(fontWeight: FontWeight.w700)))
+                            ).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                ticketProvider.setFilters(kitchenId: val);
+                                _fetchKitchenZones();
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            // User requested to keep these commented out exactly as they were
+            // Stack(
+            //   alignment: Alignment.center,
+            //   children: [
+            //     IconButton(
+            //       icon: const Icon(Icons.notifications_none_rounded, color: navy, size: 28),
+            //       onPressed: () {},
+            //     ),
+            //     Positioned(
+            //       right: 12, top: 12,
+            //       child: Container(width: 10, height: 10, decoration: BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2))),
+            //     )
+            //   ],
+            // ),
+            // const SizedBox(width: 8),
+          ],
         ),
-
-        // NEW: Injected modular App Drawer
-        drawer: AppDrawer(
-            authProv: authProvider,
-            ticketProv: ticketProvider,
-            isAdmin: isAdmin,
-            onKitchenChanged: _fetchZonesForFilter
-        ),
-
         body: RefreshIndicator(
           color: golden,
+          backgroundColor: Colors.white,
           onRefresh: () => ticketProvider.refreshTickets(),
           child: CustomScrollView(
             controller: _scrollController,
@@ -152,7 +272,7 @@ class _HomeScreenState extends State<HomeScreen> {
               SliverAppBar(
                 backgroundColor: Colors.transparent, elevation: 0, floating: true, snap: true, automaticallyImplyLeading: false, toolbarHeight: 0,
                 bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(160),
+                  preferredSize: const Size.fromHeight(170),
                   child: Container(
                     padding: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
@@ -259,7 +379,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   showFilterBottomSheet(
                                       context: context,
                                       provider: ticketProvider,
-                                      authProv: authProvider,
+                                      authProv: authProv,
                                       kitchenZones: _kitchenZones
                                   );
                                 },
@@ -295,7 +415,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Center(child: CircularProgressIndicator(color: golden)),
                         );
                       }
-                      return TicketCard(ticket: ticketProvider.tickets[index]); // NEW: Injected modular card
+                      return TicketCard(ticket: ticketProvider.tickets[index]); // Injected modular card
                     },
                     childCount: ticketProvider.tickets.length + (ticketProvider.isLoading ? 1 : 0),
                   ),
@@ -305,10 +425,44 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         floatingActionButton: FloatingActionButton.extended(
-          backgroundColor: golden, foregroundColor: navy, elevation: 4,
+          backgroundColor: golden,
+          foregroundColor: navy,
+          elevation: 4,
           onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TicketDetailScreen())),
           icon: const Icon(Icons.add_rounded),
           label: Text("Raise Issue", style: GoogleFonts.inter(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String label, int count, Color color, String targetStatus, TicketProvider provider) {
+    final bool isSelected = provider.statusFilter == targetStatus;
+    return InkWell(
+      onTap: () {
+        if (isSelected) {
+          provider.setFilters(status: 'ALL');
+        } else {
+          provider.setFilters(status: targetStatus);
+        }
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.1) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isSelected ? color : Colors.transparent, width: 1.5),
+          boxShadow: isSelected ? [] : [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2))],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(count.toString(), style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w900, color: isSelected ? color : navy)),
+            const SizedBox(height: 2),
+            Text(label, style: GoogleFonts.inter(fontSize: 9, color: isSelected ? color : Colors.grey.shade500, fontWeight: FontWeight.w800, letterSpacing: 0), maxLines: 1, overflow: TextOverflow.ellipsis),
+          ],
         ),
       ),
     );
