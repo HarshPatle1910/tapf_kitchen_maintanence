@@ -1,264 +1,338 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+// --- Screen Imports ---
 import 'package:kitchen_maintanence/screens/reports/complaint_report_screen.dart';
 import 'package:kitchen_maintanence/screens/reports/master_equipment_report_screen.dart';
 import 'package:kitchen_maintanence/screens/reports/pm_checklist_screen.dart';
 import 'package:kitchen_maintanence/screens/reports/pm_schedule_screen.dart';
+import 'package:kitchen_maintanence/screens/reports/ro_checklist_screen.dart';
 import 'package:kitchen_maintanence/screens/reports/testing_equipment_screen.dart';
 import 'package:kitchen_maintanence/screens/reports/tools_tackles_screen.dart';
+import 'boiler_log_screen.dart';
 import 'breakdown_report_screen.dart';
 import 'critical_spares_report_screen.dart';
 import 'dg_log_screen.dart';
+import 'electrical_log_screen.dart';
 
-class ReportsScreen extends StatelessWidget {
+// --- Data Models ---
+class _ReportData {
+  final String code;
+  final String title;
+  final Widget screen;
+
+  _ReportData({required this.code, required this.title, required this.screen});
+}
+
+class _CategoryData {
+  final String title;
+  final IconData icon;
+  final List<_ReportData> reports;
+
+  _CategoryData({required this.title, required this.icon, required this.reports});
+}
+
+class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
 
-  static const Color primary = Color(0xFF26538D);
-  static const Color background = Color(0xFFFFFFFF);
-  static const Color surface = Color(0xFFF8FAFC);
+  @override
+  State<ReportsScreen> createState() => _ReportsScreenState();
+}
 
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 24, bottom: 12, left: 4),
-      child: Text(
-        title.toUpperCase(),
-        style: GoogleFonts.inter(
-          fontWeight: FontWeight.w800,
-          fontSize: 12,
-          color: Colors.grey.shade500,
-          letterSpacing: 1.2,
-        ),
-      ),
-    );
+class _ReportsScreenState extends State<ReportsScreen> {
+  static const Color primary = Color(0xFF26538D);
+  static const Color background = Color(0xFFF8FAFC);
+  static const Color surface = Colors.white;
+
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  // --- Master Configuration of Categories and Reports ---
+  final List<_CategoryData> _allCategories = [
+    _CategoryData(
+      title: "Master Reports",
+      icon: Icons.folder_special_outlined,
+      reports: [
+        _ReportData(code: "MNT-02", title: "Equipment Master", screen: const EquipmentReportScreen()),
+        _ReportData(code: "MT-03", title: "Testing Equipment", screen: const TestingEquipmentScreen()),
+      ],
+    ),
+    _CategoryData(
+      title: "Preventive Maintenance",
+      icon: Icons.build_circle_outlined,
+      reports: [
+        _ReportData(code: "MT-05", title: "PM Schedule", screen: const PMScheduleScreen()),
+        _ReportData(code: "MT-06", title: "PM Checklist", screen: const PMChecklistScreen()),
+      ],
+    ),
+    _CategoryData(
+      title: "Breakdown & Complaints",
+      icon: Icons.assignment_late_outlined,
+      reports: [
+        _ReportData(code: "MT-07", title: "Breakdown Intimation", screen: const BreakdownReportScreen()),
+        _ReportData(code: "MT-16", title: "Complaint Register", screen: const ComplaintReportScreen()),
+      ],
+    ),
+    _CategoryData(
+      title: "Daily Log Reports",
+      icon: Icons.analytics_outlined,
+      reports: [
+        _ReportData(code: "MT-10", title: "Electrical Log", screen: const ElectricalLogListScreen()),
+        _ReportData(code: "MT-11", title: "Boiler Log Sheet", screen: const BoilerLogListScreen()),
+        _ReportData(code: "MT-13", title: "RO Plant Checklist", screen: const ROChecklistListScreen()),
+        _ReportData(code: "MT-14", title: "DG Set Report", screen: const DGLogListScreen()),
+      ],
+    ),
+    _CategoryData(
+      title: "Asset Management",
+      icon: Icons.inventory_2_outlined,
+      reports: [
+        _ReportData(code: "MT-08", title: "Tools & Tackles", screen: const ToolsTacklesScreen()),
+        _ReportData(code: "MT-15", title: "Critical Spare Parts", screen: const CriticalSparesReportScreen()),
+      ],
+    ),
+  ];
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
-  Widget _buildReportCard({
-    required String title,
-    required String code,
-    required String desc,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Minimalistic Icon Container
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade100),
-                  ),
-                  child: Icon(icon, color: primary, size: 24),
-                ),
-                const SizedBox(width: 16),
+  // --- Filter Logic ---
+  List<_CategoryData> get _filteredCategories {
+    if (_searchQuery.isEmpty) return _allCategories;
 
-                // Text Content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: primary.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              code,
-                              style: GoogleFonts.inter(
-                                color: primary,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                                color: const Color(0xFF0F172A),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        desc,
-                        style: GoogleFonts.inter(
-                          color: Colors.grey.shade500,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  color: Colors.grey.shade300,
-                  size: 16,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    return _allCategories.map((cat) {
+      final filteredReports = cat.reports.where((report) {
+        final matchesTitle = report.title.toLowerCase().contains(_searchQuery.toLowerCase());
+        final matchesCode = report.code.toLowerCase().contains(_searchQuery.toLowerCase());
+        return matchesTitle || matchesCode;
+      }).toList();
+
+      return _CategoryData(title: cat.title, icon: cat.icon, reports: filteredReports);
+    }).where((cat) => cat.reports.isNotEmpty).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: background,
-      appBar: AppBar(
-        backgroundColor: background,
-        elevation: 0,
-        foregroundColor: primary,
-        title: Text(
-          "Report Center",
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
-          ),
-        ),
-        centerTitle: false,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        physics: const BouncingScrollPhysics(),
-        children: [
-          _buildReportCard(
-            title: "Equipment Master",
-            code: "MNT-02",
-            desc:
-                "Complete master list of all kitchen machinery and equipment.",
-            icon: Icons.precision_manufacturing_outlined,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const EquipmentReportScreen()),
-            ),
-          ),
-          _buildReportCard(
-            title: "Testing Equipments",
-            code: "MT-03",
-            desc: "Master list of testing, measuring, and calibration tools.",
-            icon: Icons.speed_outlined,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const TestingEquipmentScreen()),
-            ),
-          ),
-          _buildReportCard(
-            title: "Preventive Maintenance Schedule",
-            code: "MT-05",
-            desc: "Plan and achieve the machines",
-            icon: Icons.speed_outlined,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const PMScheduleScreen()),
-            ),
-          ),
-          _buildReportCard(
-            title: "PM Checklist",
-            code: "MT-06",
-            desc: "Scheduled preventive maintenance checklists and activities.",
-            icon: Icons.fact_check_outlined,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const PMChecklistScreen()),
-            ),
-          ),
-          _buildReportCard(
-            title: "Breakdown Intimation",
-            code: "MT-07",
-            desc:
-                "Register and track sudden machinery breakdowns and resolutions.",
-            icon: Icons.warning_amber_rounded,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const BreakdownReportScreen()),
-            ),
-          ),
-          _buildReportCard(
-            title: "Tools & Tackles",
-            code: "MT-08",
-            desc: "Daily log of tools taken and returned by technicians.",
-            icon: Icons.handyman_outlined,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ToolsTacklesScreen()),
-            ),
-          ),
-          _buildReportCard(
-            title: "DG SET Report",
-            code: "MT-14",
-            desc: "DG SET: 250 KVA (Rated Voltage: 415 V) (Rated Current: 347 A)",
-            icon: Icons.handyman_outlined,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const DGLogListScreen()),
-            ),
-          ),
-          _buildReportCard(
-            title: "Critical Spare Part",
-            code: "MT-15",
-            desc: "Get a list of critical spare parts for maintenance",
-            icon: Icons.handyman_outlined,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CriticalSparesReportScreen()),
-            ),
-          ),
-          _buildReportCard(
-            title: "Complaint Register",
-            code: "MT-16",
-            desc: "Log and monitor ongoing maintenance complaints.",
-            icon: Icons.assignment_late_outlined,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ComplaintReportScreen()),
-            ),
-          ),
+    final categories = _filteredCategories;
 
-          const SizedBox(height: 32), // Bottom padding
-        ],
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: background,
+        appBar: AppBar(
+          backgroundColor: background,
+          elevation: 0,
+          toolbarHeight: 0, // Hiding standard app bar to use a custom header
+        ),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // --- HEADER SECTION ---
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+              color: background,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Reports Center",
+                    style: GoogleFonts.inter(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: primary,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // --- SEARCH BAR ---
+                  TextField(
+                    controller: _searchController,
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.black87),
+                    decoration: InputDecoration(
+                      hintText: "Search by report name or code...",
+                      hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontWeight: FontWeight.w500),
+                      prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 22),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.grey, size: 20),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                          FocusScope.of(context).unfocus();
+                        },
+                      )
+                          : null,
+                      filled: true,
+                      fillColor: surface,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: primary, width: 1.5),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // --- CATEGORIES LIST (ACCORDION) ---
+            Expanded(
+              child: categories.isEmpty
+                  ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.search_off_rounded, size: 64, color: Colors.grey.shade300),
+                    const SizedBox(height: 16),
+                    Text(
+                      "No reports found",
+                      style: GoogleFonts.inter(fontSize: 16, color: Colors.grey.shade500, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              )
+                  : ListView.builder(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                physics: const BouncingScrollPhysics(),
+                itemCount: categories.length,
+                itemBuilder: (context, index) {
+                  final category = categories[index];
+                  // Auto-expand if searching, otherwise keep collapsed
+                  final initiallyExpanded = _searchQuery.isNotEmpty;
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.02),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Theme(
+                        // Removes the default borders from ExpansionTile
+                        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                        child: ExpansionTile(
+                          initiallyExpanded: initiallyExpanded,
+                          iconColor: primary,
+                          collapsedIconColor: Colors.grey.shade400,
+                          tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                          title: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: primary.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(category.icon, color: primary, size: 22),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Text(
+                                  category.title,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF0F172A),
+                                  ),
+                                ),
+                              ),
+                              // Report Count Badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  "${category.reports.length}",
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                          ),
+                          children: category.reports.map((report) => _buildReportTile(report)).toList(),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- REPORT LIST TILE (COMPACT) ---
+  Widget _buildReportTile(_ReportData report) {
+    return InkWell(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => report.screen)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: Colors.grey.shade100)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: primary.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: primary.withOpacity(0.1)),
+              ),
+              child: Text(
+                report.code,
+                style: GoogleFonts.inter(
+                  color: primary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                report.title,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded, color: Colors.grey.shade300, size: 16),
+          ],
+        ),
       ),
     );
   }
