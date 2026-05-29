@@ -18,6 +18,7 @@ void showFilterBottomSheet({
   String tempKitchen = provider.kitchenFilter;
   String tempZone = provider.zoneFilter;
   bool tempAssignedToMe = provider.assignedToMeFilter;
+  bool tempRaisedByMe = provider.raisedByMeFilter; // NEW FILTER STATE
   DateTime? tempStart = provider.startDate;
   DateTime? tempEnd = provider.endDate;
 
@@ -69,10 +70,10 @@ void showFilterBottomSheet({
                       Text("Sort & Filter", style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: navy)),
                       TextButton(
                         onPressed: () {
-                          // FIX: Instantly applies the reset to the Provider and closes the sheet
                           final defaultKitchen = authProv.assignedKitchens.isNotEmpty ? authProv.assignedKitchens.first['id'].toString() : 'ALL';
                           provider.setFilters(
-                            status: 'ALL', priority: 'ALL', zoneId: 'ALL', assignedToMe: false,
+                            status: 'ALL', priority: 'ALL', zoneId: 'ALL',
+                            assignedToMe: false, raisedByMe: false, // RESET BOTH
                             sort: 'DATE_DESC', kitchenId: defaultKitchen, start: null, end: null,
                           );
                           Navigator.pop(ctx);
@@ -90,14 +91,28 @@ void showFilterBottomSheet({
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 16),
+
+                          // NEW: Combined Toggles into one container
                           Container(
                             decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
-                            child: SwitchListTile(
-                              title: Text("My Tasks Only", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy)),
-                              subtitle: Text("Show tickets assigned to me", style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade600)),
-                              activeColor: golden,
-                              value: tempAssignedToMe,
-                              onChanged: (val) => setModalState(() => tempAssignedToMe = val),
+                            child: Column(
+                              children: [
+                                SwitchListTile(
+                                  title: Text("My Tasks Only", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy)),
+                                  subtitle: Text("Show tickets assigned to me", style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade600)),
+                                  activeColor: golden,
+                                  value: tempAssignedToMe,
+                                  onChanged: (val) => setModalState(() => tempAssignedToMe = val),
+                                ),
+                                Divider(height: 1, color: Colors.grey.shade200),
+                                SwitchListTile(
+                                  title: Text("Raised By Me", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy)),
+                                  subtitle: Text("Show tickets I have raised", style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade600)),
+                                  activeColor: golden,
+                                  value: tempRaisedByMe,
+                                  onChanged: (val) => setModalState(() => tempRaisedByMe = val),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -203,7 +218,11 @@ void showFilterBottomSheet({
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(backgroundColor: navy, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
                         onPressed: () {
-                          provider.setFilters(status: tempStatus, priority: tempPriority, kitchenId: tempKitchen, zoneId: tempZone, assignedToMe: tempAssignedToMe, start: tempStart, end: tempEnd, sort: tempSort);
+                          provider.setFilters(
+                              status: tempStatus, priority: tempPriority, kitchenId: tempKitchen,
+                              zoneId: tempZone, assignedToMe: tempAssignedToMe, raisedByMe: tempRaisedByMe, // PASSED HERE
+                              start: tempStart, end: tempEnd, sort: tempSort
+                          );
                           Navigator.pop(ctx);
                         },
                         child: Text("APPLY FILTERS", style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 0.5)),
