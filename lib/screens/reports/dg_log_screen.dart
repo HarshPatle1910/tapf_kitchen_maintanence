@@ -647,7 +647,7 @@ class _DGLogFormScreenState extends State<DGLogFormScreen> {
               ),
 
               _buildSectionCard(
-                  title: "Observations & Confirmations", icon: Icons.draw_outlined,
+                  title: "Review", icon: Icons.draw_outlined,
                   children: [
                     TextField(controller: _remarksCtrl, enabled: !_isReadOnly, maxLines: 3, decoration: _decor("Enter observations or write standard notes here...")),
                     const SizedBox(height: 20),
