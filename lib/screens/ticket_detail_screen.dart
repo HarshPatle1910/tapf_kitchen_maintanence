@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -14,6 +15,7 @@ import '../../providers/ticket_provider.dart';
 import '../../widgets/ticket/ticket_status_banner.dart';
 import '../../widgets/ticket/ticket_timeline.dart';
 import '../../widgets/ticket/ticket_form_fields.dart';
+import '../core/constants/api_constants.dart';
 
 class TicketDetailScreen extends StatefulWidget {
   final Map<String, dynamic>? ticket;
@@ -30,6 +32,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
   final _supabase = Supabase.instance.client;
   final _formKey = GlobalKey<FormState>();
+
+  Map<String, dynamic>? _localTicket;
+  bool _isFetchingTicket = false;
 
   final _titleController = TextEditingController();
   final _causeController = TextEditingController();
@@ -72,38 +77,68 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   Map<String, dynamic>? _currentlySelectedSpareToAdd;
   Map<String, dynamic>? _currentlySelectedToolToAdd;
 
-  bool get isEditing => widget.ticket != null;
-  String get currentStatus => widget.ticket?['status'] ?? 'RAISED';
+  bool get isEditing => _localTicket != null;
+  String get currentStatus => _localTicket?['status'] ?? 'RAISED';
   bool get isTicketClosed => currentStatus == 'VERIFIED';
 
   @override
   void initState() {
     super.initState();
 
-    if (isEditing) {
-      _titleController.text = widget.ticket!['title'] ?? '';
-      _causeController.text = widget.ticket!['cause_of_issue'] ?? '';
-      _actionTakenController.text = widget.ticket!['action_taken'] ?? '';
-      _priority = widget.ticket!['priority'] ?? 'MEDIUM';
-      _category = widget.ticket!['category'] ?? 'In Breakdown Condition';
-      _selectedAreaId = widget.ticket!['area_id']?.toString();
-      _selectedWorker = widget.ticket!['assigned_to_id']?.toString();
+    if (widget.ticket != null) {
+      _localTicket = Map<String, dynamic>.from(widget.ticket!);
 
-      if (widget.ticket!['breakdown_time'] != null) {
-        _breakdownTime = DateTime.parse(widget.ticket!['breakdown_time']).toLocal();
+      if (_localTicket!['title'] == null) {
+        _fetchTicketFromDB(_localTicket!['id']);
+      } else {
+        _setupEditingData();
+        WidgetsBinding.instance.addPostFrameCallback((_) => _fetchDropdownData());
       }
-
-      _fetchMedia();
-      _fetchUsedSpares();
-      _fetchUsedTools();
     } else {
       _breakdownTime = DateTime.now();
+      WidgetsBinding.instance.addPostFrameCallback((_) => _fetchDropdownData());
+    }
+  }
+
+  Future<void> _fetchTicketFromDB(String id) async {
+    setState(() => _isFetchingTicket = true);
+    try {
+      final res = await _supabase.from('tickets')
+          .select('*, m_kitchen(name), assigned_to:m_user!assigned_to_id(name)')
+          .eq('id', id)
+          .single();
+
+      setState(() {
+        _localTicket = res;
+        _setupEditingData();
+      });
+      _fetchDropdownData();
+    } catch (e) {
+      debugPrint("Error fetching ticket from notification: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Failed to load ticket details."), backgroundColor: Colors.red));
+      }
+    } finally {
+      if (mounted) setState(() => _isFetchingTicket = false);
+    }
+  }
+
+  void _setupEditingData() {
+    _titleController.text = _localTicket!['title'] ?? '';
+    _causeController.text = _localTicket!['cause_of_issue'] ?? '';
+    _actionTakenController.text = _localTicket!['action_taken'] ?? '';
+    _priority = _localTicket!['priority'] ?? 'MEDIUM';
+    _category = _localTicket!['category'] ?? 'In Breakdown Condition';
+    _selectedAreaId = _localTicket!['area_id']?.toString();
+    _selectedWorker = _localTicket!['assigned_to_id']?.toString();
+
+    if (_localTicket!['breakdown_time'] != null) {
+      _breakdownTime = DateTime.parse(_localTicket!['breakdown_time']).toLocal();
     }
 
-    // Delay fetching dropdowns to ensure context providers are fully mounted
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchDropdownData();
-    });
+    _fetchMedia();
+    _fetchUsedSpares();
+    _fetchUsedTools();
   }
 
   @override
@@ -133,24 +168,22 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     String? assignedToId,
   }) async {
     try {
-      String getPythonApiBaseUrl() {
-        if (kIsWeb) return 'http://127.0.0.1:8000/api';
-        if (Platform.isAndroid) return 'http://192.168.2.143:8000/api';
-        if (Platform.isIOS) return 'http://127.0.0.1:8000/api';
-        return 'http://127.0.0.1:8000/api';
-      }
-
-      final url = Uri.parse('${getPythonApiBaseUrl()}/notifications/trigger');
+      final url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/notifications/trigger');
+      final String apiKey = dotenv.env['NOTIFICATION_API_KEY'] ?? '';
 
       await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+        },
         body: jsonEncode({
           "action": action,
           "ticket_id": ticketId,
           "ticket_no": ticketNo,
           "kitchen_id": kitchenId,
           "assigned_to_id": assignedToId,
+          "raised_by_id": _supabase.auth.currentUser?.id,
         }),
       );
     } catch (e) {
@@ -187,9 +220,10 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   }
 
   Future<void> _fetchMedia() async {
+    if (_localTicket == null) return;
     setState(() => _isLoadingMedia = true);
     try {
-      final mediaRecords = await _supabase.from('ticket_media').select('storage_path, upload_stage').eq('ticket_id', widget.ticket!['id']);
+      final mediaRecords = await _supabase.from('ticket_media').select('storage_path, upload_stage').eq('ticket_id', _localTicket!['id']);
       List<String> before = [];
       List<String> after = [];
 
@@ -207,15 +241,17 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   }
 
   Future<void> _fetchUsedSpares() async {
+    if (_localTicket == null) return;
     try {
-      final records = await _supabase.from('spare_ticket').select('used_qty, m_spares(*, m_vendor(name), spare_tracker(current_qty))').eq('ticket_id', widget.ticket!['id']);
+      final records = await _supabase.from('spare_ticket').select('used_qty, m_spares(*, m_vendor(name), spare_tracker(current_qty))').eq('ticket_id', _localTicket!['id']);
       if (mounted) setState(() { _usedSpares = records.map((r) => {'qty': r['used_qty'], 'spare': r['m_spares'], 'is_existing': true}).toList(); });
     } catch (e) { debugPrint("Error fetching used spares: $e"); }
   }
 
   Future<void> _fetchUsedTools() async {
+    if (_localTicket == null) return;
     try {
-      final records = await _supabase.from('ticket_tools').select('m_tools(*)').eq('ticket_id', widget.ticket!['id']);
+      final records = await _supabase.from('ticket_tools').select('m_tools(*)').eq('ticket_id', _localTicket!['id']);
       if (mounted) setState(() { _usedTools = records.map((r) => {'tool': r['m_tools'], 'is_existing': true}).toList(); });
     } catch (e) { debugPrint("Error fetching used tools: $e"); }
   }
@@ -227,9 +263,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
       String targetKitchenId = "";
 
-      // Determine the active kitchen context
       if (isEditing) {
-        targetKitchenId = widget.ticket!['kitchen_id']?.toString() ?? "";
+        targetKitchenId = _localTicket!['kitchen_id']?.toString() ?? "";
       } else {
         if (authProv.assignedKitchens.isNotEmpty) {
           int index = authProv.assignedKitchens.indexWhere((k) => k['id'].toString() == ticketProv.kitchenFilter);
@@ -240,54 +275,56 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
       if (targetKitchenId.isEmpty) return;
 
-      // 1. Fetch Zones for this specific kitchen
       final zonesData = await _supabase.from('m_zone').select('id').eq('kitchen_id', targetKitchenId).eq('status', true);
       final List<String> validZoneIds = zonesData.map((z) => z['id'].toString()).toList();
 
-      // 2. Fetch Areas ONLY belonging to those Zones
       List<dynamic> areasData = [];
       if (validZoneIds.isNotEmpty) {
         areasData = await _supabase.from('m_area').select().eq('status', true).inFilter('zone_id', validZoneIds);
       }
 
-      // 3. Fetch Equipment (This gets filtered down locally based on the selected area in the UI)
+      // Fetch Normal Equipment & Testing Equipment
       final equipsData = await _supabase.from('m_equipment').select().eq('status', true);
+      final testEquipsData = await _supabase.from('m_testing_equipment').select().eq('status', true);
 
-      // 4. Fetch the rest of the generic resources
       final staffData = await _supabase.from('m_user').select('*, user_kitchens(kitchen_id)').eq('status', true);
       final sparesData = await _supabase.from('m_spares').select('*, m_vendor(name), spare_tracker(current_qty)').eq('status', true).eq('kitchen_id', targetKitchenId);
       final toolsData = await _supabase.from('m_tools').select('*').eq('status', true).eq('kitchen_id', targetKitchenId);
 
       if (mounted) {
         setState(() {
-          // Parse Areas
           _allAreas = List<Map<String, dynamic>>.from(areasData);
           for (var a in _allAreas) { a['display_name'] = a['area_name']; }
 
-          // Parse Equipment
-          _allEquipment = List<Map<String, dynamic>>.from(equipsData);
-          for (var e in _allEquipment) { e['display_name'] = e['name']; }
+          // Combine both tables and set an is_testing flag
+          _allEquipment = [];
+          for (var e in equipsData) {
+            e['display_name'] = e['name'];
+            e['is_testing'] = false;
+            _allEquipment.add(e);
+          }
+          for (var te in testEquipsData) {
+            te['display_name'] = '${te['name']} (Testing)';
+            te['is_testing'] = true;
+            _allEquipment.add(te);
+          }
 
-          // Parse Workers
           _workers = List<Map<String, dynamic>>.from(staffData);
           for (var w in _workers) { w['display_name'] = w['name']; }
 
-          // Parse Spares
           _availableSpares = List<Map<String, dynamic>>.from(sparesData);
           for (var s in _availableSpares) {
             String vendorName = s['m_vendor']?['name'] != null ? " (${s['m_vendor']['name']})" : "";
             s['display_name'] = "${s['spare_name']}$vendorName";
           }
 
-          // Parse Tools
           _availableTools = List<Map<String, dynamic>>.from(toolsData);
           for (var t in _availableTools) { t['display_name'] = t['tool_name']; }
 
-          // Prefill text fields if editing
           if (isEditing && _selectedWorker != null) {
             final worker = _workers.firstWhere((w) => w['id'].toString() == _selectedWorker, orElse: () => <String, dynamic>{});
             if (worker.isNotEmpty) _workerSearchController.text = worker['display_name'];
-            else _workerSearchController.text = widget.ticket!['assigned_to']?['name'] ?? 'Inactive Worker';
+            else _workerSearchController.text = _localTicket!['assigned_to']?['name'] ?? 'Inactive Worker';
           }
 
           if (isEditing && _selectedAreaId != null) {
@@ -303,15 +340,29 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   }
 
   Future<void> _fetchLinkedEquipments() async {
+    if (_localTicket == null) return;
     try {
-      final linkedEq = await _supabase.from('ticket_equipments').select('m_equipment(*)').eq('ticket_id', widget.ticket!['id']);
+      // We now dynamically fetch from both columns thanks to the updated database structure
+      final linkedEq = await _supabase.from('ticket_equipments')
+          .select('equipment_id, testing_equipment_id, m_equipment(*), m_testing_equipment(*)')
+          .eq('ticket_id', _localTicket!['id']);
+
       if (mounted) {
         setState(() {
-          _selectedEquipments = List<Map<String, dynamic>>.from(linkedEq.map((e) {
-            var eq = e['m_equipment'];
-            eq['display_name'] = eq['name'];
-            return eq;
-          }));
+          _selectedEquipments = [];
+          for (var e in linkedEq) {
+            if (e['m_equipment'] != null) {
+              var eq = e['m_equipment'];
+              eq['display_name'] = eq['name'];
+              eq['is_testing'] = false;
+              _selectedEquipments.add(eq);
+            } else if (e['m_testing_equipment'] != null) {
+              var te = e['m_testing_equipment'];
+              te['display_name'] = '${te['name']} (Testing)';
+              te['is_testing'] = true;
+              _selectedEquipments.add(te);
+            }
+          }
         });
       }
     } catch (e) { debugPrint("Error fetching linked equipment: $e"); }
@@ -480,14 +531,22 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       }
 
       Map<String, dynamic> insertData = {
-        'title': _titleController.text, 'cause_of_issue': _causeController.text, 'priority': _priority, 'category': _category,
+        'title': _titleController.text, 'priority': _priority, 'category': _category,
         'area_id': _selectedAreaId, 'kitchen_id': exactKitchenId, 'raised_by_id': userId,
         'breakdown_time': _breakdownTime!.toUtc().toIso8601String(),
       };
 
       final newTicket = await _supabase.from('tickets').insert(insertData).select().single();
 
-      final equipmentInserts = _selectedEquipments.map((eq) => {'ticket_id': newTicket['id'], 'equipment_id': eq['id']}).toList();
+      final equipmentInserts = _selectedEquipments.map((eq) {
+        // Dynamically place into the correct foreign key column based on the flag
+        if (eq['is_testing'] == true) {
+          return {'ticket_id': newTicket['id'], 'testing_equipment_id': eq['id']};
+        } else {
+          return {'ticket_id': newTicket['id'], 'equipment_id': eq['id']};
+        }
+      }).toList();
+
       if (equipmentInserts.isNotEmpty) await _supabase.from('ticket_equipments').insert(equipmentInserts);
 
       if (_selectedImages.isNotEmpty) await _uploadImages(newTicket['id'], 'RAISED');
@@ -515,13 +574,26 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     FocusManager.instance.primaryFocus?.unfocus();
     _titleController.text = _formatToCamelCase(_titleController.text);
 
+    // Validation when completing the ticket
     if (nextStatus == 'COMPLETED') {
+      if (_causeController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please enter the Cause of Issue.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
+        return;
+      }
       if (_actionTakenController.text.trim().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please enter the Action Taken.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
         return;
       }
       if (_selectedImages.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please upload Completion Photos.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
+        return;
+      }
+    }
+
+    // Validation when just updating details while IN_PROGRESS
+    if (nextStatus == null && currentStatus == 'IN_PROGRESS') {
+      if (_causeController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please enter the Cause of Issue.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
         return;
       }
     }
@@ -536,25 +608,40 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         if (nextStatus == 'IN_PROGRESS') updates['repair_start_time'] = nowISO;
         else if (nextStatus == 'COMPLETED') {
           updates['ticket_completion_time'] = nowISO;
-          updates['action_taken'] = _actionTakenController.text.trim();
         }
         else if (nextStatus == 'VERIFIED') updates['verified_by_id'] = _supabase.auth.currentUser?.id;
-      } else {
-        if (_actionTakenController.text.isNotEmpty) updates['action_taken'] = _actionTakenController.text.trim();
+      }
+
+      // Check worker permissions locally to avoid the getter error
+      final isAssignedWorker = _selectedWorker != null && _selectedWorker == _supabase.auth.currentUser?.id;
+
+      if ((isAssignedWorker && currentStatus == 'IN_PROGRESS') || (isAdmin && (currentStatus == 'IN_PROGRESS' || currentStatus == 'COMPLETED'))) {
+        updates['action_taken'] = _actionTakenController.text.trim();
+        updates['cause_of_issue'] = _causeController.text.trim();
       }
 
       if (isAdmin && !isTicketClosed) {
-        updates['title'] = _titleController.text; updates['cause_of_issue'] = _causeController.text;
+        updates['title'] = _titleController.text;
         updates['priority'] = _priority; updates['category'] = _category; updates['area_id'] = _selectedAreaId;
         if (_breakdownTime != null) updates['breakdown_time'] = _breakdownTime!.toUtc().toIso8601String();
-        if (_selectedWorker != null) {
-          updates['assigned_to_id'] = _selectedWorker;
-          if (currentStatus == 'RAISED') updates['status'] = 'ASSIGNED';
+
+        // Lock assigned worker updating if ticket has progressed past ASSIGNED
+        if (currentStatus == 'RAISED' || currentStatus == 'ASSIGNED') {
+          if (_selectedWorker != null) {
+            updates['assigned_to_id'] = _selectedWorker;
+            if (currentStatus == 'RAISED' && nextStatus == null) updates['status'] = 'ASSIGNED';
+          }
         }
 
-        await _supabase.from('ticket_equipments').delete().eq('ticket_id', widget.ticket!['id']);
+        await _supabase.from('ticket_equipments').delete().eq('ticket_id', _localTicket!['id']);
         if (_selectedEquipments.isNotEmpty) {
-          final newMappings = _selectedEquipments.map((eq) => {'ticket_id': widget.ticket!['id'], 'equipment_id': eq['id']}).toList();
+          final newMappings = _selectedEquipments.map((eq) {
+            if (eq['is_testing'] == true) {
+              return {'ticket_id': _localTicket!['id'], 'testing_equipment_id': eq['id']};
+            } else {
+              return {'ticket_id': _localTicket!['id'], 'equipment_id': eq['id']};
+            }
+          }).toList();
           await _supabase.from('ticket_equipments').insert(newMappings);
         }
       }
@@ -563,7 +650,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         for (var item in _usedTools) {
           if (item['is_existing'] == true) continue;
           await _supabase.from('ticket_tools').insert({
-            'ticket_id': widget.ticket!['id'], 'tool_id': item['tool']['id'], 'employee_id': _supabase.auth.currentUser?.id,
+            'ticket_id': _localTicket!['id'], 'tool_id': item['tool']['id'], 'employee_id': _supabase.auth.currentUser?.id,
           });
         }
       }
@@ -574,7 +661,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           final spare = item['spare'];
           final int qty = item['qty'];
           await _supabase.from('spare_ticket').insert({
-            'ticket_id': widget.ticket!['id'], 'spare_id': spare['id'], 'used_qty': qty,
+            'ticket_id': _localTicket!['id'], 'spare_id': spare['id'], 'used_qty': qty,
             'used_qty_time': nowISO, 'logged_by_id': _supabase.auth.currentUser?.id,
           });
           int currentStock = _getSpareCurrentQty(spare);
@@ -582,28 +669,28 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         }
       }
 
-      await _supabase.from('tickets').update(updates).eq('id', widget.ticket!['id']);
-      if (nextStatus == 'COMPLETED' && _selectedImages.isNotEmpty) await _uploadImages(widget.ticket!['id'], 'COMPLETED');
+      await _supabase.from('tickets').update(updates).eq('id', _localTicket!['id']);
+      if (nextStatus == 'COMPLETED' && _selectedImages.isNotEmpty) await _uploadImages(_localTicket!['id'], 'COMPLETED');
 
       if (nextStatus == 'ASSIGNED' && _selectedWorker != null) {
         await _triggerNotification(
           action: 'ASSIGNED',
-          ticketId: widget.ticket!['id'],
-          ticketNo: widget.ticket!['ticket_no'],
-          kitchenId: widget.ticket!['kitchen_id'],
+          ticketId: _localTicket!['id'],
+          ticketNo: _localTicket!['ticket_no'],
+          kitchenId: _localTicket!['kitchen_id'],
           assignedToId: _selectedWorker,
         );
       } else if (nextStatus == 'COMPLETED') {
         await _triggerNotification(
           action: 'COMPLETED',
-          ticketId: widget.ticket!['id'],
-          ticketNo: widget.ticket!['ticket_no'],
-          kitchenId: widget.ticket!['kitchen_id'],
+          ticketId: _localTicket!['id'],
+          ticketNo: _localTicket!['ticket_no'],
+          kitchenId: _localTicket!['kitchen_id'],
         );
       }
 
       if (mounted) {
-        if (widget.ticket != null) widget.ticket!.addAll(updates);
+        if (_localTicket != null) _localTicket!.addAll(updates);
         context.read<TicketProvider>().refreshTickets();
         Navigator.pop(context);
       }
@@ -797,6 +884,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   // --- CORE BUILD METHOD ---
   @override
   Widget build(BuildContext context) {
+    if (_isFetchingTicket) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF8F9FA),
+        body: Center(child: CircularProgressIndicator(color: navy)),
+      );
+    }
+
     final authProv = context.watch<AuthProvider>();
     final ticketProv = context.watch<TicketProvider>();
     final currentUserId = _supabase.auth.currentUser?.id;
@@ -808,6 +902,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     final bool readOnlyFields = isTicketClosed || (isEditing && !isAdmin);
     final showCameraBox = (!isEditing || canEditWorkDetails) && currentStatus != 'VERIFIED';
 
+    // Hide Equipment Search for normal workers if editing a ticket.
+    final bool showEquipSearch = !isEditing || isAdmin;
+
     String activeKitchenName = "Loading Kitchen...";
     String activeKitchenId = "";
 
@@ -817,8 +914,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       activeKitchenName = activeK['name']?.toString() ?? 'Unknown Kitchen';
       activeKitchenId = activeK['id']?.toString() ?? "";
     } else if (isEditing) {
-      activeKitchenName = widget.ticket?['m_kitchen']?['name']?.toString() ?? 'Unknown Kitchen';
-      activeKitchenId = widget.ticket?['kitchen_id']?.toString() ?? "";
+      activeKitchenName = _localTicket?['m_kitchen']?['name']?.toString() ?? 'Unknown Kitchen';
+      activeKitchenId = _localTicket?['kitchen_id']?.toString() ?? "";
     }
 
     final List<Map<String, dynamic>> availableEquipments = _selectedAreaId == null ? [] : _allEquipment.where((e) => e['area_id']?.toString() == _selectedAreaId).toList();
@@ -829,7 +926,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         backgroundColor: const Color(0xFFF8F9FA),
         appBar: AppBar(
           elevation: 0, backgroundColor: Colors.white, foregroundColor: navy,
-          title: Text(isEditing ? (widget.ticket!['ticket_no'] ?? 'Ticket Details') : "Raise New Issue", style: GoogleFonts.inter(fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+          title: Text(isEditing ? (_localTicket!['ticket_no'] ?? 'Ticket Details') : "Raise New Issue", style: GoogleFonts.inter(fontWeight: FontWeight.w800, letterSpacing: -0.5)),
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -841,7 +938,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 if (isEditing) ...[
                   TicketStatusBanner(currentStatus: currentStatus),
                   const SizedBox(height: 12),
-                  TicketTimeline(ticket: widget.ticket!),
+                  TicketTimeline(ticket: _localTicket!),
                   const SizedBox(height: 12),
                 ],
 
@@ -894,34 +991,33 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      TicketFormFields.buildSleekAutocomplete(
-                          key: ValueKey(_selectedAreaId ?? 'no_area'), context: context,
-                          hint: _selectedAreaId == null ? "Select an Area first" : (availableEquipments.isNotEmpty ? "Search Equipment *" : "No equipment in this area"),
-                          icon: Icons.precision_manufacturing_outlined, controller: _equipSearchController, focusNode: _equipFocusNode, options: availableEquipments, isDisabled: readOnlyFields || _selectedAreaId == null || availableEquipments.isEmpty,
-                          onSelected: (val) { setState(() { if (!_selectedEquipments.any((e) => e['id'] == val['id'])) _selectedEquipments.add(val); _equipSearchController.clear(); }); }
-                      ),
+                      if (showEquipSearch) ...[
+                        TicketFormFields.buildSleekAutocomplete(
+                            key: ValueKey(_selectedAreaId ?? 'no_area'), context: context,
+                            hint: _selectedAreaId == null ? "Select an Area first" : (availableEquipments.isNotEmpty ? "Search Equipment *" : "No equipment in this area"),
+                            icon: Icons.precision_manufacturing_outlined, controller: _equipSearchController, focusNode: _equipFocusNode, options: availableEquipments, isDisabled: _selectedAreaId == null || availableEquipments.isEmpty,
+                            onSelected: (val) { setState(() { if (!_selectedEquipments.any((e) => e['id'] == val['id'])) _selectedEquipments.add(val); _equipSearchController.clear(); }); }
+                        ),
+                        const SizedBox(height: 12),
+                      ],
 
                       if (_selectedEquipments.isNotEmpty) ...[
-                        const SizedBox(height: 12),
                         Wrap(
                           spacing: 8, runSpacing: 8,
                           children: _selectedEquipments.map((eq) => Chip(
                             backgroundColor: navy.withOpacity(0.05), side: const BorderSide(color: navy),
-                            label: Text(eq['name'], style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: navy)),
-                            deleteIcon: const Icon(Icons.close, size: 16),
-                            onDeleted: readOnlyFields ? null : () => setState(() => _selectedEquipments.removeWhere((e) => e['id'] == eq['id'])),
+                            label: Text(eq['display_name'] ?? eq['name'] ?? 'Unknown', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: navy)),
+                            onDeleted: showEquipSearch ? () => setState(() => _selectedEquipments.removeWhere((e) => e['id'] == eq['id'])) : null,
                           )).toList(),
                         ),
+                        const SizedBox(height: 12),
                       ],
-                      const SizedBox(height: 12),
 
                       TicketFormFields.buildDropdown(label: "Priority *", items: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'], val: _priority, onChanged: readOnlyFields ? null : (val) => setState(() => _priority = val!)),
                       const SizedBox(height: 12),
                       TicketFormFields.buildDropdown(label: "Category *", items: ['In Running Condition', 'In Breakdown Condition', 'Running at Risk'], val: _category, onChanged: readOnlyFields ? null : (val) => setState(() => _category = val!)),
                       const SizedBox(height: 12),
-                      TicketFormFields.buildTextField(ctrl: _titleController, label: "Issue Title *", icon: Icons.title, isReadOnly: readOnlyFields, isRequired: true, textCapitalization: TextCapitalization.words),
-                      const SizedBox(height: 12),
-                      TicketFormFields.buildTextField(ctrl: _causeController, label: "Cause of Issue *", icon: Icons.report_problem_outlined, maxLines: 3, isReadOnly: readOnlyFields, isRequired: true, textCapitalization: TextCapitalization.sentences),
+                      TicketFormFields.buildTextField(ctrl: _titleController, label: "Description *", icon: Icons.title, isReadOnly: readOnlyFields, isRequired: true, textCapitalization: TextCapitalization.words),
                     ],
                   ),
                 ),
@@ -936,6 +1032,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                       children: [
                         Text("Work Details", style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 16, color: navy)),
                         const Divider(height: 24),
+
+                        TicketFormFields.buildTextField(
+                          ctrl: _causeController, label: "Cause of Issue *", icon: Icons.report_problem_outlined, maxLines: 3, isReadOnly: !canEditWorkDetails, isRequired: canEditWorkDetails, textCapitalization: TextCapitalization.sentences,
+                        ),
+                        const SizedBox(height: 16),
 
                         TicketFormFields.buildTextField(
                           ctrl: _actionTakenController, label: "Action Taken *", icon: Icons.handyman, maxLines: 3, isReadOnly: !canEditWorkDetails, isRequired: canEditWorkDetails, textCapitalization: TextCapitalization.sentences,
@@ -1054,7 +1155,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 ],
 
                 const SizedBox(height: 20),
-                if (isEditing && isAdmin) ...[
+                // Locked Admin Worker Assignment
+                if (isEditing && isAdmin && (currentStatus == 'RAISED' || currentStatus == 'ASSIGNED')) ...[
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
@@ -1071,6 +1173,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   ),
                   const SizedBox(height: 24),
                 ],
+                const SizedBox(height: 200),
               ],
             ),
           ),

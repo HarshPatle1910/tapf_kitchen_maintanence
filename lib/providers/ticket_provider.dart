@@ -1,11 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 
-import '../core/constants/api_constants.dart'; // <-- ADDED FOR NOTIFICATIONS
+import '../core/constants/api_constants.dart';
 
 class TicketProvider with ChangeNotifier {
   final _supabase = Supabase.instance.client;
@@ -22,6 +21,7 @@ class TicketProvider with ChangeNotifier {
 
   String _zoneFilter = 'ALL';
   bool _assignedToMeFilter = false;
+  bool _raisedByMeFilter = false; // NEW FILTER
 
   DateTime? _startDate;
   DateTime? _endDate;
@@ -46,6 +46,7 @@ class TicketProvider with ChangeNotifier {
 
   String get zoneFilter => _zoneFilter;
   bool get assignedToMeFilter => _assignedToMeFilter;
+  bool get raisedByMeFilter => _raisedByMeFilter; // NEW GETTER
 
   DateTime? get startDate => _startDate;
   DateTime? get endDate => _endDate;
@@ -61,9 +62,8 @@ class TicketProvider with ChangeNotifier {
   // NOTIFICATION TRIGGER LOGIC
   // ============================================================================
 
-  /// Call this right after you successfully Insert or Update a ticket in Supabase!
   Future<void> sendInstantNotification({
-    required String action, // Must be: "RAISED", "ASSIGNED", or "COMPLETED"
+    required String action,
     required String ticketId,
     required String ticketNo,
     required String kitchenId,
@@ -83,13 +83,11 @@ class TicketProvider with ChangeNotifier {
           "assigned_to_id": assignedToId,
         }),
       );
-
-      debugPrint('Notification Triggered: ${response.statusCode} - ${response.body}');
+      debugPrint('Notification Triggered: ${response.statusCode}');
     } catch (e) {
       debugPrint("Failed to trigger notification: $e");
     }
   }
-  // ============================================================================
 
   Future<void> initialize(List<String> kitchenIds) async {
     if (kitchenIds.isEmpty) return;
@@ -110,7 +108,6 @@ class TicketProvider with ChangeNotifier {
       schema: 'public',
       table: 'tickets',
       callback: (payload) {
-        debugPrint("Realtime DB Change Detected: Refreshing tickets...");
         refreshTickets(isRealtime: true);
       },
     );
@@ -134,6 +131,7 @@ class TicketProvider with ChangeNotifier {
     String? kitchenId,
     String? zoneId,
     bool? assignedToMe,
+    bool? raisedByMe,
     DateTime? start,
     DateTime? end,
     String? sort,
@@ -143,11 +141,12 @@ class TicketProvider with ChangeNotifier {
     if (kitchenId != null) _kitchenFilter = kitchenId;
     if (zoneId != null) _zoneFilter = zoneId;
     if (assignedToMe != null) _assignedToMeFilter = assignedToMe;
+    if (raisedByMe != null) _raisedByMeFilter = raisedByMe;
     if (start != null) _startDate = start;
     if (end != null) _endDate = end;
     if (sort != null) _sortBy = sort;
 
-    if (start == null && end == null && sort == null && status == null && priority == null && kitchenId == null && zoneId == null && assignedToMe == null) {
+    if (start == null && end == null && sort == null && status == null && priority == null && kitchenId == null && zoneId == null && assignedToMe == null && raisedByMe == null) {
       _startDate = null;
       _endDate = null;
     }
@@ -174,9 +173,15 @@ class TicketProvider with ChangeNotifier {
         query = query.eq('kitchen_id', _kitchenFilter);
       }
 
-      if (_assignedToMeFilter) {
-        final userId = _supabase.auth.currentUser?.id;
-        if (userId != null) query = query.eq('assigned_to_id', userId);
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId != null) {
+        if (_assignedToMeFilter && _raisedByMeFilter) {
+          query = query.or('assigned_to_id.eq.$userId,raised_by_id.eq.$userId');
+        } else if (_assignedToMeFilter) {
+          query = query.eq('assigned_to_id', userId);
+        } else if (_raisedByMeFilter) {
+          query = query.eq('raised_by_id', userId);
+        }
       }
 
       final statsData = await query;
@@ -201,12 +206,12 @@ class TicketProvider with ChangeNotifier {
     if (loadMore) _offset += _limit;
 
     try {
+      // 🚨 CRITICAL FIX: Removed ticket_equipments join to prevent database crashes when FK is dropped.
       var query = _supabase.from('tickets').select('''
             *, 
             m_kitchen(name),
             raised_by:m_user!raised_by_id(name),
-            assigned_to:m_user!assigned_to_id(name),
-            ticket_equipments(m_equipment(name))
+            assigned_to:m_user!assigned_to_id(name)
           ''');
 
       if (_kitchenFilter == 'ALL') {
@@ -228,9 +233,16 @@ class TicketProvider with ChangeNotifier {
         query = query.inFilter('area_id', areaIds);
       }
 
-      if (_assignedToMeFilter) {
-        final userId = _supabase.auth.currentUser?.id;
-        if (userId != null) query = query.eq('assigned_to_id', userId);
+      // 🚨 CRITICAL FIX: Correctly filters when using OR / AND logic.
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId != null) {
+        if (_assignedToMeFilter && _raisedByMeFilter) {
+          query = query.or('assigned_to_id.eq.$userId,raised_by_id.eq.$userId');
+        } else if (_assignedToMeFilter) {
+          query = query.eq('assigned_to_id', userId);
+        } else if (_raisedByMeFilter) {
+          query = query.eq('raised_by_id', userId);
+        }
       }
 
       if (_statusFilter != 'ALL') {
