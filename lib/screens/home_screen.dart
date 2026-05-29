@@ -121,7 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final authProvider = context.watch<AuthProvider>();
     final isAdmin = authProvider.activeRole == 'admin';
 
-    final bool hasActiveFilters = ticketProvider.priorityFilter != 'ALL' || ticketProvider.startDate != null || ticketProvider.zoneFilter != 'ALL' || ticketProvider.assignedToMeFilter;
+    final bool hasActiveFilters = ticketProvider.priorityFilter != 'ALL' || ticketProvider.startDate != null || ticketProvider.zoneFilter != 'ALL' || ticketProvider.assignedToMeFilter || ticketProvider.raisedByMeFilter;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
