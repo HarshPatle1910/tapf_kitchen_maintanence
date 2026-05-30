@@ -21,7 +21,7 @@ class TicketProvider with ChangeNotifier {
 
   String _zoneFilter = 'ALL';
   bool _assignedToMeFilter = false;
-  bool _raisedByMeFilter = false; // NEW FILTER
+  bool _raisedByMeFilter = false;
 
   DateTime? _startDate;
   DateTime? _endDate;
@@ -46,7 +46,7 @@ class TicketProvider with ChangeNotifier {
 
   String get zoneFilter => _zoneFilter;
   bool get assignedToMeFilter => _assignedToMeFilter;
-  bool get raisedByMeFilter => _raisedByMeFilter; // NEW GETTER
+  bool get raisedByMeFilter => _raisedByMeFilter;
 
   DateTime? get startDate => _startDate;
   DateTime? get endDate => _endDate;
@@ -135,6 +135,7 @@ class TicketProvider with ChangeNotifier {
     DateTime? start,
     DateTime? end,
     String? sort,
+    bool clearDates = false,
   }) {
     if (status != null) _statusFilter = status;
     if (priority != null) _priorityFilter = priority;
@@ -142,13 +143,14 @@ class TicketProvider with ChangeNotifier {
     if (zoneId != null) _zoneFilter = zoneId;
     if (assignedToMe != null) _assignedToMeFilter = assignedToMe;
     if (raisedByMe != null) _raisedByMeFilter = raisedByMe;
-    if (start != null) _startDate = start;
-    if (end != null) _endDate = end;
     if (sort != null) _sortBy = sort;
 
-    if (start == null && end == null && sort == null && status == null && priority == null && kitchenId == null && zoneId == null && assignedToMe == null && raisedByMe == null) {
+    if (clearDates) {
       _startDate = null;
       _endDate = null;
+    } else {
+      if (start != null) _startDate = start;
+      if (end != null) _endDate = end;
     }
 
     refreshTickets();
@@ -157,22 +159,41 @@ class TicketProvider with ChangeNotifier {
   Future<void> refreshTickets({bool isRealtime = false}) async {
     _offset = 0;
     if (_allowedKitchenIds.isNotEmpty) {
-      await _fetchGlobalStats();
-      await fetchTickets(forceRefresh: isRealtime);
+      // Run both concurrently for faster UI updates
+      await Future.wait([
+        _fetchGlobalStats(),
+        fetchTickets(forceRefresh: isRealtime),
+      ]);
     }
   }
 
+  // UPDATED: Now respects all filters (Zone, Priority, Date, Search) for accurate tab counts
   Future<void> _fetchGlobalStats() async {
     if (_allowedKitchenIds.isEmpty) return;
     try {
       var query = _supabase.from('tickets').select('status');
 
+      // 1. Kitchen Filter
       if (_kitchenFilter == 'ALL') {
         query = query.inFilter('kitchen_id', _allowedKitchenIds);
       } else {
         query = query.eq('kitchen_id', _kitchenFilter);
       }
 
+      // 2. Zone Filter
+      if (_zoneFilter != 'ALL') {
+        final areas = await _supabase.from('m_area').select('id').eq('zone_id', _zoneFilter);
+        final List<String> areaIds = areas.map((a) => a['id'].toString()).toList();
+
+        if (areaIds.isEmpty) {
+          _total = 0; _toDo = 0; _inProgress = 0; _completed = 0; _verified = 0;
+          notifyListeners();
+          return;
+        }
+        query = query.inFilter('area_id', areaIds);
+      }
+
+      // 3. User Filter
       final userId = _supabase.auth.currentUser?.id;
       if (userId != null) {
         if (_assignedToMeFilter && _raisedByMeFilter) {
@@ -184,12 +205,33 @@ class TicketProvider with ChangeNotifier {
         }
       }
 
+      // 4. Priority Filter
+      if (_priorityFilter != 'ALL') {
+        query = query.eq('priority', _priorityFilter);
+      }
+
+      // 5. Date Filters
+      if (_startDate != null) {
+        query = query.gte('ticket_raised_time', _startDate!.toIso8601String());
+      }
+      if (_endDate != null) {
+        final endOfDay = DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
+        query = query.lte('ticket_raised_time', endOfDay.toIso8601String());
+      }
+
+      // 6. Search Query
+      if (_searchQuery.isNotEmpty) {
+        query = query.or('title.ilike.%$_searchQuery%,ticket_no.ilike.%$_searchQuery%');
+      }
+
       final statsData = await query;
+
       _total = statsData.length;
       _toDo = statsData.where((t) => t['status'] == 'RAISED').length;
       _inProgress = statsData.where((t) => t['status'] == 'IN_PROGRESS' || t['status'] == 'ASSIGNED').length;
       _completed = statsData.where((t) => t['status'] == 'COMPLETED').length;
       _verified = statsData.where((t) => t['status'] == 'VERIFIED').length;
+
       notifyListeners();
     } catch (e) {
       debugPrint("Error fetching stats: $e");
@@ -206,7 +248,6 @@ class TicketProvider with ChangeNotifier {
     if (loadMore) _offset += _limit;
 
     try {
-      // 🚨 CRITICAL FIX: Removed ticket_equipments join to prevent database crashes when FK is dropped.
       var query = _supabase.from('tickets').select('''
             *, 
             m_kitchen(name),
@@ -233,7 +274,6 @@ class TicketProvider with ChangeNotifier {
         query = query.inFilter('area_id', areaIds);
       }
 
-      // 🚨 CRITICAL FIX: Correctly filters when using OR / AND logic.
       final userId = _supabase.auth.currentUser?.id;
       if (userId != null) {
         if (_assignedToMeFilter && _raisedByMeFilter) {
