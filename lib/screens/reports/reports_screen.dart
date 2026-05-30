@@ -74,11 +74,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
           title: "Testing Equipment",
           screen: const TestingEquipmentScreen(),
         ),
-        _ReportData(
-          code: "MT-15",
-          title: "Critical Spare Parts",
-          screen: const CriticalSparesReportScreen(),
-        ),
       ],
     ),
     _CategoryData(
@@ -147,6 +142,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
           code: "MT-08",
           title: "Tools & Tackles",
           screen: const ToolsTacklesScreen(),
+        ),
+        _ReportData(
+          code: "MT-15",
+          title: "Critical Spare Parts",
+          screen: const CriticalSparesReportScreen(),
         ),
       ],
     ),
