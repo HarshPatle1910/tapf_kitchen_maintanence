@@ -203,6 +203,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year} $hour12:${d.minute.toString().padLeft(2, '0')} $amPm';
   }
 
+  String _formatDisplayDate(DateTime? d) {
+    if (d == null) return 'Unknown';
+    final int hour12 = d.hour > 12 ? d.hour - 12 : (d.hour == 0 ? 12 : d.hour);
+    final String amPm = d.hour >= 12 ? 'PM' : 'AM';
+    return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year} $hour12:${d.minute.toString().padLeft(2, '0')} $amPm';
+  }
+
   Future<void> _pickBreakdownTime() async {
     final DateTime? date = await showDatePicker(
       context: context, initialDate: _breakdownTime ?? DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime.now(),
@@ -342,7 +349,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   Future<void> _fetchLinkedEquipments() async {
     if (_localTicket == null) return;
     try {
-      // We now dynamically fetch from both columns thanks to the updated database structure
       final linkedEq = await _supabase.from('ticket_equipments')
           .select('equipment_id, testing_equipment_id, m_equipment(*), m_testing_equipment(*)')
           .eq('ticket_id', _localTicket!['id']);
@@ -539,7 +545,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       final newTicket = await _supabase.from('tickets').insert(insertData).select().single();
 
       final equipmentInserts = _selectedEquipments.map((eq) {
-        // Dynamically place into the correct foreign key column based on the flag
         if (eq['is_testing'] == true) {
           return {'ticket_id': newTicket['id'], 'testing_equipment_id': eq['id']};
         } else {
@@ -574,7 +579,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     FocusManager.instance.primaryFocus?.unfocus();
     _titleController.text = _formatToCamelCase(_titleController.text);
 
-    // Validation when completing the ticket
     if (nextStatus == 'COMPLETED') {
       if (_causeController.text.trim().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please enter the Cause of Issue.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
@@ -590,7 +594,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       }
     }
 
-    // Validation when just updating details while IN_PROGRESS
     if (nextStatus == null && currentStatus == 'IN_PROGRESS') {
       if (_causeController.text.trim().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please enter the Cause of Issue.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
@@ -612,7 +615,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         else if (nextStatus == 'VERIFIED') updates['verified_by_id'] = _supabase.auth.currentUser?.id;
       }
 
-      // Check worker permissions locally to avoid the getter error
       final isAssignedWorker = _selectedWorker != null && _selectedWorker == _supabase.auth.currentUser?.id;
 
       if ((isAssignedWorker && currentStatus == 'IN_PROGRESS') || (isAdmin && (currentStatus == 'IN_PROGRESS' || currentStatus == 'COMPLETED'))) {
@@ -625,7 +627,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         updates['priority'] = _priority; updates['category'] = _category; updates['area_id'] = _selectedAreaId;
         if (_breakdownTime != null) updates['breakdown_time'] = _breakdownTime!.toUtc().toIso8601String();
 
-        // Lock assigned worker updating if ticket has progressed past ASSIGNED
         if (currentStatus == 'RAISED' || currentStatus == 'ASSIGNED') {
           if (_selectedWorker != null) {
             updates['assigned_to_id'] = _selectedWorker;
@@ -902,7 +903,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     final bool readOnlyFields = isTicketClosed || (isEditing && !isAdmin);
     final showCameraBox = (!isEditing || canEditWorkDetails) && currentStatus != 'VERIFIED';
 
-    // Hide Equipment Search for normal workers if editing a ticket.
     final bool showEquipSearch = !isEditing || isAdmin;
 
     String activeKitchenName = "Loading Kitchen...";
@@ -938,6 +938,30 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 if (isEditing) ...[
                   TicketStatusBanner(currentStatus: currentStatus),
                   const SizedBox(height: 12),
+
+                  // NEW: RAISED TIME DISPLAY
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.access_time_rounded, color: navy, size: 20),
+                        const SizedBox(width: 8),
+                        Text("Raised On: ", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.grey.shade600, fontSize: 13)),
+                        Expanded(
+                          child: Text(
+                            _localTicket?['ticket_raised_time'] != null
+                                ? _formatDisplayDate(DateTime.tryParse(_localTicket!['ticket_raised_time'])?.toLocal())
+                                : 'Unknown',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: navy, fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
                   TicketTimeline(ticket: _localTicket!),
                   const SizedBox(height: 12),
                 ],
@@ -948,8 +972,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      TicketFormFields.buildTextField(ctrl: TextEditingController(text: activeKitchenName), label: "Target Kitchen", icon: Icons.kitchen, isReadOnly: true),
-                      const SizedBox(height: 12),
+                      // Target Kitchen displays ONLY if the user has multiple kitchens assigned
+                      if (authProv.assignedKitchens.length > 1) ...[
+                        TicketFormFields.buildTextField(ctrl: TextEditingController(text: activeKitchenName), label: "Target Kitchen", icon: Icons.kitchen, isReadOnly: true),
+                        const SizedBox(height: 12),
+                      ],
 
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -991,12 +1018,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      if (showEquipSearch) ...[
+                      // Restricts to single equipment search selection cleanly
+                      if (showEquipSearch && _selectedEquipments.isEmpty) ...[
                         TicketFormFields.buildSleekAutocomplete(
                             key: ValueKey(_selectedAreaId ?? 'no_area'), context: context,
                             hint: _selectedAreaId == null ? "Select an Area first" : (availableEquipments.isNotEmpty ? "Search Equipment *" : "No equipment in this area"),
                             icon: Icons.precision_manufacturing_outlined, controller: _equipSearchController, focusNode: _equipFocusNode, options: availableEquipments, isDisabled: _selectedAreaId == null || availableEquipments.isEmpty,
-                            onSelected: (val) { setState(() { if (!_selectedEquipments.any((e) => e['id'] == val['id'])) _selectedEquipments.add(val); _equipSearchController.clear(); }); }
+                            onSelected: (val) { setState(() { _selectedEquipments = [val]; _equipSearchController.clear(); }); }
                         ),
                         const SizedBox(height: 12),
                       ],
@@ -1007,7 +1035,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                           children: _selectedEquipments.map((eq) => Chip(
                             backgroundColor: navy.withOpacity(0.05), side: const BorderSide(color: navy),
                             label: Text(eq['display_name'] ?? eq['name'] ?? 'Unknown', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: navy)),
-                            onDeleted: showEquipSearch ? () => setState(() => _selectedEquipments.removeWhere((e) => e['id'] == eq['id'])) : null,
+                            onDeleted: showEquipSearch ? () => setState(() => _selectedEquipments.clear()) : null,
                           )).toList(),
                         ),
                         const SizedBox(height: 12),
@@ -1096,7 +1124,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                               Expanded(
                                 flex: 3,
                                 child: TicketFormFields.buildSleekAutocomplete(
-                                    context: context, hint: "Search Spare (Name/Vendor)", icon: Icons.build_circle, controller: _spareSearchController, focusNode: _spareFocusNode, options: _availableSpares, isDisabled: false,
+                                    context: context, hint: "Search Spare", icon: Icons.build_circle, controller: _spareSearchController, focusNode: _spareFocusNode, options: _availableSpares, isDisabled: false,
                                     onSelected: (val) { setState(() => _currentlySelectedSpareToAdd = val); },
                                     onCleared: () { setState(() => _currentlySelectedSpareToAdd = null); }
                                 ),
@@ -1155,7 +1183,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 ],
 
                 const SizedBox(height: 20),
-                // Locked Admin Worker Assignment
                 if (isEditing && isAdmin && (currentStatus == 'RAISED' || currentStatus == 'ASSIGNED')) ...[
                   Container(
                     padding: const EdgeInsets.all(20),
