@@ -29,12 +29,34 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   static const Color navy = Color(0xFF26538D);
+  final _supabase = Supabase.instance.client;
   int _selectedIndex = 0;
+
+  bool _isLoadingAccess = true;
+  List<String> _allowedReportCodes = [];
 
   @override
   void initState() {
     super.initState();
     NotificationService().initNotifications();
+    _fetchUserReportAccess();
+  }
+
+  Future<void> _fetchUserReportAccess() async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId != null) {
+        final res = await _supabase.from('user_report_access').select('report_code').eq('user_id', userId);
+        if (mounted) {
+          setState(() {
+            _allowedReportCodes = List<String>.from(res.map((x) => x['report_code']));
+            _isLoadingAccess = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingAccess = false);
+    }
   }
 
   @override
@@ -42,20 +64,30 @@ class _HomeScreenState extends State<HomeScreen> {
     final authProv = context.watch<AuthProvider>();
     final bool isAdmin = authProv.activeRole == 'admin';
 
-    // Dynamically build tabs based on user role
+    // Show Reports Tab if Admin OR if they have access to at least 1 report
+    final bool showReportsTab = isAdmin || _allowedReportCodes.isNotEmpty;
+
+    // Dynamically build tabs based on permissions
     final List<Widget> pages = [
       const _HomeTicketView(),
-      const ReportsScreen(),
+      if (showReportsTab) ReportsScreen(allowedReportCodes: _allowedReportCodes, isAdmin: isAdmin),
       if (isAdmin) const UserManagementScreen(),
       const MoreScreen(),
     ];
 
     final List<BottomNavigationBarItem> navItems = [
       const BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-      const BottomNavigationBarItem(icon: Icon(Icons.analytics_outlined), activeIcon: Icon(Icons.analytics), label: 'Reports'),
+      if (showReportsTab) const BottomNavigationBarItem(icon: Icon(Icons.analytics_outlined), activeIcon: Icon(Icons.analytics), label: 'Reports'),
       if (isAdmin) const BottomNavigationBarItem(icon: Icon(Icons.people_outline), activeIcon: Icon(Icons.people), label: 'Users'),
       const BottomNavigationBarItem(icon: Icon(Icons.menu), activeIcon: Icon(Icons.menu_open), label: 'More'),
     ];
+
+    // Ensure selectedIndex doesn't crash if permissions load and change tab count
+    if (_selectedIndex >= pages.length) _selectedIndex = 0;
+
+    if (_isLoadingAccess && !isAdmin) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator(color: navy)));
+    }
 
     return Scaffold(
       body: IndexedStack(
@@ -118,12 +150,9 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
       final authProv = context.read<AuthProvider>();
       if (authProv.assignedKitchens.isNotEmpty) {
         final ticketProv = context.read<TicketProvider>();
-
-        // Force selection of the first kitchen if it's currently set to 'ALL'
         if (ticketProv.kitchenFilter == 'ALL') {
           ticketProv.setFilters(kitchenId: authProv.assignedKitchens.first['id'].toString());
         }
-
         final List<String> kIds = authProv.assignedKitchens.map((k) => k['id'].toString()).toList();
         ticketProv.initialize(kIds);
         _fetchKitchenZones();
@@ -176,8 +205,6 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
     }
 
     final bool hasActiveFilters = ticketProvider.priorityFilter != 'ALL' || ticketProvider.startDate != null || ticketProvider.zoneFilter != 'ALL' || ticketProvider.assignedToMeFilter || ticketProvider.raisedByMeFilter;
-
-    // Show dropdown only if there is more than 1 kitchen assigned
     final bool isSingleKitchen = authProv.assignedKitchens.length <= 1;
 
     return GestureDetector(
@@ -243,23 +270,6 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
               ),
             ],
           ),
-          actions: [
-            // User requested to keep these commented out exactly as they were
-            // Stack(
-            //   alignment: Alignment.center,
-            //   children: [
-            //     IconButton(
-            //       icon: const Icon(Icons.notifications_none_rounded, color: navy, size: 28),
-            //       onPressed: () {},
-            //     ),
-            //     Positioned(
-            //       right: 12, top: 12,
-            //       child: Container(width: 10, height: 10, decoration: BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2))),
-            //     )
-            //   ],
-            // ),
-            // const SizedBox(width: 8),
-          ],
         ),
         body: RefreshIndicator(
           color: golden,
