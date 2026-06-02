@@ -27,7 +27,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   // Standard static list of assignable reports
   final List<Map<String, String>> _availableReports = [
-    {"code": "MNT-02", "name": "Equipment Master"},
+    {"code": "MT-02", "name": "Equipment Master"},
     {"code": "MT-03", "name": "Testing Equipment"},
     {"code": "MT-15", "name": "Critical Spare Parts"},
     {"code": "MT-05", "name": "PM Schedule"},
@@ -377,12 +377,39 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
-  // --- NEW: Report Access Manager Dialog ---
+  // --- UPDATED: Kitchen-Specific Report Access Manager Dialog ---
   Future<void> _showReportAccessDialog(Map<String, dynamic> user) async {
-    bool isSaving = false;
-    List<String> assignedReports = [];
     final userId = user['id'];
 
+    // Find all kitchens assigned to this specific user
+    final existingUserKitchens = user['user_kitchens'] as List<dynamic>? ?? [];
+    List<Map<String, dynamic>> userAssignedKitchens = [];
+
+    for (var uk in existingUserKitchens) {
+      final kMatch = _allKitchens.firstWhere(
+        (k) => k['id'] == uk['kitchen_id'],
+        orElse: () => {},
+      );
+      if (kMatch.isNotEmpty) {
+        userAssignedKitchens.add(kMatch);
+      }
+    }
+
+    if (userAssignedKitchens.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("User must be assigned to at least one kitchen first."),
+        ),
+      );
+      return;
+    }
+
+    String? selectedKitchenId = userAssignedKitchens.first['id'].toString();
+    List<String> assignedReportsForSelectedKitchen = [];
+    bool isSaving = false;
+    bool isLoadingPermissions = false;
+
+    // Fetch Initial Permissions BEFORE opening Bottom Sheet to prevent UI lockup
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -394,19 +421,52 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       final res = await _supabase
           .from('user_report_access')
           .select('report_code')
-          .eq('user_id', userId);
-      assignedReports = List<String>.from(res.map((x) => x['report_code']));
+          .eq('user_id', userId)
+          .eq('kitchen_id', selectedKitchenId!);
+
+      assignedReportsForSelectedKitchen = List<String>.from(
+        res.map((x) => x['report_code']),
+      );
       if (mounted) Navigator.pop(context); // Close loading dialog
     } catch (e) {
       if (mounted) Navigator.pop(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Failed to load access: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load initial access: $e")),
+      );
       return;
     }
 
     if (!mounted) return;
 
+    // Helper to fetch permissions when switching kitchens in dropdown
+    Future<void> fetchPermissionsForKitchen(
+      String kitchenId,
+      StateSetter setModalState,
+    ) async {
+      setModalState(() => isLoadingPermissions = true);
+      try {
+        final res = await _supabase
+            .from('user_report_access')
+            .select('report_code')
+            .eq('user_id', userId)
+            .eq('kitchen_id', kitchenId);
+
+        setModalState(() {
+          assignedReportsForSelectedKitchen = List<String>.from(
+            res.map((x) => x['report_code']),
+          );
+          isLoadingPermissions = false;
+        });
+      } catch (e) {
+        setModalState(() => isLoadingPermissions = false);
+        if (mounted)
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Failed to load access: $e")));
+      }
+    }
+
+    // Launch Bottom Sheet
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -417,7 +477,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
           return Container(
-            height: MediaQuery.of(context).size.height * 0.8,
+            height: MediaQuery.of(context).size.height * 0.85,
             padding: EdgeInsets.only(
               left: 24,
               right: 24,
@@ -439,7 +499,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   ),
                 ),
                 Text(
-                  "Report Access",
+                  "Report Permissions",
                   style: GoogleFonts.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
@@ -447,7 +507,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   ),
                 ),
                 Text(
-                  "Grant ${user['name']} access to specific reports",
+                  "Manage permissions per kitchen for ${user['name']}",
                   style: GoogleFonts.inter(
                     color: Colors.grey.shade600,
                     fontSize: 13,
@@ -455,18 +515,96 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Select/Deselect All
+                // KITCHEN SELECTOR
+                Text(
+                  "Target Kitchen",
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade500,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                // Show Dropdown only if multiple kitchens. Else, show static text.
+                if (userAssignedKitchens.length == 1)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Text(
+                      userAssignedKitchens.first['name'],
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: navy,
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        value: selectedKitchenId,
+                        icon: const Icon(
+                          Icons.keyboard_arrow_down,
+                          color: navy,
+                        ),
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: navy,
+                        ),
+                        items: userAssignedKitchens
+                            .map(
+                              (k) => DropdownMenuItem(
+                                value: k['id'].toString(),
+                                child: Text(k['name']),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null && val != selectedKitchenId) {
+                            setModalState(() {
+                              selectedKitchenId = val;
+                              assignedReportsForSelectedKitchen.clear();
+                            });
+                            fetchPermissionsForKitchen(val, setModalState);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: () {
-                        setModalState(() {
-                          assignedReports = _availableReports
-                              .map((r) => r['code']!)
-                              .toList();
-                        });
-                      },
+                      onPressed: isLoadingPermissions
+                          ? null
+                          : () {
+                              setModalState(() {
+                                assignedReportsForSelectedKitchen =
+                                    _availableReports
+                                        .map((r) => r['code']!)
+                                        .toList();
+                              });
+                            },
                       child: Text(
                         "Select All",
                         style: GoogleFonts.inter(
@@ -476,8 +614,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () =>
-                          setModalState(() => assignedReports.clear()),
+                      onPressed: isLoadingPermissions
+                          ? null
+                          : () => setModalState(
+                              () => assignedReportsForSelectedKitchen.clear(),
+                            ),
                       child: Text(
                         "Clear",
                         style: GoogleFonts.inter(
@@ -488,41 +629,49 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     ),
                   ],
                 ),
-
                 const Divider(),
 
                 Expanded(
-                  child: ListView.builder(
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: _availableReports.length,
-                    itemBuilder: (context, i) {
-                      final r = _availableReports[i];
-                      final isSelected = assignedReports.contains(r['code']);
-                      return CheckboxListTile(
-                        activeColor: navy,
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(
-                          "${r['code']} - ${r['name']}",
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
+                  child: isLoadingPermissions
+                      ? const Center(
+                          child: CircularProgressIndicator(color: golden),
+                        )
+                      : ListView.builder(
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: _availableReports.length,
+                          itemBuilder: (context, i) {
+                            final r = _availableReports[i];
+                            final isSelected = assignedReportsForSelectedKitchen
+                                .contains(r['code']);
+                            return CheckboxListTile(
+                              activeColor: navy,
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(
+                                "${r['code']} - ${r['name']}",
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              value: isSelected,
+                              onChanged: (val) {
+                                setModalState(() {
+                                  if (val == true)
+                                    assignedReportsForSelectedKitchen.add(
+                                      r['code']!,
+                                    );
+                                  else
+                                    assignedReportsForSelectedKitchen.remove(
+                                      r['code']!,
+                                    );
+                                });
+                              },
+                            );
+                          },
                         ),
-                        value: isSelected,
-                        onChanged: (val) {
-                          setModalState(() {
-                            if (val == true) {
-                              assignedReports.add(r['code']!);
-                            } else {
-                              assignedReports.remove(r['code']!);
-                            }
-                          });
-                        },
-                      );
-                    },
-                  ),
                 ),
                 const SizedBox(height: 16),
+
                 SizedBox(
                   width: double.infinity,
                   height: 54,
@@ -535,7 +684,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       ),
                       elevation: 0,
                     ),
-                    onPressed: isSaving
+                    onPressed: isSaving || isLoadingPermissions
                         ? null
                         : () async {
                             setModalState(() => isSaving = true);
@@ -543,22 +692,26 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                               context,
                             );
                             try {
-                              // Delete existing rules for this user
+                              // Delete existing rules for this user ONLY IN THE SELECTED KITCHEN
                               await _supabase
                                   .from('user_report_access')
                                   .delete()
-                                  .eq('user_id', userId);
+                                  .eq('user_id', userId)
+                                  .eq('kitchen_id', selectedKitchenId!);
 
                               // Insert new rules
-                              if (assignedReports.isNotEmpty) {
-                                final payload = assignedReports
-                                    .map(
-                                      (code) => {
-                                        'user_id': userId,
-                                        'report_code': code,
-                                      },
-                                    )
-                                    .toList();
+                              if (assignedReportsForSelectedKitchen
+                                  .isNotEmpty) {
+                                final payload =
+                                    assignedReportsForSelectedKitchen
+                                        .map(
+                                          (code) => {
+                                            'user_id': userId,
+                                            'report_code': code,
+                                            'kitchen_id': selectedKitchenId,
+                                          },
+                                        )
+                                        .toList();
                                 await _supabase
                                     .from('user_report_access')
                                     .insert(payload);
@@ -569,7 +722,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                 scaffoldMessenger.showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      'Access updated successfully!',
+                                      'Access saved for selected kitchen.',
                                       style: GoogleFonts.inter(),
                                     ),
                                     backgroundColor: Colors.green,
@@ -592,7 +745,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     child: isSaving
                         ? const CircularProgressIndicator(color: Colors.white)
                         : Text(
-                            "SAVE ACCESS",
+                            "SAVE KITCHEN ACCESS",
                             style: GoogleFonts.inter(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
@@ -819,7 +972,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                   ],
                                 ),
                               ),
-                              // --- NEW: Multiple Action Icons ---
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
