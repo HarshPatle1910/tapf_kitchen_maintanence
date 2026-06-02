@@ -5,15 +5,14 @@ import 'package:open_filex/open_filex.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import 'package:provider/provider.dart'; // <-- FIXED: Added missing import
+import 'package:provider/provider.dart';
 
 import '../../core/constants/api_constants.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/ticket_provider.dart';
 
-
 // ============================================================================
-// 1. DASHBOARD SCREEN (Minimalistic UI)
+// 1. DASHBOARD SCREEN
 // ============================================================================
 class TestingEquipmentScreen extends StatefulWidget {
   const TestingEquipmentScreen({super.key});
@@ -23,37 +22,81 @@ class TestingEquipmentScreen extends StatefulWidget {
 }
 
 class _TestingEquipmentScreenState extends State<TestingEquipmentScreen> {
-  // Single Primary Color as requested
   static const Color primary = Color(0xFF26538D);
-  static const Color background = Color(0xFFFFFFFF);
-  static const Color surface = Color(0xFFF8FAFC);
+  static const Color golden = Color(0xFFD4AF37);
+  static const Color background = Color(0xFFF8FAFC);
+  static const Color surface = Color(0xFFFFFFFF);
 
   final _supabase = Supabase.instance.client;
   List<Map<String, dynamic>> _records = [];
+  List<Map<String, dynamic>> _areas = [];
   bool _isLoading = true;
 
   // Search and Filter State
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
-  String _selectedFilter = 'All'; // Options: 'All', 'Verified', 'Due'
+  final FocusNode _searchFocusNode = FocusNode();
+  String _selectedFilter =
+      'All'; // Options: 'All', 'Due This Week', 'Due This Month'
 
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchAreas();
+      _fetchData();
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  String _getActiveKitchenId() {
+    final authProv = context.read<AuthProvider>();
+    final ticketProv = context.read<TicketProvider>();
+    String activeId = ticketProv.kitchenFilter;
+    if (activeId == 'ALL' || activeId.isEmpty) {
+      if (authProv.assignedKitchens.isNotEmpty) {
+        activeId = authProv.assignedKitchens.first['id'].toString();
+      } else {
+        activeId = '';
+      }
+    }
+    return activeId;
+  }
+
+  Future<void> _fetchAreas() async {
+    final kitchenId = _getActiveKitchenId();
+    if (kitchenId.isEmpty) return;
+
+    try {
+      final response = await _supabase
+          .from('m_area')
+          .select('id, area_name, m_zone!inner(kitchen_id)')
+          .eq('status', true)
+          .eq('m_zone.kitchen_id', kitchenId);
+
+      if (mounted) {
+        setState(() {
+          _areas = List<Map<String, dynamic>>.from(response);
+          for (var a in _areas) {
+            a['display_name'] = a['area_name'];
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching areas: $e");
+    }
   }
 
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
-
-    final targetKitchenId = _getActiveKitchenId();
-    if (targetKitchenId == null) {
+    final kitchenId = _getActiveKitchenId();
+    if (kitchenId.isEmpty) {
       if (mounted) setState(() => _isLoading = false);
       return;
     }
@@ -61,8 +104,8 @@ class _TestingEquipmentScreenState extends State<TestingEquipmentScreen> {
     try {
       final res = await _supabase
           .from('v_testing_equipment_master')
-          .select()
-          .eq('kitchen_id', targetKitchenId) // <--- Added Filter
+          .select('*')
+          .eq('kitchen_id', kitchenId)
           .order('next_due_date', ascending: true);
 
       if (mounted) {
@@ -72,453 +115,1093 @@ class _TestingEquipmentScreenState extends State<TestingEquipmentScreen> {
         });
       }
     } catch (e) {
-      debugPrint("Fetch Error: $e");
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
       }
     }
   }
 
-  String? _getActiveKitchenId() {
-    final authProv = context.read<AuthProvider>();
-    final ticketProv = context.read<TicketProvider>();
-    String targetKitchenId = ticketProv.kitchenFilter;
-
-    if (targetKitchenId == 'ALL' || targetKitchenId.isEmpty) {
-      if (authProv.assignedKitchens.isNotEmpty) {
-        return authProv.assignedKitchens.first['id'].toString();
-      }
-      return null;
-    }
-    return targetKitchenId;
+  // --- Date Calculation Filters ---
+  bool _isDueThisWeek(DateTime date) {
+    final now = DateTime.now();
+    final startOfWeek = DateTime(
+      now.year,
+      now.month,
+      now.day - now.weekday + 1,
+    );
+    final endOfWeek = startOfWeek.add(
+      const Duration(days: 6, hours: 23, minutes: 59),
+    );
+    return date.isAfter(startOfWeek.subtract(const Duration(seconds: 1))) &&
+        date.isBefore(endOfWeek.add(const Duration(seconds: 1)));
   }
 
-  // --- EXPORT LOGIC ---
-  void _showExportDialog() {
+  bool _isDueThisMonth(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year && date.month == now.month;
+  }
+
+  List<Map<String, dynamic>> get _filteredRecords {
+    return _records.where((r) {
+      // 1. Search filter
+      final name = (r['equipment_name'] ?? '').toLowerCase();
+      if (_searchQuery.isNotEmpty &&
+          !name.contains(_searchQuery.toLowerCase())) {
+        return false;
+      }
+
+      // 2. Chip filters
+      if (_selectedFilter != 'All') {
+        if (r['next_due_date'] == null) return false;
+        final dueDate = DateTime.parse(r['next_due_date']);
+
+        if (_selectedFilter == 'Due This Week') {
+          return _isDueThisWeek(dueDate) ||
+              dueDate.isBefore(DateTime.now()); // Include overdues
+        } else if (_selectedFilter == 'Due This Month') {
+          return _isDueThisMonth(dueDate) ||
+              dueDate.isBefore(DateTime.now()); // Include overdues
+        }
+      }
+      return true;
+    }).toList();
+  }
+
+  void _showAddEditDialog([Map<String, dynamic>? record]) async {
+    final result = await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => _TestingEquipmentFormBottomSheet(
+        existingRecord: record,
+        areas: _areas,
+      ),
+    );
+
+    if (result == true) {
+      _fetchData();
+    }
+  }
+
+  // --- Export Functionality (UPDATED TO MATCH API) ---
+  void _showExportFormatDialog() {
     String format = 'docx';
+    bool exportAll = true;
+    int selectedMonth = DateTime.now().month;
+    int selectedYear = DateTime.now().year;
+
+    final List<String> months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text("Export Master List", style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: primary)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          title: Text(
+            "Export Testing Equipment",
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.w700,
+              color: primary,
+            ),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Generate the MT-03 equipment master list.",
-                style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 14),
+                "Select timeframe for the master list.",
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: Colors.grey.shade700,
+                ),
               ),
-              const SizedBox(height: 24),
-              Text("Format", style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.grey.shade500)),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
+
+              // Timeframe Selection
               Row(
                 children: [
                   ChoiceChip(
-                      label: Text("Word", style: GoogleFonts.inter(fontWeight: format == 'docx' ? FontWeight.bold : FontWeight.normal)),
-                      selected: format == 'docx',
-                      selectedColor: primary.withOpacity(0.1),
-                      showCheckmark: false,
-                      onSelected: (v) => setDialogState(() => format = 'docx')),
+                    label: Text(
+                      "All Time",
+                      style: GoogleFonts.inter(
+                        fontWeight: exportAll
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        color: exportAll ? primary : Colors.black87,
+                      ),
+                    ),
+                    selected: exportAll,
+                    onSelected: (v) => setDialogState(() => exportAll = true),
+                    selectedColor: primary.withOpacity(0.1),
+                    side: BorderSide(
+                      color: exportAll ? primary : Colors.grey.shade300,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
                   const SizedBox(width: 8),
                   ChoiceChip(
-                      label: Text("PDF", style: GoogleFonts.inter(fontWeight: format == 'pdf' ? FontWeight.bold : FontWeight.normal)),
-                      selected: format == 'pdf',
-                      selectedColor: primary.withOpacity(0.1),
-                      showCheckmark: false,
-                      onSelected: (v) => setDialogState(() => format = 'pdf')),
+                    label: Text(
+                      "Month-wise",
+                      style: GoogleFonts.inter(
+                        fontWeight: !exportAll
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        color: !exportAll ? primary : Colors.black87,
+                      ),
+                    ),
+                    selected: !exportAll,
+                    onSelected: (v) => setDialogState(() => exportAll = false),
+                    selectedColor: primary.withOpacity(0.1),
+                    side: BorderSide(
+                      color: !exportAll ? primary : Colors.grey.shade300,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
                 ],
-              )
+              ),
+
+              // Month & Year Dropdowns (Shown only if Specific Month is chosen)
+              if (!exportAll) ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: DropdownButtonFormField<int>(
+                        borderRadius: BorderRadius.all(Radius.circular(16)),
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                        ),
+                        value: selectedMonth,
+                        items: List.generate(
+                          12,
+                          (index) => DropdownMenuItem(
+                            value: index + 1,
+                            child: Text(
+                              months[index],
+                              style: GoogleFonts.inter(fontSize: 13),
+                            ),
+                          ),
+                        ).toList(),
+                        onChanged: (v) =>
+                            setDialogState(() => selectedMonth = v!),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: DropdownButtonFormField<int>(
+                        borderRadius: BorderRadius.all(Radius.circular(16)),
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                        ),
+                        value: selectedYear,
+                        items: List.generate(
+                          5,
+                          (index) => DropdownMenuItem(
+                            value: DateTime.now().year - index,
+                            child: Text(
+                              (DateTime.now().year - index).toString(),
+                              style: GoogleFonts.inter(fontSize: 13),
+                            ),
+                          ),
+                        ).toList(),
+                        onChanged: (v) =>
+                            setDialogState(() => selectedYear = v!),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+
+              const SizedBox(height: 24),
+              Text(
+                "Select Format",
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  ChoiceChip(
+                    label: Text(
+                      "Word (.docx)",
+                      style: GoogleFonts.inter(
+                        fontWeight: format == 'docx'
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    selected: format == 'docx',
+                    selectedColor: primary.withOpacity(0.1),
+                    side: BorderSide(
+                      color: format == 'docx' ? primary : Colors.grey.shade300,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    onSelected: (v) => setDialogState(() => format = 'docx'),
+                  ),
+                  const SizedBox(width: 10),
+                  ChoiceChip(
+                    label: Text(
+                      "PDF",
+                      style: GoogleFonts.inter(
+                        fontWeight: format == 'pdf'
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    selected: format == 'pdf',
+                    selectedColor: primary.withOpacity(0.1),
+                    side: BorderSide(
+                      color: format == 'pdf' ? primary : Colors.grey.shade300,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    onSelected: (v) => setDialogState(() => format = 'pdf'),
+                  ),
+                ],
+              ),
             ],
           ),
+          actionsPadding: const EdgeInsets.all(16),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: Text("CANCEL", style: GoogleFonts.inter(color: Colors.grey.shade600))),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                "CANCEL",
+                style: GoogleFonts.inter(
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: primary, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                elevation: 0,
+              ),
               onPressed: () {
                 Navigator.pop(ctx);
-                _executeExport(format);
+                _executeExport(format, exportAll, selectedMonth, selectedYear);
               },
-              child: Text("GENERATE", style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
-            )
+              child: Text(
+                "DOWNLOAD",
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _executeExport(String format) async {
+  Future<void> _executeExport(
+    String format,
+    bool exportAll,
+    int month,
+    int year,
+  ) async {
     final targetKitchenId = _getActiveKitchenId();
-    if (targetKitchenId == null) return;
+    if (targetKitchenId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No Kitchen Selected'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
-    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator(color: primary)));
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) =>
+          const Center(child: CircularProgressIndicator(color: primary)),
+    );
+
     try {
-      final url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/reports/testing-equipments?kitchen_id=$targetKitchenId&format=$format');
+      // Base URL points to testing-equipments (with an 's') as defined in python API
+      String urlString =
+          '${ApiConstants.pythonApiBaseUrl}/reports/testing-equipments?kitchen_id=$targetKitchenId&format=$format';
 
+      // Append month and year if specific month is requested
+      if (!exportAll) {
+        urlString += '&month=$month&year=$year';
+      }
+
+      debugPrint("Download URL: $urlString");
+
+      final url = Uri.parse(urlString);
       final response = await http.get(url);
+
       if (response.statusCode == 200) {
-        String expectedFilename = 'MT03_Master_List_Testing_Equipments.$format';
-        Directory? saveDir;
-        if (Platform.isAndroid) saveDir = Directory('/storage/emulated/0/Download/Equipment Reports');
-        else saveDir = Directory('${(await getApplicationDocumentsDirectory()).path}/Equipment Reports');
-        if (!await saveDir.exists()) await saveDir.create(recursive: true);
-        final file = File('${saveDir.path}/$expectedFilename');
+        // Safe path that bypasses Android 11+ Scoped Storage restrictions
+        final saveDir = await getApplicationDocumentsDirectory();
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final file = File(
+          '${saveDir.path}/MT03_Testing_Equipment_$timestamp.$format',
+        );
+
         await file.writeAsBytes(response.bodyBytes);
-        if (mounted) Navigator.pop(context);
-        OpenFilex.open(file.path);
-      } else throw Exception("Server returned ${response.statusCode}");
+
+        if (mounted) Navigator.pop(context); // Close loading dialog
+
+        // Open the file using the native device viewer
+        final openResult = await OpenFilex.open(file.path);
+
+        if (openResult.type != ResultType.done && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Saved successfully, but no app found to open $format files.',
+              ),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      } else {
+        throw Exception(
+          "Server Error ${response.statusCode}: ${response.body}",
+        );
+      }
     } catch (e) {
-      if (mounted) Navigator.pop(context);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export Failed: $e'), backgroundColor: Colors.red));
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export Failed: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Apply Search AND Status Filters
-    final filteredRecords = _records.where((r) {
-      final name = (r['equipment_name'] ?? '').toString().toLowerCase();
-      final location = (r['location'] ?? '').toString().toLowerCase();
-      final bool matchesSearch = name.contains(_searchQuery.toLowerCase()) || location.contains(_searchQuery.toLowerCase());
+    final filteredData = _filteredRecords;
 
-      bool matchesFilter = true;
-      if (_selectedFilter == 'Verified') {
-        matchesFilter = r['is_testing_completed'] == true;
-      } else if (_selectedFilter == 'Due') {
-        matchesFilter = r['is_testing_completed'] != true;
-      }
-
-      return matchesSearch && matchesFilter;
-    }).toList();
-
-    return Scaffold(
-      backgroundColor: background,
-      appBar: AppBar(
-        backgroundColor: background, foregroundColor: primary, elevation: 0,
-        title: Text("MT-03 Master List", style: GoogleFonts.inter(fontWeight: FontWeight.w700, letterSpacing: -0.5)),
-        actions: [
-          IconButton(icon: const Icon(Icons.download_outlined, color: primary), tooltip: "Export", onPressed: _showExportDialog)
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: primary))
-          : Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. Search Bar with Clear 'X' Icon
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (val) => setState(() => _searchQuery = val),
-              style: GoogleFonts.inter(fontSize: 14),
-              decoration: InputDecoration(
-                hintText: "Search equipment or location...",
-                hintStyle: GoogleFonts.inter(color: Colors.grey.shade400),
-                prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                  icon: const Icon(Icons.clear, color: Colors.grey, size: 20),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() => _searchQuery = '');
-                  },
-                )
-                    : null,
-                filled: true, fillColor: surface,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: background,
+        appBar: AppBar(
+          backgroundColor: surface,
+          foregroundColor: primary,
+          elevation: 0,
+          title: Text(
+            "Testing Equipment",
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.download_outlined, color: primary),
+              tooltip: "Download Report",
+              onPressed: _showExportFormatDialog,
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // SEARCH & FILTERS
+            Container(
+              color: surface,
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    style: GoogleFonts.inter(fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: "Search equipment...",
+                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      filled: true,
+                      fillColor: background,
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 0,
+                        horizontal: 16,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 20),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                                FocusScope.of(context).unfocus();
+                              },
+                            )
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: ['All', 'Due This Week', 'Due This Month'].map((
+                        filter,
+                      ) {
+                        final isSelected = _selectedFilter == filter;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text(
+                              filter,
+                              style: GoogleFonts.inter(
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.w500,
+                                color: isSelected
+                                    ? Colors.white
+                                    : Colors.black87,
+                              ),
+                            ),
+                            selected: isSelected,
+                            onSelected: (val) {
+                              if (val) setState(() => _selectedFilter = filter);
+                            },
+                            selectedColor: primary,
+                            backgroundColor: Colors.white,
+                            side: BorderSide(
+                              color: isSelected
+                                  ? primary
+                                  : Colors.grey.shade300,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
 
-          // 2. Status Filters
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Row(
-              children: ['All', 'Verified', 'Due'].map((filter) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(
-                        filter,
-                        style: GoogleFonts.inter(
-                            color: _selectedFilter == filter ? primary : Colors.grey.shade600,
-                            fontWeight: _selectedFilter == filter ? FontWeight.w600 : FontWeight.normal
-                        )
-                    ),
-                    selected: _selectedFilter == filter,
-                    selectedColor: primary.withOpacity(0.1),
-                    backgroundColor: surface,
-                    side: BorderSide.none,
-                    showCheckmark: false,
-                    onSelected: (selected) {
-                      if (selected) setState(() => _selectedFilter = filter);
-                    },
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 8),
+            // LIST VIEW
+            Expanded(
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: primary),
+                    )
+                  : filteredData.isEmpty
+                  ? Center(
+                      child: Text(
+                        "No testing equipment found.",
+                        style: GoogleFonts.inter(color: Colors.grey.shade500),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16).copyWith(bottom: 100),
+                      itemCount: filteredData.length,
+                      itemBuilder: (context, index) {
+                        final item = filteredData[index];
+                        final isDue =
+                            item['next_due_date'] != null &&
+                            !DateTime.parse(
+                              item['next_due_date'],
+                            ).isAfter(DateTime.now());
 
-          // 3. Minimal List View
-          Expanded(
-            child: filteredRecords.isEmpty
-                ? Center(child: Text("No equipment found.", style: GoogleFonts.inter(color: Colors.grey)))
-                : ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              itemCount: filteredRecords.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (ctx, i) {
-                final item = filteredRecords[i];
-                final bool isCompleted = item['is_testing_completed'] == true;
-
-                return InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () async {
-                    final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => CreateEditTestingEquipmentScreen(existingRecord: item)));
-                    if (result == true) _fetchData();
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: Colors.grey.shade200),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: surface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDue
+                                  ? Colors.red.shade200
+                                  : Colors.grey.shade200,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.02),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.all(16),
+                            onTap: () => _showAddEditDialog(item),
+                            title: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    item['equipment_name'] ?? 'Unnamed',
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: primary,
+                                    ),
+                                  ),
+                                ),
+                                if (isDue)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade50,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      "OVERDUE",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 8),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(item['equipment_name'] ?? 'Unknown Equipment', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: primary, fontSize: 15)),
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.place_outlined,
+                                        size: 14,
+                                        color: Colors.grey,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        item['location'] ?? 'N/A',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                   const SizedBox(height: 4),
-                                  Text(item['location'] ?? 'Unknown Location', style: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13, fontWeight: FontWeight.w500)),
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.event_repeat,
+                                        size: 14,
+                                        color: Colors.grey,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        "Freq: ${item['calibration_frequency'] ?? 'N/A'}",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: background,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              "Last Calib",
+                                              style: GoogleFonts.inter(
+                                                fontSize: 10,
+                                                color: Colors.grey.shade500,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            Text(
+                                              item['last_calibration_date'] ??
+                                                  'N/A',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                              "Next Due",
+                                              style: GoogleFonts.inter(
+                                                fontSize: 10,
+                                                color: Colors.grey.shade500,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            Text(
+                                              item['next_due_date'] ?? 'N/A',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w800,
+                                                color: isDue
+                                                    ? Colors.red
+                                                    : Colors.green.shade700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(color: isCompleted ? Colors.green.shade50 : Colors.red.shade50, borderRadius: BorderRadius.circular(6)),
-                              child: Text(isCompleted ? "Verified" : "Due", style: GoogleFonts.inter(color: isCompleted ? Colors.green.shade700 : Colors.red.shade700, fontSize: 11, fontWeight: FontWeight.w600)),
-                            )
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            _buildMinimalDetail("Range", item['operating_range'] ?? 'N/A'),
-                            _buildMinimalDetail("Freq", item['calibration_frequency'] ?? 'N/A'),
-                            _buildMinimalDetail("Due", item['next_due_date'] ?? 'N/A', isWarning: !isCompleted),
-                          ],
-                        )
-                      ],
+                            trailing: const Icon(
+                              Icons.chevron_right,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  ),
-                );
-              },
             ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          backgroundColor: golden,
+          foregroundColor: primary,
+          elevation: 4,
+          onPressed: () {
+            _searchFocusNode.unfocus();
+            _showAddEditDialog();
+          },
+          icon: const Icon(Icons.add_rounded),
+          label: Text(
+            "Add Equipment",
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
           ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: primary,
-        elevation: 0,
-        child: const Icon(Icons.add, color: Colors.white),
-        onPressed: () async {
-          final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => const CreateEditTestingEquipmentScreen()));
-          if (result == true) _fetchData();
-        },
-      ),
-    );
-  }
-
-  Widget _buildMinimalDetail(String label, String value, {bool isWarning = false}) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 11, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 2),
-          Text(value, style: GoogleFonts.inter(color: isWarning ? Colors.red.shade700 : primary, fontSize: 13, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
-        ],
+        ),
       ),
     );
   }
 }
 
 // ============================================================================
-// 2. CREATE / EDIT FORM SCREEN (Minimalistic & RawAutocomplete)
+// DEDICATED STATEFUL BOTTOM SHEET FORM
 // ============================================================================
-class CreateEditTestingEquipmentScreen extends StatefulWidget {
+class _TestingEquipmentFormBottomSheet extends StatefulWidget {
   final Map<String, dynamic>? existingRecord;
+  final List<Map<String, dynamic>> areas;
 
-  const CreateEditTestingEquipmentScreen({super.key, this.existingRecord});
+  const _TestingEquipmentFormBottomSheet({
+    Key? key,
+    this.existingRecord,
+    required this.areas,
+  }) : super(key: key);
 
   @override
-  State<CreateEditTestingEquipmentScreen> createState() => _CreateEditTestingEquipmentScreenState();
+  State<_TestingEquipmentFormBottomSheet> createState() =>
+      _TestingEquipmentFormBottomSheetState();
 }
 
-class _CreateEditTestingEquipmentScreenState extends State<CreateEditTestingEquipmentScreen> {
+class _TestingEquipmentFormBottomSheetState
+    extends State<_TestingEquipmentFormBottomSheet> {
   static const Color primary = Color(0xFF26538D);
-  static const Color surface = Color(0xFFF8FAFC);
+  static const Color golden = Color(0xFFD4AF37);
 
   final _supabase = Supabase.instance.client;
-  bool _isLoading = true;
+  final _formKey = GlobalKey<FormState>();
+
   bool _isSaving = false;
+  bool _isActive = true;
 
-  final _nameController = TextEditingController();
-  final _operatingRangeController = TextEditingController();
-  final _calibrationFreqController = TextEditingController();
-  final _remarksController = TextEditingController();
+  late TextEditingController _nameController;
+  late TextEditingController _opRangeController;
+  late TextEditingController _remarksController;
 
-  // Area Autocomplete
-  final TextEditingController _areaSearchCtrl = TextEditingController();
-  final FocusNode _areaFocusNode = FocusNode();
+  // Autocomplete Area
+  late TextEditingController _areaSearchController;
+  late FocusNode _areaFocusNode;
 
   String? _selectedAreaId;
-  DateTime? _dateOfCommission;
+  DateTime? _commissionDate;
   DateTime? _lastCalibrationDate;
   DateTime? _nextDueDate;
-  bool _isTestingCompleted = false;
+  String? _frequency;
 
-  List<Map<String, dynamic>> _areas = [];
+  final List<String> _freqOptions = [
+    'Daily',
+    'Weekly',
+    'Monthly',
+    'Quarterly',
+    'Half Yearly',
+    'Yearly',
+  ];
 
   @override
   void initState() {
     super.initState();
-    _initData();
+    _nameController = TextEditingController(
+      text: widget.existingRecord?['equipment_name'] ?? '',
+    );
+    _opRangeController = TextEditingController(
+      text: widget.existingRecord?['operating_range'] ?? '',
+    );
+    _remarksController = TextEditingController(
+      text: widget.existingRecord?['remarks'] ?? '',
+    );
+
+    _areaSearchController = TextEditingController();
+    _areaFocusNode = FocusNode();
+    _isActive = true;
+
+    if (widget.existingRecord != null) {
+      _frequency = widget.existingRecord!['calibration_frequency'];
+      _commissionDate = widget.existingRecord!['date_of_commission'] != null
+          ? DateTime.parse(widget.existingRecord!['date_of_commission'])
+          : null;
+      _lastCalibrationDate =
+          widget.existingRecord!['last_calibration_date'] != null
+          ? DateTime.parse(widget.existingRecord!['last_calibration_date'])
+          : null;
+      _nextDueDate = widget.existingRecord!['next_due_date'] != null
+          ? DateTime.parse(widget.existingRecord!['next_due_date'])
+          : null;
+
+      final locationName = widget.existingRecord!['location'];
+      if (locationName != null && locationName != 'N/A') {
+        final match = widget.areas.firstWhere(
+          (a) => a['area_name'] == locationName,
+          orElse: () => <String, dynamic>{},
+        );
+        if (match.isNotEmpty) {
+          _selectedAreaId = match['id'].toString();
+          _areaSearchController.text = match['area_name'];
+        }
+      }
+    }
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _operatingRangeController.dispose();
-    _calibrationFreqController.dispose();
+    _opRangeController.dispose();
     _remarksController.dispose();
-    _areaSearchCtrl.dispose();
+    _areaSearchController.dispose();
     _areaFocusNode.dispose();
     super.dispose();
   }
 
-  Future<void> _initData() async {
-    if (widget.existingRecord != null) {
-      _nameController.text = widget.existingRecord!['equipment_name'] ?? '';
-      _operatingRangeController.text = widget.existingRecord!['operating_range'] ?? '';
-      _calibrationFreqController.text = widget.existingRecord!['calibration_frequency'] ?? '';
-      _remarksController.text = widget.existingRecord!['remarks'] ?? '';
-      _isTestingCompleted = widget.existingRecord!['is_testing_completed'] == true;
+  // --- Dynamic Due State Check ---
+  bool get _isDue {
+    if (_nextDueDate == null) return false;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final due = DateTime(
+      _nextDueDate!.year,
+      _nextDueDate!.month,
+      _nextDueDate!.day,
+    );
+    // If due date is today or in the past, it's due
+    return due.isBefore(today) || due.isAtSameMomentAs(today);
+  }
 
-      String existingLocation = widget.existingRecord!['location'] ?? '';
-      if (existingLocation != 'N/A') _areaSearchCtrl.text = existingLocation;
-
-      if (widget.existingRecord!['date_of_commission'] != null) _dateOfCommission = DateTime.tryParse(widget.existingRecord!['date_of_commission']);
-      if (widget.existingRecord!['last_calibration_date'] != null) _lastCalibrationDate = DateTime.tryParse(widget.existingRecord!['last_calibration_date']);
-      if (widget.existingRecord!['next_due_date'] != null) _nextDueDate = DateTime.tryParse(widget.existingRecord!['next_due_date']);
-    }
-
-    try {
-      final areaRes = await _supabase.from('m_area').select('id, area_name').eq('status', true).order('area_name');
-      _areas = List<Map<String, dynamic>>.from(areaRes);
-
-      if (widget.existingRecord != null) {
-        final baseRec = await _supabase.from('m_testing_equipment').select('area_id').eq('id', widget.existingRecord!['id']).single();
-        _selectedAreaId = baseRec['area_id'];
-      }
-    } catch (e) {
-      debugPrint("Error loading dropdown data: $e");
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+  // --- Auto Calculation Logic ---
+  DateTime? _calculateNextDueDate(DateTime? lastCalib, String? freq) {
+    if (lastCalib == null || freq == null) return null;
+    switch (freq) {
+      case 'Daily':
+        return lastCalib.add(const Duration(days: 1));
+      case 'Weekly':
+        return lastCalib.add(const Duration(days: 7));
+      case 'Monthly':
+        return DateTime(lastCalib.year, lastCalib.month + 1, lastCalib.day);
+      case 'Quarterly':
+        return DateTime(lastCalib.year, lastCalib.month + 3, lastCalib.day);
+      case 'Half Yearly':
+        return DateTime(lastCalib.year, lastCalib.month + 6, lastCalib.day);
+      case 'Yearly':
+        return DateTime(lastCalib.year + 1, lastCalib.month, lastCalib.day);
+      default:
+        return null;
     }
   }
 
+  void _recalcNextDue() {
+    setState(() {
+      _nextDueDate = _calculateNextDueDate(_lastCalibrationDate, _frequency);
+    });
+  }
+
+  // --- Date Pickers ---
+  Future<void> _pickCommissionDate() async {
+    FocusScope.of(context).unfocus();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _commissionDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(), // Restrict to past/present
+      builder: (context, child) => Theme(
+        data: ThemeData.light().copyWith(
+          colorScheme: const ColorScheme.light(primary: primary),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      setState(() {
+        _commissionDate = picked;
+        // If last calibration is before new commission date, reset it
+        if (_lastCalibrationDate != null &&
+            _lastCalibrationDate!.isBefore(_commissionDate!)) {
+          _lastCalibrationDate = null;
+          _nextDueDate = null;
+        }
+      });
+    }
+  }
+
+  Future<void> _pickLastCalibrationDate() async {
+    FocusScope.of(context).unfocus();
+    if (_commissionDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please select Date of Commission first."),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _lastCalibrationDate ?? DateTime.now(),
+      firstDate: _commissionDate!, // Restrict >= Commission Date
+      lastDate: DateTime.now(), // Restrict <= Today
+      builder: (context, child) => Theme(
+        data: ThemeData.light().copyWith(
+          colorScheme: const ColorScheme.light(primary: primary),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      setState(() {
+        _lastCalibrationDate = picked;
+        _recalcNextDue();
+      });
+    }
+  }
+
+  // --- DB Save Execution ---
   Future<void> _saveRecord() async {
-    if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Equipment Name is required.")));
+    FocusScope.of(context).unfocus();
+
+    if (!_formKey.currentState!.validate()) return;
+    if (_selectedAreaId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select an Area.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    if (_commissionDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Date of Commission is required.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    if (_frequency == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Calibration Frequency is required.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    if (_lastCalibrationDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Last Calibration Date is required.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
     setState(() => _isSaving = true);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
 
     try {
-      final data = {
-        if (widget.existingRecord == null) 'name': _nameController.text.trim(),
+      final payload = {
+        'name': _nameController.text.trim(),
+        'date_of_commission': _commissionDate?.toIso8601String().split('T')[0],
         'area_id': _selectedAreaId,
-        'operating_range': _operatingRangeController.text.trim(),
-        'calibration_frequency': _calibrationFreqController.text.trim(),
-        'remarks': _remarksController.text.trim(),
-        'is_testing_completed': _isTestingCompleted,
-        'date_of_commission': _dateOfCommission?.toIso8601String().split('T')[0],
-        'last_calibration_date': _lastCalibrationDate?.toIso8601String().split('T')[0],
+        'operating_range': _opRangeController.text.trim(),
+        'calibration_frequency': _frequency,
+        'last_calibration_date': _lastCalibrationDate?.toIso8601String().split(
+          'T',
+        )[0],
         'next_due_date': _nextDueDate?.toIso8601String().split('T')[0],
+        'status': _isActive,
+        'is_testing_completed': false,
+        'remarks': _remarksController.text.trim(),
       };
 
       if (widget.existingRecord == null) {
-        await _supabase.from('m_testing_equipment').insert(data);
+        await _supabase.from('m_testing_equipment').insert(payload);
       } else {
-        await _supabase.from('m_testing_equipment').update(data).eq('id', widget.existingRecord!['id']);
+        await _supabase
+            .from('m_testing_equipment')
+            .update(payload)
+            .eq('id', widget.existingRecord!['id']);
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Saved successfully!"), backgroundColor: Colors.green));
-        Navigator.pop(context, true);
+        navigator.pop(true);
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Equipment saved successfully!',
+              style: GoogleFonts.inter(),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
-      setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to save: $e"), backgroundColor: Colors.red));
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Error saving data: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => _isSaving = false);
+      }
     }
   }
 
-  InputDecoration _minimalDecor(String label, {bool isLocked = false}) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 14),
-      filled: true,
-      fillColor: isLocked ? Colors.grey.shade100 : surface,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-    );
+  // --- Mark Complete & Save Macro ---
+  Future<void> _markCompleteAndSave() async {
+    FocusScope.of(context).unfocus();
+    if (!_formKey.currentState!.validate()) return;
+
+    // Automatically roll dates forward using Today as the actual completion date
+    setState(() {
+      final now = DateTime.now();
+      _lastCalibrationDate = DateTime(now.year, now.month, now.day);
+      _recalcNextDue();
+    });
+
+    await _saveRecord();
   }
 
-  Widget _buildDatePicker(String label, DateTime? selectedDate, Function(DateTime?) onDateSelected) {
-    return InkWell(
-      onTap: () async {
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: selectedDate ?? DateTime.now(),
-          firstDate: DateTime(2000),
-          lastDate: DateTime(2100),
-          builder: (context, child) {
-            return Theme(
-              data: Theme.of(context).copyWith(
-                colorScheme: const ColorScheme.light(primary: primary),
-              ),
-              child: child!,
-            );
-          },
-        );
-        if (picked != null) onDateSelected(picked);
-      },
-      child: InputDecorator(
-        decoration: _minimalDecor(label),
-        child: Text(
-            selectedDate != null ? "${selectedDate.day.toString().padLeft(2, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.year}" : "Select Date",
-            style: GoogleFonts.inter(color: selectedDate != null ? primary : Colors.grey.shade400, fontWeight: FontWeight.w500, fontSize: 14)
-        ),
+  InputDecoration _minimalDecor(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 13),
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: primary),
       ),
     );
   }
@@ -526,140 +1209,332 @@ class _CreateEditTestingEquipmentScreenState extends State<CreateEditTestingEqui
   @override
   Widget build(BuildContext context) {
     final bool isEditing = widget.existingRecord != null;
-    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator(color: primary)));
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white, foregroundColor: primary, elevation: 0,
-        title: Text(isEditing ? "Edit Equipment" : "Add Equipment", style: GoogleFonts.inter(fontWeight: FontWeight.w700, letterSpacing: -0.5)),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. Name Field (LOCKED IF EDITING)
-            TextFormField(
-              controller: _nameController,
-              enabled: !isEditing,
-              style: GoogleFonts.inter(color: isEditing ? Colors.grey.shade500 : primary, fontWeight: FontWeight.w600, fontSize: 15),
-              decoration: _minimalDecor("Equipment Name *", isLocked: isEditing).copyWith(
-                prefixIcon: isEditing ? const Icon(Icons.lock_outline, color: Colors.grey, size: 18) : null,
-              ),
-            ),
-            const SizedBox(height: 16),
+    // Determine bottom button state based on the current due date logic
+    final String btnText = !isEditing
+        ? "CREATE EQUIPMENT"
+        : (_isDue ? "MARK COMPLETE" : "SAVE CHANGES");
+    final Color btnColor = (!isEditing || !_isDue)
+        ? primary
+        : Colors.green.shade600;
 
-            // 2. Area RawAutocomplete
-            RawAutocomplete<Map<String, dynamic>>(
-              textEditingController: _areaSearchCtrl,
-              focusNode: _areaFocusNode,
-              optionsBuilder: (val) {
-                if (val.text.isEmpty) return _areas;
-                return _areas.where((a) => a['area_name'].toString().toLowerCase().contains(val.text.toLowerCase()));
-              },
-              displayStringForOption: (a) => a['area_name'],
-              onSelected: (sel) { setState(() => _selectedAreaId = sel['id']); _areaFocusNode.unfocus(); },
-              fieldViewBuilder: (ctx, ctrl, fNode, onSub) => TextFormField(
-                controller: ctrl, focusNode: fNode,
-                style: GoogleFonts.inter(color: primary, fontWeight: FontWeight.w500, fontSize: 15),
-                decoration: _minimalDecor("Location / Area").copyWith(
-                  suffixIcon: _areaSearchCtrl.text.isNotEmpty
-                      ? IconButton(
-                    icon: const Icon(Icons.clear, color: Colors.grey, size: 20),
-                    onPressed: () {
-                      ctrl.clear();
-                      setState(() => _selectedAreaId = null);
-                    },
-                  )
-                      : const Icon(Icons.arrow_drop_down, color: Colors.grey),
-                ),
-                onChanged: (val) { if (val.isEmpty) setState(() => _selectedAreaId = null); },
-              ),
-              optionsViewBuilder: (ctx, onSel, opts) => Align(
-                alignment: Alignment.topLeft,
-                child: Material(
-                  elevation: 2.0, borderRadius: BorderRadius.circular(10), shadowColor: Colors.black.withOpacity(0.2),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24).copyWith(top: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
                   child: Container(
-                    constraints: BoxConstraints(maxHeight: 200, maxWidth: MediaQuery.of(context).size.width - 40),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.grey.shade100)),
-                    child: ListView.separated(
-                      padding: EdgeInsets.zero, shrinkWrap: true, itemCount: opts.length,
-                      separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade100),
-                      itemBuilder: (ctx, idx) => ListTile(
-                        dense: true,
-                        title: Text(opts.elementAt(idx)['area_name'], style: GoogleFonts.inter(fontSize: 14, color: primary, fontWeight: FontWeight.w500)),
-                        onTap: () => onSel(opts.elementAt(idx)),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                Text(
+                  isEditing ? "Edit Equipment" : "Register Equipment",
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: primary,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Name
+                TextFormField(
+                  controller: _nameController,
+                  validator: (v) => v!.isEmpty ? 'Required' : null,
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                  decoration: _minimalDecor("Equipment Name *"),
+                ),
+                const SizedBox(height: 16),
+
+                // Area AutoComplete
+                RawAutocomplete<Map<String, dynamic>>(
+                  textEditingController: _areaSearchController,
+                  focusNode: _areaFocusNode,
+                  optionsBuilder: (val) {
+                    if (val.text.isEmpty) return widget.areas;
+                    return widget.areas.where(
+                      (opt) => opt['display_name']
+                          .toString()
+                          .toLowerCase()
+                          .contains(val.text.toLowerCase()),
+                    );
+                  },
+                  displayStringForOption: (opt) =>
+                      opt['display_name'].toString(),
+                  onSelected: (sel) {
+                    setState(() {
+                      _selectedAreaId = sel['id'].toString();
+                    });
+                    _areaFocusNode.unfocus();
+                  },
+                  fieldViewBuilder: (ctx, ctrl, fNode, onSub) => TextFormField(
+                    controller: ctrl,
+                    focusNode: fNode,
+                    validator: (v) =>
+                        _selectedAreaId == null ? 'Required' : null,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    decoration: _minimalDecor("Search Area *").copyWith(
+                      suffixIcon: ctrl.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(
+                                Icons.clear,
+                                size: 16,
+                                color: Colors.grey,
+                              ),
+                              onPressed: () {
+                                ctrl.clear();
+                                setState(() => _selectedAreaId = null);
+                              },
+                            )
+                          : null,
+                    ),
+                  ),
+                  optionsViewBuilder: (ctx, onSel, opts) => Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      elevation: 4.0,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        constraints: BoxConstraints(
+                          maxHeight: 200,
+                          maxWidth: MediaQuery.of(context).size.width - 48,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: ListView.separated(
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          itemCount: opts.length,
+                          separatorBuilder: (_, __) =>
+                              Divider(height: 1, color: Colors.grey.shade200),
+                          itemBuilder: (ctx, idx) => ListTile(
+                            title: Text(
+                              opts.elementAt(idx)['display_name'],
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            onTap: () => onSel(opts.elementAt(idx)),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-            // 3. Configs
-            Row(
-              children: [
-                Expanded(child: TextField(controller: _operatingRangeController, style: GoogleFonts.inter(fontSize: 14), decoration: _minimalDecor("Operating Range"))),
-                const SizedBox(width: 12),
-                Expanded(child: TextField(controller: _calibrationFreqController, style: GoogleFonts.inter(fontSize: 14), decoration: _minimalDecor("Calib. Freq (e.g. 1 Yr)"))),
+                // Operating Range
+                TextFormField(
+                  controller: _opRangeController,
+                  validator: (v) => v!.isEmpty ? 'Required' : null,
+                  style: GoogleFonts.inter(fontSize: 14),
+                  decoration: _minimalDecor(
+                    "Operating Range * (e.g., 0-100°C)",
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Frequency Dropdown
+                DropdownButtonFormField<String>(
+                  value: _frequency,
+                  validator: (v) => v == null ? 'Required' : null,
+                  dropdownColor: Colors.white,
+                  items: _freqOptions
+                      .map(
+                        (f) => DropdownMenuItem(
+                          value: f,
+                          child: Text(
+                            f,
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (val) {
+                    FocusScope.of(context).unfocus();
+                    setState(() {
+                      _frequency = val;
+                      _recalcNextDue();
+                    });
+                  },
+                  decoration: _minimalDecor("Calibration Frequency *"),
+                ),
+                const SizedBox(height: 16),
+
+                // Commission Date
+                InkWell(
+                  onTap: _pickCommissionDate,
+                  child: InputDecorator(
+                    decoration: _minimalDecor("Date of Commission *").copyWith(
+                      errorText:
+                          _commissionDate == null &&
+                              _formKey.currentState?.validate() == false
+                          ? 'Required'
+                          : null,
+                    ),
+                    child: Text(
+                      _commissionDate != null
+                          ? "${_commissionDate!.year}-${_commissionDate!.month.toString().padLeft(2, '0')}-${_commissionDate!.day.toString().padLeft(2, '0')}"
+                          : "Select Date",
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: _commissionDate != null
+                            ? Colors.black87
+                            : Colors.grey.shade500,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Last Calibration
+                InkWell(
+                  onTap: _pickLastCalibrationDate,
+                  child: InputDecorator(
+                    decoration: _minimalDecor("Last Calibration Date *")
+                        .copyWith(
+                          errorText:
+                              _lastCalibrationDate == null &&
+                                  _formKey.currentState?.validate() == false
+                              ? 'Required'
+                              : null,
+                        ),
+                    child: Text(
+                      _lastCalibrationDate != null
+                          ? "${_lastCalibrationDate!.year}-${_lastCalibrationDate!.month.toString().padLeft(2, '0')}-${_lastCalibrationDate!.day.toString().padLeft(2, '0')}"
+                          : "Select Date",
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: _lastCalibrationDate != null
+                            ? Colors.black87
+                            : Colors.grey.shade500,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // LOCKED Auto-Calculated Next Due Date
+                InputDecorator(
+                  decoration: _minimalDecor("Next Due Date (Auto-Calculated)"),
+                  child: Text(
+                    _nextDueDate != null
+                        ? "${_nextDueDate!.year}-${_nextDueDate!.month.toString().padLeft(2, '0')}-${_nextDueDate!.day.toString().padLeft(2, '0')}"
+                        : "Pending calculation",
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: _nextDueDate != null
+                          ? primary
+                          : Colors.grey.shade400,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Active Status Toggle
+                if (isEditing) ...[
+                  SwitchListTile(
+                    title: Text(
+                      "Equipment Active",
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                        color: primary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      "Turn off to retire and hide from list",
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    value: _isActive,
+                    activeColor: Colors.green,
+                    contentPadding: EdgeInsets.zero,
+                    onChanged: (val) {
+                      FocusScope.of(context).unfocus();
+                      setState(() => _isActive = val);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                ],
+
+                // Remarks
+                TextField(
+                  controller: _remarksController,
+                  maxLines: 2,
+                  style: GoogleFonts.inter(fontSize: 14),
+                  decoration: _minimalDecor("Remarks / Notes (Optional)"),
+                ),
+                const SizedBox(height: 24),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: btnColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: _isSaving
+                        ? null
+                        : (isEditing && _isDue
+                              ? _markCompleteAndSave
+                              : _saveRecord),
+                    child: _isSaving
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            btnText,
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 16),
-
-            // 4. Dates
-            _buildDatePicker("Date of Commission", _dateOfCommission, (d) => setState(() => _dateOfCommission = d)),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(child: _buildDatePicker("Last Calibration", _lastCalibrationDate, (d) => setState(() => _lastCalibrationDate = d))),
-                const SizedBox(width: 12),
-                Expanded(child: _buildDatePicker("Next Due Date", _nextDueDate, (d) => setState(() => _nextDueDate = d))),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // 5. Status Toggle (Clean look)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(12)),
-              child: SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                title: Text("Testing Completed", style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14, color: primary)),
-                value: _isTestingCompleted,
-                activeColor: Colors.white,
-                activeTrackColor: Colors.green.shade500,
-                inactiveThumbColor: Colors.grey.shade400,
-                inactiveTrackColor: Colors.grey.shade200,
-                onChanged: (val) => setState(() => _isTestingCompleted = val),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // 6. Remarks
-            TextField(
-              controller: _remarksController,
-              maxLines: 3,
-              style: GoogleFonts.inter(fontSize: 14),
-              decoration: _minimalDecor("Remarks / Notes"),
-            ),
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: primary, minimumSize: const Size(double.infinity, 54), elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
-            ),
-            onPressed: _isSaving ? null : _saveRecord,
-            child: _isSaving
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : Text(isEditing ? "Save Changes" : "Create Equipment", style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.white)),
           ),
         ),
       ),
