@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // --- Screen Imports ---
+import '../../providers/auth_provider.dart';
+import '../../providers/ticket_provider.dart';
+
 import 'package:kitchen_maintanence/screens/reports/complaint_report_screen.dart';
 import 'package:kitchen_maintanence/screens/reports/master_equipment_report_screen.dart';
 import 'package:kitchen_maintanence/screens/reports/pm_checklist_screen.dart';
@@ -58,6 +63,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
+  // Local state to hold the allowed codes so we can update them on refresh
+  late List<String> _localAllowedCodes;
+
   // --- Master Configuration of Categories and Reports ---
   final List<_CategoryData> _allCategories = [
     _CategoryData(
@@ -65,7 +73,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       icon: Icons.folder_special_outlined,
       reports: [
         _ReportData(
-          code: "MNT-02",
+          code: "MT-02",
           title: "Equipment Master",
           screen: const EquipmentReportScreen(),
         ),
@@ -153,34 +161,100 @@ class _ReportsScreenState extends State<ReportsScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _localAllowedCodes = List.from(widget.allowedReportCodes);
+  }
+
+  // Ensures if HomeScreen updates the permissions, this screen catches it
+  @override
+  void didUpdateWidget(ReportsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.allowedReportCodes != oldWidget.allowedReportCodes) {
+      setState(() {
+        _localAllowedCodes = List.from(widget.allowedReportCodes);
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
-  // --- Refresh Logic ---
+  // --- Dynamic Refresh Logic ---
   Future<void> _handleRefresh() async {
-    // Provides a visual refresh indicator delay and rebuilds the UI
-    // If you add a callback from HomeScreen to re-fetch access data, you can call it here.
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (mounted) setState(() {});
+    if (widget.isAdmin) {
+      // Admins have access to everything, just delay for UX
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (mounted) setState(() {});
+      return;
+    }
+
+    try {
+      final authProv = context.read<AuthProvider>();
+      final ticketProv = context.read<TicketProvider>();
+      final supabase = Supabase.instance.client;
+
+      String currentKitchenId = ticketProv.kitchenFilter;
+
+      // Resolve 'ALL' or missing to the first actual assigned kitchen
+      if (currentKitchenId == 'ALL' || !authProv.assignedKitchens.any((k) => k['id'].toString() == currentKitchenId)) {
+        if (authProv.assignedKitchens.isNotEmpty) {
+          currentKitchenId = authProv.assignedKitchens.first['id'].toString();
+        } else {
+          return;
+        }
+      }
+
+      final userId = supabase.auth.currentUser?.id;
+      if (userId != null) {
+        final res = await supabase.from('user_report_access')
+            .select('report_code')
+            .eq('user_id', userId)
+            .eq('kitchen_id', currentKitchenId);
+
+        if (mounted) {
+          setState(() {
+            _localAllowedCodes = List<String>.from(res.map((x) => x['report_code']));
+          });
+          // ScaffoldMessenger.of(context).showSnackBar(
+          //   SnackBar(
+          //     content: Text('Report access refreshed.', style: GoogleFonts.inter()),
+          //     backgroundColor: Colors.green,
+          //     duration: const Duration(seconds: 2),
+          //   ),
+          // );
+        }
+      }
+    } catch (e) {
+      debugPrint("Error refreshing report access: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to refresh access.', style: GoogleFonts.inter()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   // --- Filter Logic ---
   List<_CategoryData> get _filteredCategories {
-    // 1. First, strictly filter out reports the user doesn't have access to
+    // 1. Strictly filter out reports the user doesn't have access to using LOCAL codes
     final authorizedCategories = _allCategories
         .map((cat) {
-          final authorizedReports = cat.reports.where((report) {
-            return widget.isAdmin ||
-                widget.allowedReportCodes.contains(report.code);
-          }).toList();
-          return _CategoryData(
-            title: cat.title,
-            icon: cat.icon,
-            reports: authorizedReports,
-          );
-        })
+      final authorizedReports = cat.reports.where((report) {
+        return widget.isAdmin || _localAllowedCodes.contains(report.code);
+      }).toList();
+      return _CategoryData(
+        title: cat.title,
+        icon: cat.icon,
+        reports: authorizedReports,
+      );
+    })
         .where((cat) => cat.reports.isNotEmpty)
         .toList();
 
@@ -189,22 +263,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     return authorizedCategories
         .map((cat) {
-          final filteredReports = cat.reports.where((report) {
-            final matchesTitle = report.title.toLowerCase().contains(
-              _searchQuery.toLowerCase(),
-            );
-            final matchesCode = report.code.toLowerCase().contains(
-              _searchQuery.toLowerCase(),
-            );
-            return matchesTitle || matchesCode;
-          }).toList();
+      final filteredReports = cat.reports.where((report) {
+        final matchesTitle = report.title.toLowerCase().contains(
+          _searchQuery.toLowerCase(),
+        );
+        final matchesCode = report.code.toLowerCase().contains(
+          _searchQuery.toLowerCase(),
+        );
+        return matchesTitle || matchesCode;
+      }).toList();
 
-          return _CategoryData(
-            title: cat.title,
-            icon: cat.icon,
-            reports: filteredReports,
-          );
-        })
+      return _CategoryData(
+        title: cat.title,
+        icon: cat.icon,
+        reports: filteredReports,
+      );
+    })
         .where((cat) => cat.reports.isNotEmpty)
         .toList();
   }
@@ -266,17 +340,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       ),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(
-                                Icons.clear,
-                                color: Colors.grey,
-                                size: 20,
-                              ),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                                FocusScope.of(context).unfocus();
-                              },
-                            )
+                        icon: const Icon(
+                          Icons.clear,
+                          color: Colors.grey,
+                          size: 20,
+                        ),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                          FocusScope.of(context).unfocus();
+                        },
+                      )
                           : null,
                       filled: true,
                       fillColor: surface,
@@ -310,127 +384,127 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 onRefresh: _handleRefresh,
                 child: categories.isEmpty
                     ? ListView(
-                        physics:
-                            const AlwaysScrollableScrollPhysics(), // Ensures pull-to-refresh works when empty
-                        padding: EdgeInsets.only(
-                          top: MediaQuery.of(context).size.height * 0.15,
+                  physics:
+                  const AlwaysScrollableScrollPhysics(), // Ensures pull-to-refresh works when empty
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).size.height * 0.15,
+                  ),
+                  children: [
+                    Icon(
+                      Icons.search_off_rounded,
+                      size: 64,
+                      color: Colors.grey.shade300,
+                    ),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: Text(
+                        "No reports accessible",
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          color: Colors.grey.shade500,
+                          fontWeight: FontWeight.w500,
                         ),
-                        children: [
-                          Icon(
-                            Icons.search_off_rounded,
-                            size: 64,
-                            color: Colors.grey.shade300,
-                          ),
-                          const SizedBox(height: 16),
-                          Center(
-                            child: Text(
-                              "No reports accessible",
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                color: Colors.grey.shade500,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
+                      ),
+                    ),
+                  ],
+                )
+                    : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                  physics:
+                  const AlwaysScrollableScrollPhysics(), // Ensures pull-to-refresh works even if not full
+                  itemCount: categories.length,
+                  itemBuilder: (context, index) {
+                    final category = categories[index];
+                    final initiallyExpanded =
+                        _searchQuery.isNotEmpty || categories.length == 1;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade200),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
                         ],
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
-                        physics:
-                            const AlwaysScrollableScrollPhysics(), // Ensures pull-to-refresh works even if not full
-                        itemCount: categories.length,
-                        itemBuilder: (context, index) {
-                          final category = categories[index];
-                          final initiallyExpanded =
-                              _searchQuery.isNotEmpty || categories.length == 1;
-
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 16),
-                            decoration: BoxDecoration(
-                              color: surface,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.grey.shade200),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.02),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Theme(
+                          data: Theme.of(
+                            context,
+                          ).copyWith(dividerColor: Colors.transparent),
+                          child: ExpansionTile(
+                            initiallyExpanded: initiallyExpanded,
+                            iconColor: primary,
+                            collapsedIconColor: Colors.grey.shade400,
+                            tilePadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
+                            title: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: primary.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(
+                                      10,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    category.icon,
+                                    color: primary,
+                                    size: 22,
+                                  ),
                                 ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Text(
+                                    category.title,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(
+                                      8,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    "${category.reports.length}",
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
                               ],
                             ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: Theme(
-                                data: Theme.of(
-                                  context,
-                                ).copyWith(dividerColor: Colors.transparent),
-                                child: ExpansionTile(
-                                  initiallyExpanded: initiallyExpanded,
-                                  iconColor: primary,
-                                  collapsedIconColor: Colors.grey.shade400,
-                                  tilePadding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 8,
-                                  ),
-                                  title: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(10),
-                                        decoration: BoxDecoration(
-                                          color: primary.withOpacity(0.08),
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                        ),
-                                        child: Icon(
-                                          category.icon,
-                                          color: primary,
-                                          size: 22,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: Text(
-                                          category.title,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w700,
-                                            color: const Color(0xFF0F172A),
-                                          ),
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey.shade100,
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          "${category.reports.length}",
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                    ],
-                                  ),
-                                  children: category.reports
-                                      .map((report) => _buildReportTile(report))
-                                      .toList(),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
+                            children: category.reports
+                                .map((report) => _buildReportTile(report))
+                                .toList(),
+                          ),
+                        ),
                       ),
+                    );
+                  },
+                ),
               ),
             ),
           ],

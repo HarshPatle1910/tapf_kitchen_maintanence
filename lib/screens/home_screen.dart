@@ -36,41 +36,50 @@ class _HomeScreenState extends State<HomeScreen> {
   List<String> _allowedReportCodes = [];
   String? _lastCheckedKitchenId;
 
+  // Master list to ensure we don't show the tab for deprecated/invalid codes
+  final List<String> _validReportCodes = [
+    "MNT-02", "MT-03", "MT-15", "MT-05", "MT-06", "MT-07",
+    "MT-16", "MT-10", "MT-11", "MT-13", "MT-14", "MT-08"
+  ];
+
   @override
   void initState() {
     super.initState();
     NotificationService().initNotifications();
 
-    // Wait for providers to initialize, then fetch permissions based on active kitchen
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkAndFetchPermissions();
+      final ticketProv = context.read<TicketProvider>();
+      final authProv = context.read<AuthProvider>();
+      _resolveKitchenAndFetch(ticketProv, authProv);
     });
   }
 
-  // --- UPDATED: Fetch based on currently active kitchen ---
-  Future<void> _checkAndFetchPermissions() async {
-    final ticketProv = context.read<TicketProvider>();
-    final authProv = context.read<AuthProvider>();
-
+  // Resolves the currently active kitchen and triggers a fetch if it changed
+  void _resolveKitchenAndFetch(TicketProvider ticketProv, AuthProvider authProv) {
     String currentKitchenId = ticketProv.kitchenFilter;
 
     // Resolve 'ALL' or missing to the first actual assigned kitchen
-    if (currentKitchenId == 'ALL' ||
-        !authProv.assignedKitchens.any(
-          (k) => k['id'].toString() == currentKitchenId,
-        )) {
+    if (currentKitchenId == 'ALL' || !authProv.assignedKitchens.any((k) => k['id'].toString() == currentKitchenId)) {
       if (authProv.assignedKitchens.isNotEmpty) {
         currentKitchenId = authProv.assignedKitchens.first['id'].toString();
       } else {
-        setState(() => _isLoadingAccess = false);
+        if (mounted && _isLoadingAccess) setState(() => _isLoadingAccess = false);
         return;
       }
     }
 
-    if (currentKitchenId == _lastCheckedKitchenId && !_isLoadingAccess) return;
+    if (currentKitchenId.isNotEmpty && currentKitchenId != _lastCheckedKitchenId) {
+      _checkAndFetchPermissions(currentKitchenId);
+    }
+  }
 
-    _lastCheckedKitchenId = currentKitchenId;
-    setState(() => _isLoadingAccess = true);
+  // Fetches permissions for the specific kitchen
+  Future<void> _checkAndFetchPermissions(String kitchenId) async {
+    _lastCheckedKitchenId = kitchenId;
+
+    Future.microtask(() {
+      if (mounted) setState(() => _isLoadingAccess = true);
+    });
 
     try {
       final userId = _supabase.auth.currentUser?.id;
@@ -79,32 +88,33 @@ class _HomeScreenState extends State<HomeScreen> {
             .from('user_report_access')
             .select('report_code')
             .eq('user_id', userId)
-            .eq('kitchen_id', currentKitchenId);
+            .eq('kitchen_id', kitchenId);
 
         if (mounted) {
           setState(() {
-            _allowedReportCodes = List<String>.from(
-              res.map((x) => x['report_code']),
-            );
+            _allowedReportCodes = List<String>.from(res.map((x) => x['report_code']));
             _isLoadingAccess = false;
           });
         }
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoadingAccess = false);
+      if (mounted) setState(() { _isLoadingAccess = false; _allowedReportCodes = []; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Check permissions continuously when UI builds (in case user changed kitchens in another tab)
-    _checkAndFetchPermissions();
-
     final authProv = context.watch<AuthProvider>();
-    final bool isAdmin = authProv.activeRole == 'admin';
+    final ticketProv = context.watch<TicketProvider>();
 
-    // Show Reports Tab if Admin OR if they have access to at least 1 report in current kitchen
-    final bool showReportsTab = isAdmin || _allowedReportCodes.isNotEmpty;
+    // Check if the kitchen was changed from the Ticket Dashboard dropdown
+    _resolveKitchenAndFetch(ticketProv, authProv);
+
+    final bool isAdmin = authProv.activeRole == 'admin';
+    final bool hasValidReports = _allowedReportCodes.any((code) => _validReportCodes.contains(code));
+
+    // Show Reports Tab if Admin OR if they have access to at least 1 valid report in current kitchen
+    final bool showReportsTab = isAdmin || hasValidReports;
 
     final List<Widget> pages = [
       const _HomeTicketView(),
@@ -142,13 +152,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     ];
 
+    // Safety fallback: If tab disappears while user is on it, return them to Home
     if (_selectedIndex >= pages.length) _selectedIndex = 0;
-
-    if (_isLoadingAccess && !isAdmin) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: navy)),
-      );
-    }
 
     return Scaffold(
       body: IndexedStack(index: _selectedIndex, children: pages),
@@ -242,7 +247,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
       String targetKitchenId = ticketProv.kitchenFilter;
       if (targetKitchenId == 'ALL' ||
           !authProv.assignedKitchens.any(
-            (k) => k['id'].toString() == targetKitchenId,
+                (k) => k['id'].toString() == targetKitchenId,
           )) {
         if (authProv.assignedKitchens.isNotEmpty) {
           targetKitchenId = authProv.assignedKitchens.first['id'].toString();
@@ -261,11 +266,11 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
           _kitchenZones = List<Map<String, dynamic>>.from(res)
               .map(
                 (z) => {
-                  'id': z['id'],
-                  'name': z['name'],
-                  'display_name': z['name'],
-                },
-              )
+              'id': z['id'],
+              'name': z['name'],
+              'display_name': z['name'],
+            },
+          )
               .toList();
         });
       }
@@ -290,7 +295,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
     String? validDropdownValue = ticketProvider.kitchenFilter;
     if (validDropdownValue == 'ALL' ||
         !authProv.assignedKitchens.any(
-          (k) => k['id'].toString() == validDropdownValue,
+              (k) => k['id'].toString() == validDropdownValue,
         )) {
       validDropdownValue = authProv.assignedKitchens.isNotEmpty
           ? authProv.assignedKitchens.first['id'].toString()
@@ -299,10 +304,10 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
 
     final bool hasActiveFilters =
         ticketProvider.priorityFilter != 'ALL' ||
-        ticketProvider.startDate != null ||
-        ticketProvider.zoneFilter != 'ALL' ||
-        ticketProvider.assignedToMeFilter ||
-        ticketProvider.raisedByMeFilter;
+            ticketProvider.startDate != null ||
+            ticketProvider.zoneFilter != 'ALL' ||
+            ticketProvider.assignedToMeFilter ||
+            ticketProvider.raisedByMeFilter;
     final bool isSingleKitchen = authProv.assignedKitchens.length <= 1;
 
     return GestureDetector(
@@ -347,7 +352,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                       Text(
                         authProv.assignedKitchens.isNotEmpty
                             ? authProv.assignedKitchens.first['name'] ??
-                                  'Unknown Kitchen'
+                            'Unknown Kitchen'
                             : 'No Kitchens',
                         style: GoogleFonts.inter(
                           fontSize: 15,
@@ -387,15 +392,15 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                             items: authProv.assignedKitchens
                                 .map(
                                   (k) => DropdownMenuItem(
-                                    value: k['id'].toString(),
-                                    child: Text(
-                                      k['name'] ?? 'Unknown',
-                                      style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
+                                value: k['id'].toString(),
+                                child: Text(
+                                  k['name'] ?? 'Unknown',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w700,
                                   ),
-                                )
+                                ),
+                              ),
+                            )
                                 .toList(),
                             onChanged: (val) {
                               if (val != null) {
@@ -526,27 +531,27 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                                     focusNode: _searchFocusNode,
                                     optionsBuilder:
                                         (TextEditingValue textEditingValue) {
-                                          if (textEditingValue.text.isEmpty)
-                                            return const Iterable<
-                                              Map<String, dynamic>
-                                            >.empty();
-                                          final query = textEditingValue.text
-                                              .toLowerCase();
-                                          return ticketProvider.tickets.where((
-                                            ticket,
+                                      if (textEditingValue.text.isEmpty)
+                                        return const Iterable<
+                                            Map<String, dynamic>
+                                        >.empty();
+                                      final query = textEditingValue.text
+                                          .toLowerCase();
+                                      return ticketProvider.tickets.where((
+                                          ticket,
                                           ) {
-                                            final title =
-                                                (ticket['title'] ?? '')
-                                                    .toLowerCase();
-                                            final no =
-                                                (ticket['ticket_no'] ?? '')
-                                                    .toLowerCase();
-                                            return title.contains(query) ||
-                                                no.contains(query);
-                                          });
-                                        },
+                                        final title =
+                                        (ticket['title'] ?? '')
+                                            .toLowerCase();
+                                        final no =
+                                        (ticket['ticket_no'] ?? '')
+                                            .toLowerCase();
+                                        return title.contains(query) ||
+                                            no.contains(query);
+                                      });
+                                    },
                                     displayStringForOption: (option) =>
-                                        option['ticket_no'] ?? '',
+                                    option['ticket_no'] ?? '',
                                     onSelected: (selection) {
                                       _searchController.clear();
                                       _searchFocusNode.unfocus();
@@ -561,177 +566,177 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                                     },
                                     fieldViewBuilder:
                                         (
-                                          BuildContext context,
-                                          TextEditingController
-                                          textEditingController,
-                                          FocusNode focusNode,
-                                          VoidCallback onFieldSubmitted,
+                                        BuildContext context,
+                                        TextEditingController
+                                        textEditingController,
+                                        FocusNode focusNode,
+                                        VoidCallback onFieldSubmitted,
                                         ) {
-                                          return TextField(
-                                            controller: textEditingController,
-                                            focusNode: focusNode,
-                                            onSubmitted: (value) {
-                                              onFieldSubmitted();
-                                              context
-                                                  .read<TicketProvider>()
-                                                  .setSearchQuery(value);
-                                            },
-                                            style: GoogleFonts.inter(
-                                              fontWeight: FontWeight.w600,
-                                              color: navy,
-                                            ),
-                                            decoration: InputDecoration(
-                                              hintText:
-                                                  "Search title or ticket #...",
-                                              hintStyle: GoogleFonts.inter(
-                                                color: Colors.grey.shade400,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                              prefixIcon: const Icon(
-                                                Icons.search,
-                                                color: Colors.grey,
-                                              ),
-                                              suffixIcon:
-                                                  textEditingController
-                                                      .text
-                                                      .isNotEmpty
-                                                  ? IconButton(
-                                                      icon: const Icon(
-                                                        Icons.clear,
-                                                        color: Colors.grey,
-                                                        size: 20,
-                                                      ),
-                                                      onPressed: () {
-                                                        textEditingController
-                                                            .clear();
-                                                        context
-                                                            .read<
-                                                              TicketProvider
-                                                            >()
-                                                            .setSearchQuery('');
-                                                        focusNode.unfocus();
-                                                      },
-                                                    )
-                                                  : null,
-                                              filled: true,
-                                              fillColor: Colors.grey.shade50,
-                                              contentPadding:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 14,
-                                                  ),
-                                              border: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                                borderSide: BorderSide.none,
-                                              ),
-                                              focusedBorder: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                                borderSide: const BorderSide(
-                                                  color: golden,
-                                                  width: 2,
-                                                ),
-                                              ),
-                                            ),
-                                          );
+                                      return TextField(
+                                        controller: textEditingController,
+                                        focusNode: focusNode,
+                                        onSubmitted: (value) {
+                                          onFieldSubmitted();
+                                          context
+                                              .read<TicketProvider>()
+                                              .setSearchQuery(value);
                                         },
+                                        style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.w600,
+                                          color: navy,
+                                        ),
+                                        decoration: InputDecoration(
+                                          hintText:
+                                          "Search title or ticket #...",
+                                          hintStyle: GoogleFonts.inter(
+                                            color: Colors.grey.shade400,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          prefixIcon: const Icon(
+                                            Icons.search,
+                                            color: Colors.grey,
+                                          ),
+                                          suffixIcon:
+                                          textEditingController
+                                              .text
+                                              .isNotEmpty
+                                              ? IconButton(
+                                            icon: const Icon(
+                                              Icons.clear,
+                                              color: Colors.grey,
+                                              size: 20,
+                                            ),
+                                            onPressed: () {
+                                              textEditingController
+                                                  .clear();
+                                              context
+                                                  .read<
+                                                  TicketProvider
+                                              >()
+                                                  .setSearchQuery('');
+                                              focusNode.unfocus();
+                                            },
+                                          )
+                                              : null,
+                                          filled: true,
+                                          fillColor: Colors.grey.shade50,
+                                          contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            vertical: 14,
+                                          ),
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                            BorderRadius.circular(12),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius:
+                                            BorderRadius.circular(12),
+                                            borderSide: const BorderSide(
+                                              color: golden,
+                                              width: 2,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
                                     optionsViewBuilder:
                                         (
-                                          BuildContext context,
-                                          AutocompleteOnSelected<
+                                        BuildContext context,
+                                        AutocompleteOnSelected<
                                             Map<String, dynamic>
-                                          >
-                                          onSelected,
-                                          Iterable<Map<String, dynamic>>
-                                          options,
+                                        >
+                                        onSelected,
+                                        Iterable<Map<String, dynamic>>
+                                        options,
                                         ) {
-                                          return Align(
-                                            alignment: Alignment.topLeft,
-                                            child: Material(
-                                              elevation: 4.0,
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              child: Container(
-                                                width:
-                                                    MediaQuery.of(
-                                                      context,
-                                                    ).size.width -
-                                                    86,
-                                                constraints:
-                                                    const BoxConstraints(
-                                                      maxHeight: 250,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                ),
-                                                child: ListView.separated(
-                                                  padding: EdgeInsets.zero,
-                                                  shrinkWrap: true,
-                                                  itemCount: options.length,
-                                                  separatorBuilder:
-                                                      (context, index) =>
-                                                          Divider(
-                                                            height: 1,
-                                                            color: Colors
-                                                                .grey
-                                                                .shade100,
-                                                          ),
-                                                  itemBuilder:
-                                                      (
-                                                        BuildContext context,
-                                                        int index,
-                                                      ) {
-                                                        final option = options
-                                                            .elementAt(index);
-                                                        return ListTile(
-                                                          title: Text(
-                                                            option['title'] ??
-                                                                'No Title',
-                                                            style:
-                                                                GoogleFonts.inter(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w600,
-                                                                  fontSize: 13,
-                                                                  color: navy,
-                                                                ),
-                                                            maxLines: 1,
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                          ),
-                                                          subtitle: Text(
-                                                            option['ticket_no'] ??
-                                                                '#---',
-                                                            style:
-                                                                GoogleFonts.inter(
-                                                                  fontSize: 11,
-                                                                  color: Colors
-                                                                      .grey
-                                                                      .shade500,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold,
-                                                                ),
-                                                          ),
-                                                          trailing: const Icon(
-                                                            Icons.chevron_right,
-                                                            size: 18,
-                                                            color: Colors.grey,
-                                                          ),
-                                                          onTap: () =>
-                                                              onSelected(
-                                                                option,
-                                                              ),
-                                                        );
-                                                      },
-                                                ),
-                                              ),
+                                      return Align(
+                                        alignment: Alignment.topLeft,
+                                        child: Material(
+                                          elevation: 4.0,
+                                          borderRadius:
+                                          BorderRadius.circular(12),
+                                          child: Container(
+                                            width:
+                                            MediaQuery.of(
+                                              context,
+                                            ).size.width -
+                                                86,
+                                            constraints:
+                                            const BoxConstraints(
+                                              maxHeight: 250,
                                             ),
-                                          );
-                                        },
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                              BorderRadius.circular(12),
+                                            ),
+                                            child: ListView.separated(
+                                              padding: EdgeInsets.zero,
+                                              shrinkWrap: true,
+                                              itemCount: options.length,
+                                              separatorBuilder:
+                                                  (context, index) =>
+                                                  Divider(
+                                                    height: 1,
+                                                    color: Colors
+                                                        .grey
+                                                        .shade100,
+                                                  ),
+                                              itemBuilder:
+                                                  (
+                                                  BuildContext context,
+                                                  int index,
+                                                  ) {
+                                                final option = options
+                                                    .elementAt(index);
+                                                return ListTile(
+                                                  title: Text(
+                                                    option['title'] ??
+                                                        'No Title',
+                                                    style:
+                                                    GoogleFonts.inter(
+                                                      fontWeight:
+                                                      FontWeight
+                                                          .w600,
+                                                      fontSize: 13,
+                                                      color: navy,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                    TextOverflow
+                                                        .ellipsis,
+                                                  ),
+                                                  subtitle: Text(
+                                                    option['ticket_no'] ??
+                                                        '#---',
+                                                    style:
+                                                    GoogleFonts.inter(
+                                                      fontSize: 11,
+                                                      color: Colors
+                                                          .grey
+                                                          .shade500,
+                                                      fontWeight:
+                                                      FontWeight
+                                                          .bold,
+                                                    ),
+                                                  ),
+                                                  trailing: const Icon(
+                                                    Icons.chevron_right,
+                                                    size: 18,
+                                                    color: Colors.grey,
+                                                  ),
+                                                  onTap: () =>
+                                                      onSelected(
+                                                        option,
+                                                      ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ),
                               ),
@@ -790,7 +795,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
-                    (context, index) {
+                        (context, index) {
                       if (index == ticketProvider.tickets.length) {
                         return const Padding(
                           padding: EdgeInsets.all(16.0),
@@ -801,10 +806,10 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                       }
                       return TicketCard(
                         ticket: ticketProvider.tickets[index],
-                      ); // Injected modular card
+                      );
                     },
                     childCount:
-                        ticketProvider.tickets.length +
+                    ticketProvider.tickets.length +
                         (ticketProvider.isLoading ? 1 : 0),
                   ),
                 ),
@@ -834,12 +839,12 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
   }
 
   Widget _buildStatCard(
-    String label,
-    int count,
-    Color color,
-    String targetStatus,
-    TicketProvider provider,
-  ) {
+      String label,
+      int count,
+      Color color,
+      String targetStatus,
+      TicketProvider provider,
+      ) {
     final bool isSelected = provider.statusFilter == targetStatus;
     return InkWell(
       onTap: () {
@@ -863,12 +868,12 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
           boxShadow: isSelected
               ? []
               : [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
