@@ -108,16 +108,14 @@ class _ElectricalLogListScreenState extends State<ElectricalLogListScreen> {
     return validDates;
   }
 
-  // Generate Year Items dynamically (From 2025 to Current Year)
   List<DropdownMenuItem<int>> _getYearItems() {
     int currentYear = DateTime.now().year;
     List<int> years = List.generate((currentYear - 2025) + 1, (i) => 2025 + i);
     return years.map((y) => DropdownMenuItem(value: y, child: Text(y.toString(), style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))))).toList();
   }
 
-  // Generate Month Items dynamically (Enforce May 2025 start, and cap at Current Month)
   List<DropdownMenuItem<int>> _getMonthItems() {
-    int startMonth = (_selectedYear == 2025) ? 5 : 1; // May is month 5
+    int startMonth = (_selectedYear == 2025) ? 5 : 1;
     int endMonth = (_selectedYear == DateTime.now().year) ? DateTime.now().month : 12;
 
     List<DropdownMenuItem<int>> items = [];
@@ -131,7 +129,6 @@ class _ElectricalLogListScreenState extends State<ElectricalLogListScreen> {
     if (newYear == null) return;
     setState(() {
       _selectedYear = newYear;
-      // Re-clamp month if out of bounds for the newly selected year
       if (_selectedYear == 2025 && _selectedMonth < 5) _selectedMonth = 5;
       if (_selectedYear == DateTime.now().year && _selectedMonth > DateTime.now().month) _selectedMonth = DateTime.now().month;
     });
@@ -224,7 +221,6 @@ class _ElectricalLogListScreenState extends State<ElectricalLogListScreen> {
       ),
       body: Column(
         children: [
-          // ROUNDED FILTERS
           Container(
             color: surface, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
@@ -261,7 +257,6 @@ class _ElectricalLogListScreenState extends State<ElectricalLogListScreen> {
               ],
             ),
           ),
-          // DATE LIST
           Expanded(
             child: _isLoading ? const Center(child: CircularProgressIndicator(color: primary)) : RefreshIndicator(
               color: primary, onRefresh: _fetchData,
@@ -269,7 +264,7 @@ class _ElectricalLogListScreenState extends State<ElectricalLogListScreen> {
                 padding: const EdgeInsets.all(16), itemCount: dates.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (ctx, i) {
-                  final targetDate = dates[dates.length - 1 - i]; // Newest first
+                  final targetDate = dates[dates.length - 1 - i];
                   final dateStr = targetDate.toIso8601String().split('T')[0];
                   final existingRecord = _records.cast<Map<String, dynamic>?>().firstWhere((r) => r?['log_date'] == dateStr, orElse: () => null);
 
@@ -333,7 +328,47 @@ class _ElectricalLogListScreenState extends State<ElectricalLogListScreen> {
 }
 
 // ============================================================================
-// 2. ENTRY FORM SCREEN (WITH DAILY EXPORT)
+// DYNAMIC TIME SLOT CLASS
+// ============================================================================
+class _ElectricalReading {
+  String? id;
+  TimeOfDay time;
+  TextEditingController htVoltage;
+  TextEditingController tapNo;
+  TextEditingController ltVoltage;
+  TextEditingController ltAmps;
+  TextEditingController frequency;
+  TextEditingController powerFactor;
+  TextEditingController remarks;
+  String signatureName;
+  String? loggedById;
+
+  _ElectricalReading({
+    this.id,
+    required this.time,
+    required this.signatureName,
+    this.loggedById,
+  })  : htVoltage = TextEditingController(),
+        tapNo = TextEditingController(),
+        ltVoltage = TextEditingController(),
+        ltAmps = TextEditingController(),
+        frequency = TextEditingController(),
+        powerFactor = TextEditingController(),
+        remarks = TextEditingController();
+
+  void dispose() {
+    htVoltage.dispose();
+    tapNo.dispose();
+    ltVoltage.dispose();
+    ltAmps.dispose();
+    frequency.dispose();
+    powerFactor.dispose();
+    remarks.dispose();
+  }
+}
+
+// ============================================================================
+// 2. ENTRY FORM SCREEN
 // ============================================================================
 class ElectricalLogFormScreen extends StatefulWidget {
   final DateTime date;
@@ -350,6 +385,7 @@ class _ElectricalLogFormScreenState extends State<ElectricalLogFormScreen> {
   static const Color primary = Color(0xFF26538D);
   static const Color background = Color(0xFFF1F5F9);
   static const Color surface = Color(0xFFFFFFFF);
+  static const Color golden = Color(0xFFD4AF37);
 
   final _supabase = Supabase.instance.client;
   bool _isLoading = true;
@@ -365,27 +401,29 @@ class _ElectricalLogFormScreenState extends State<ElectricalLogFormScreen> {
   final _kwhClosingCtrl = TextEditingController();
   final _kvahClosingCtrl = TextEditingController();
 
-  final List<String> _timeSlots = ['06:00:00', '10:00:00', '14:00:00', '18:00:00', '22:00:00'];
-  final Map<String, Map<String, TextEditingController>> _slotCtrls = {};
+  final List<_ElectricalReading> _readings = [];
 
   @override
   void initState() {
     super.initState();
-    for (var time in _timeSlots) {
-      _slotCtrls[time] = {
-        'ht_voltage': TextEditingController(), 'tap_no': TextEditingController(),
-        'lt_voltage': TextEditingController(), 'lt_amps': TextEditingController(),
-        'frequency': TextEditingController(), 'power_factor': TextEditingController(), 'remarks': TextEditingController(),
-      };
-    }
     WidgetsBinding.instance.addPostFrameCallback((_) => _initData());
   }
 
   @override
   void dispose() {
-    _kwhClosingCtrl.dispose(); _kvahClosingCtrl.dispose();
-    for (var slot in _slotCtrls.values) { for (var ctrl in slot.values) { ctrl.dispose(); } }
+    _kwhClosingCtrl.dispose();
+    _kvahClosingCtrl.dispose();
+    for (var r in _readings) {
+      r.dispose();
+    }
     super.dispose();
+  }
+
+  void _sortReadings() {
+    _readings.sort((a, b) {
+      if (a.time.hour != b.time.hour) return a.time.hour.compareTo(b.time.hour);
+      return a.time.minute.compareTo(b.time.minute);
+    });
   }
 
   Future<void> _initData() async {
@@ -402,21 +440,33 @@ class _ElectricalLogFormScreenState extends State<ElectricalLogFormScreen> {
         _kwhClosingCtrl.text = masterRes['kwh_closing']?.toString() ?? "";
         _kvahClosingCtrl.text = masterRes['kvah_closing']?.toString() ?? "";
 
-        final readingsRes = await _supabase.from('electrical_log_reading').select().eq('daily_log_id', _dailyLogId!);
-        final List<dynamic> readings = readingsRes;
+        // Fetch dynamic readings with signatures
+        final readingsRes = await _supabase.from('electrical_log_reading').select('*, m_user(name)').eq('daily_log_id', _dailyLogId!);
+        final List<dynamic> fetchedReadings = readingsRes;
 
-        for (var row in readings) {
-          final time = row['reading_time'].toString();
-          if (_slotCtrls.containsKey(time)) {
-            _slotCtrls[time]!['ht_voltage']!.text = row['ht_voltage']?.toString() ?? '';
-            _slotCtrls[time]!['tap_no']!.text = row['tap_no']?.toString() ?? '';
-            _slotCtrls[time]!['lt_voltage']!.text = row['lt_voltage']?.toString() ?? '';
-            _slotCtrls[time]!['lt_amps']!.text = row['lt_amps']?.toString() ?? '';
-            _slotCtrls[time]!['frequency']!.text = row['frequency']?.toString() ?? '';
-            _slotCtrls[time]!['power_factor']!.text = row['power_factor']?.toString() ?? '';
-            _slotCtrls[time]!['remarks']!.text = row['remarks']?.toString() ?? '';
-          }
+        for (var row in fetchedReadings) {
+          final timeStr = row['reading_time'].toString();
+          final parts = timeStr.split(':');
+          final time = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+
+          final r = _ElectricalReading(
+            id: row['id'],
+            time: time,
+            signatureName: row['m_user']?['name'] ?? 'Unknown',
+            loggedById: row['logged_by'],
+          );
+
+          r.htVoltage.text = row['ht_voltage']?.toString() ?? '';
+          r.tapNo.text = row['tap_no']?.toString() ?? '';
+          r.ltVoltage.text = row['lt_voltage']?.toString() ?? '';
+          r.ltAmps.text = row['lt_amps']?.toString() ?? '';
+          r.frequency.text = row['frequency']?.toString() ?? '';
+          r.powerFactor.text = row['power_factor']?.toString() ?? '';
+          r.remarks.text = row['remarks']?.toString() ?? '';
+
+          _readings.add(r);
         }
+        _sortReadings();
       } catch (e) { debugPrint("Error loading log: $e"); }
     } else {
       try {
@@ -432,6 +482,13 @@ class _ElectricalLogFormScreenState extends State<ElectricalLogFormScreen> {
   }
 
   Future<void> _saveRecord() async {
+    // 1. FINAL SAFETY CHECK: Ensure there are no duplicate times before hitting database
+    final uniqueTimes = _readings.map((r) => "${r.time.hour}:${r.time.minute}").toSet();
+    if (uniqueTimes.length < _readings.length) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Duplicate times detected! Please ensure every reading has a unique time."), backgroundColor: Colors.red));
+      return;
+    }
+
     setState(() => _isSaving = true);
     try {
       final currentUserId = _supabase.auth.currentUser?.id;
@@ -444,31 +501,56 @@ class _ElectricalLogFormScreenState extends State<ElectricalLogFormScreen> {
         if (_isVerified) 'verified_by': currentUserId,
       };
 
-      final upsertRes = await _supabase.from('daily_electrical_log').upsert(masterData, onConflict: 'kitchen_id, log_date').select('id').single();
-      final activeLogId = upsertRes['id'];
+      String activeLogId;
 
-      List<Map<String, dynamic>> readingsToInsert = [];
-      for (var time in _timeSlots) {
-        final ctrls = _slotCtrls[time]!;
-        if (ctrls['ht_voltage']!.text.isNotEmpty || ctrls['lt_voltage']!.text.isNotEmpty || ctrls['lt_amps']!.text.isNotEmpty) {
-          readingsToInsert.add({
-            'daily_log_id': activeLogId,
-            'reading_time': time,
-            'ht_voltage': double.tryParse(ctrls['ht_voltage']!.text),
-            'tap_no': ctrls['tap_no']!.text,
-            'lt_voltage': double.tryParse(ctrls['lt_voltage']!.text),
-            'lt_amps': double.tryParse(ctrls['lt_amps']!.text),
-            'frequency': double.tryParse(ctrls['frequency']!.text),
-            'power_factor': double.tryParse(ctrls['power_factor']!.text),
-            'remarks': ctrls['remarks']!.text,
-            'logged_by': currentUserId,
-          });
-        }
+      // 2. EXPLICIT INSERT/UPDATE FIX (Solves the null kitchen_id constraint bug)
+      if (_dailyLogId != null) {
+        final updateRes = await _supabase.from('daily_electrical_log')
+            .update(masterData)
+            .eq('id', _dailyLogId!)
+            .select('id').single();
+        activeLogId = updateRes['id'];
+      } else {
+        final insertRes = await _supabase.from('daily_electrical_log')
+            .insert(masterData)
+            .select('id').single();
+        activeLogId = insertRes['id'];
+        _dailyLogId = activeLogId;
       }
 
-      await _supabase.from('electrical_log_reading').delete().eq('daily_log_id', activeLogId);
-      if (readingsToInsert.isNotEmpty) {
-        await _supabase.from('electrical_log_reading').insert(readingsToInsert);
+      // 3. Delete readings that were removed by the user in the UI
+      final currentIds = _readings.map((r) => r.id).whereType<String>().toList();
+      if (currentIds.isNotEmpty) {
+        await _supabase.from('electrical_log_reading')
+            .delete()
+            .eq('daily_log_id', activeLogId)
+            .not('id', 'in', currentIds);
+      } else {
+        await _supabase.from('electrical_log_reading')
+            .delete()
+            .eq('daily_log_id', activeLogId);
+      }
+
+      // 4. Upsert the remaining dynamic readings
+      List<Map<String, dynamic>> readingsToUpsert = [];
+      for (var r in _readings) {
+        readingsToUpsert.add({
+          if (r.id != null) 'id': r.id,
+          'daily_log_id': activeLogId,
+          'reading_time': "${r.time.hour.toString().padLeft(2, '0')}:${r.time.minute.toString().padLeft(2, '0')}:00",
+          'ht_voltage': double.tryParse(r.htVoltage.text),
+          'tap_no': r.tapNo.text,
+          'lt_voltage': double.tryParse(r.ltVoltage.text),
+          'lt_amps': double.tryParse(r.ltAmps.text),
+          'frequency': double.tryParse(r.frequency.text),
+          'power_factor': double.tryParse(r.powerFactor.text),
+          'remarks': r.remarks.text,
+          'logged_by': r.loggedById ?? currentUserId,
+        });
+      }
+
+      if (readingsToUpsert.isNotEmpty) {
+        await _supabase.from('electrical_log_reading').upsert(readingsToUpsert);
       }
 
       if (mounted) {
@@ -476,12 +558,13 @@ class _ElectricalLogFormScreenState extends State<ElectricalLogFormScreen> {
         Navigator.pop(context, true);
       }
     } catch (e) {
-      setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
+      }
     }
   }
 
-  // --- DAILY EXPORT FEATURE ---
   void _showDailyExportFormatDialog() {
     String format = 'xlsx';
     final dateStr = widget.date.toIso8601String().split('T')[0];
@@ -568,12 +651,11 @@ class _ElectricalLogFormScreenState extends State<ElectricalLogFormScreen> {
     );
   }
 
-  Widget _buildTimeSlotCard(String time) {
-    final ctrls = _slotCtrls[time]!;
-    final hour = int.parse(time.substring(0, 2));
+  Widget _buildTimeSlotCard(_ElectricalReading r) {
+    final hour = r.time.hour;
     final ampm = hour >= 12 ? 'PM' : 'AM';
     final formattedHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-    final uiTime = "${formattedHour.toString().padLeft(2,'0')}:${time.substring(3,5)} $ampm";
+    final uiTime = "${formattedHour.toString().padLeft(2,'0')}:${r.time.minute.toString().padLeft(2,'0')} $ampm";
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -581,17 +663,73 @@ class _ElectricalLogFormScreenState extends State<ElectricalLogFormScreen> {
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
+          initiallyExpanded: true,
           collapsedIconColor: primary, iconColor: primary,
-          title: Text("Reading at $uiTime", style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: const Color(0xFF0F172A), fontSize: 15)),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: _isReadOnly ? null : () async {
+                    final newTime = await showTimePicker(context: context, initialTime: r.time);
+                    if (newTime != null) {
+                      // Prevent duplicate time bug during editing
+                      bool exists = _readings.any((other) => other != r && other.time.hour == newTime.hour && other.time.minute == newTime.minute);
+                      if (exists) {
+                        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("A reading for this exact minute already exists!"), backgroundColor: Colors.red));
+                        return;
+                      }
+                      setState(() {
+                        r.time = newTime;
+                        _sortReadings();
+                      });
+                    }
+                  },
+                  child: Row(
+                    children: [
+                      Text("Reading at $uiTime", style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: const Color(0xFF0F172A), fontSize: 15)),
+                      if (!_isReadOnly) ...[
+                        const SizedBox(width: 8),
+                        Icon(Icons.edit_rounded, size: 16, color: Colors.grey.shade400),
+                      ]
+                    ],
+                  ),
+                ),
+              ),
+              if (!_isReadOnly)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  onPressed: () {
+                    setState(() {
+                      _readings.remove(r);
+                      r.dispose();
+                    });
+                  },
+                )
+            ],
+          ),
           children: [
             Padding(
               padding: const EdgeInsets.all(16.0).copyWith(top: 0),
               child: Column(
                 children: [
-                  _buildMetricRow("HT Voltage", ctrls['ht_voltage']!, "Tap No", ctrls['tap_no']!, s1: "kV", isNumeric: false),
-                  _buildMetricRow("LT Voltage", ctrls['lt_voltage']!, "LT Amps", ctrls['lt_amps']!, s1: "V", s2: "A"),
-                  _buildMetricRow("Frequency", ctrls['frequency']!, "Power Factor", ctrls['power_factor']!, s1: "Hz"),
-                  TextField(controller: ctrls['remarks']!, enabled: !_isReadOnly, maxLines: 2, decoration: _decor("Remarks / Observations")),
+                  _buildMetricRow("HT Voltage", r.htVoltage, "Tap No", r.tapNo, s1: "kV", isNumeric: false),
+                  _buildMetricRow("LT Voltage", r.ltVoltage, "LT Amps", r.ltAmps, s1: "V", s2: "A"),
+                  _buildMetricRow("Frequency", r.frequency, "Power Factor", r.powerFactor, s1: "Hz"),
+                  TextField(controller: r.remarks, enabled: !_isReadOnly, maxLines: 2, decoration: _decor("Remarks / Observations")),
+                  const SizedBox(height: 12),
+                  // SIGNATURE DISPLAY
+                  // Container(
+                  //   padding: const EdgeInsets.all(12),
+                  //   decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.shade200)),
+                  //   child: Row(
+                  //     children: [
+                  //       Icon(Icons.draw, size: 18, color: Colors.grey.shade600),
+                  //       const SizedBox(width: 8),
+                  //       Text("Logged by: ${r.signatureName}", style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.grey.shade800)),
+                  //     ],
+                  //   ),
+                  // )
                 ],
               ),
             )
@@ -614,7 +752,7 @@ class _ElectricalLogFormScreenState extends State<ElectricalLogFormScreen> {
           backgroundColor: surface, foregroundColor: primary, elevation: 0,
           title: Text(_isReadOnly ? "View Verified Log" : "Edit Log - $dateStr", style: GoogleFonts.inter(fontWeight: FontWeight.w700, letterSpacing: -0.5, fontSize: 18)),
           actions: [
-            // Daily Export Button (Visible only if a record exists)
+            // Daily Export Button
             if (_dailyLogId != null)
               IconButton(icon: const Icon(Icons.download_rounded, color: primary), onPressed: _showDailyExportFormatDialog),
           ],
@@ -664,10 +802,39 @@ class _ElectricalLogFormScreenState extends State<ElectricalLogFormScreen> {
                 ),
               ),
 
-              Text("Hourly Readings", style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: primary, fontSize: 16)),
+                  Text("Time Readings", style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: primary, fontSize: 16)),
+
               const SizedBox(height: 12),
 
-              ..._timeSlots.map((t) => _buildTimeSlotCard(t)),
+              ..._readings.map((r) => _buildTimeSlotCard(r)),
+
+              if (!_isReadOnly)
+                Align(
+                  alignment: Alignment.topRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      // FIX: Auto-increment minute to prevent database crash on rapid taps
+                      TimeOfDay newTime = TimeOfDay.now();
+                      while (_readings.any((r) => r.time.hour == newTime.hour && r.time.minute == newTime.minute)) {
+                        int nextMin = newTime.minute + 1;
+                        int nextHr = newTime.hour;
+                        if (nextMin >= 60) { nextMin = 0; nextHr = (nextHr + 1) % 24; }
+                        newTime = TimeOfDay(hour: nextHr, minute: nextMin);
+                      }
+
+                      setState(() {
+                        _readings.add(_ElectricalReading(
+                          time: newTime,
+                          signatureName: context.read<AuthProvider>().userName ?? 'Staff',
+                          loggedById: _supabase.auth.currentUser?.id,
+                        ));
+                        _sortReadings();
+                      });
+                    },
+                    icon: const Icon(Icons.add_circle, color: golden),
+                    label: Text("Add Time", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: golden)),
+                  ),
+                ),
 
               if (!_isReadOnly)
                 Container(
