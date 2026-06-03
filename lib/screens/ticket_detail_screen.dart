@@ -63,6 +63,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   List<Map<String, dynamic>> _usedSpares = [];
   List<Map<String, dynamic>> _usedTools = [];
 
+  bool _workerToolsReturned = false;
+  bool _toolsReturned = false;
+
   final List<XFile> _selectedImages = [];
   List<String> _beforeUrls = [];
   List<String> _afterUrls = [];
@@ -98,6 +101,22 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       _breakdownTime = DateTime.now();
       WidgetsBinding.instance.addPostFrameCallback((_) => _fetchDropdownData());
     }
+  }
+
+  // --- TIME HELPERS FOR INDIAN STANDARD TIME (IST) ---
+  String _getCurrentIST() {
+    final istNow = DateTime.now().toUtc().add(const Duration(hours: 5, minutes: 30));
+    return _formatToIST(istNow);
+  }
+
+  String _formatToIST(DateTime dt) {
+    final year = dt.year.toString().padLeft(4, '0');
+    final month = dt.month.toString().padLeft(2, '0');
+    final day = dt.day.toString().padLeft(2, '0');
+    final hour = dt.hour.toString().padLeft(2, '0');
+    final minute = dt.minute.toString().padLeft(2, '0');
+    final second = dt.second.toString().padLeft(2, '0');
+    return '$year-$month-${day}T$hour:$minute:$second+05:30';
   }
 
   Future<void> _fetchTicketFromDB(String id) async {
@@ -250,16 +269,26 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   Future<void> _fetchUsedSpares() async {
     if (_localTicket == null) return;
     try {
-      final records = await _supabase.from('spare_ticket').select('used_qty, m_spares(*, m_vendor(name), spare_tracker(current_qty))').eq('ticket_id', _localTicket!['id']);
-      if (mounted) setState(() { _usedSpares = records.map((r) => {'qty': r['used_qty'], 'spare': r['m_spares'], 'is_existing': true}).toList(); });
+      final records = await _supabase.from('spare_ticket').select('id, used_qty, m_spares(*, m_vendor(name), spare_tracker(current_qty))').eq('ticket_id', _localTicket!['id']);
+      if (mounted) setState(() { _usedSpares = records.map((r) => {'id': r['id'], 'qty': r['used_qty'], 'spare': r['m_spares'], 'is_existing': true}).toList(); });
     } catch (e) { debugPrint("Error fetching used spares: $e"); }
   }
 
   Future<void> _fetchUsedTools() async {
     if (_localTicket == null) return;
     try {
-      final records = await _supabase.from('ticket_tools').select('m_tools(*)').eq('ticket_id', _localTicket!['id']);
-      if (mounted) setState(() { _usedTools = records.map((r) => {'tool': r['m_tools'], 'is_existing': true}).toList(); });
+      final records = await _supabase.from('ticket_tools').select('*, m_tools(*)').eq('ticket_id', _localTicket!['id']);
+      if (mounted) {
+        setState(() {
+          _usedTools = records.map((r) => {
+            'id': r['id'],
+            'tool': r['m_tools'],
+            'is_existing': true,
+            'taken_time': r['taken_time'],
+            'return_time': r['return_time']
+          }).toList();
+        });
+      }
     } catch (e) { debugPrint("Error fetching used tools: $e"); }
   }
 
@@ -290,7 +319,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         areasData = await _supabase.from('m_area').select().eq('status', true).inFilter('zone_id', validZoneIds);
       }
 
-      // Fetch Normal Equipment & Testing Equipment
       final equipsData = await _supabase.from('m_equipment').select().eq('status', true);
       final testEquipsData = await _supabase.from('m_testing_equipment').select().eq('status', true);
 
@@ -303,7 +331,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           _allAreas = List<Map<String, dynamic>>.from(areasData);
           for (var a in _allAreas) { a['display_name'] = a['area_name']; }
 
-          // Combine both tables and set an is_testing flag
           _allEquipment = [];
           for (var e in equipsData) {
             e['display_name'] = e['name'];
@@ -483,6 +510,52 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     });
   }
 
+  // --- DELETE TOOLS AND SPARES FROM DRAFTS ---
+  Future<void> _removeTool(Map<String, dynamic> item) async {
+    final bool isExisting = item['is_existing'] == true;
+    if (isExisting) {
+      setState(() => _isLoading = true);
+      try {
+        await _supabase.from('ticket_tools').delete().eq('id', item['id']);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error removing tool: $e'), backgroundColor: Colors.red));
+          setState(() => _isLoading = false);
+        }
+        return;
+      }
+      setState(() => _isLoading = false);
+    }
+    setState(() => _usedTools.remove(item));
+  }
+
+  Future<void> _removeSpare(Map<String, dynamic> item) async {
+    final bool isExisting = item['is_existing'] == true;
+    if (isExisting) {
+      setState(() => _isLoading = true);
+      try {
+        final spareId = item['spare']['id'];
+        final int qty = item['qty'];
+
+        await _supabase.from('spare_ticket').delete().eq('id', item['id']);
+
+        final trackerRes = await _supabase.from('spare_tracker').select('current_qty').eq('spare_id', spareId).maybeSingle();
+        if (trackerRes != null) {
+          int currentQty = trackerRes['current_qty'] ?? 0;
+          await _supabase.from('spare_tracker').update({'current_qty': currentQty + qty}).eq('spare_id', spareId);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error removing spare: $e'), backgroundColor: Colors.red));
+          setState(() => _isLoading = false);
+        }
+        return;
+      }
+      setState(() => _isLoading = false);
+    }
+    setState(() => _usedSpares.remove(item));
+  }
+
   // --- SUBMIT / UPDATE LOGIC ---
   Future<void> _uploadImages(String ticketId, String stage) async {
     final userId = _supabase.auth.currentUser?.id;
@@ -539,7 +612,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       Map<String, dynamic> insertData = {
         'title': _titleController.text, 'priority': _priority, 'category': _category,
         'area_id': _selectedAreaId, 'kitchen_id': exactKitchenId, 'raised_by_id': userId,
-        'breakdown_time': _breakdownTime!.toUtc().toIso8601String(),
+        'breakdown_time': _formatToIST(_breakdownTime!), // Indian Standard Time
       };
 
       final newTicket = await _supabase.from('tickets').insert(insertData).select().single();
@@ -575,11 +648,24 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     }
   }
 
+  // NOTE: nextStatus = null means "Save Draft" or "Update Only"
   Future<void> _updateTicketStatus(String? nextStatus, bool isAdmin) async {
     FocusManager.instance.primaryFocus?.unfocus();
     _titleController.text = _formatToCamelCase(_titleController.text);
 
+    // Validation
+    if (nextStatus == 'VERIFIED') {
+      if (_usedTools.isNotEmpty && !_toolsReturned) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please confirm that all checked-out tools have been returned.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
+        return;
+      }
+    }
+
     if (nextStatus == 'COMPLETED') {
+      if (_usedTools.isNotEmpty && !_workerToolsReturned) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please confirm that you have returned all checked-out tools.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
+        return;
+      }
       if (_causeController.text.trim().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please enter the Cause of Issue.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
         return;
@@ -594,16 +680,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       }
     }
 
-    if (nextStatus == null && currentStatus == 'IN_PROGRESS') {
-      if (_causeController.text.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please enter the Cause of Issue.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
-        return;
-      }
-    }
-
     setState(() => _isLoading = true);
     try {
-      final nowISO = DateTime.now().toUtc().toIso8601String();
+      final nowISO = _getCurrentIST(); // ALWAYS Indian Standard Time
       final updates = <String, dynamic>{'updated_at': nowISO};
 
       if (nextStatus != null) {
@@ -617,7 +696,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
       final isAssignedWorker = _selectedWorker != null && _selectedWorker == _supabase.auth.currentUser?.id;
 
-      if ((isAssignedWorker && currentStatus == 'IN_PROGRESS') || (isAdmin && (currentStatus == 'IN_PROGRESS' || currentStatus == 'COMPLETED'))) {
+      if ((isAssignedWorker && currentStatus == 'IN_PROGRESS') || (isAdmin && !isTicketClosed)) {
         updates['action_taken'] = _actionTakenController.text.trim();
         updates['cause_of_issue'] = _causeController.text.trim();
       }
@@ -625,7 +704,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       if (isAdmin && !isTicketClosed) {
         updates['title'] = _titleController.text;
         updates['priority'] = _priority; updates['category'] = _category; updates['area_id'] = _selectedAreaId;
-        if (_breakdownTime != null) updates['breakdown_time'] = _breakdownTime!.toUtc().toIso8601String();
+        if (_breakdownTime != null) updates['breakdown_time'] = _formatToIST(_breakdownTime!);
 
         if (currentStatus == 'RAISED' || currentStatus == 'ASSIGNED') {
           if (_selectedWorker != null) {
@@ -651,9 +730,20 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         for (var item in _usedTools) {
           if (item['is_existing'] == true) continue;
           await _supabase.from('ticket_tools').insert({
-            'ticket_id': _localTicket!['id'], 'tool_id': item['tool']['id'], 'employee_id': _supabase.auth.currentUser?.id,
+            'ticket_id': _localTicket!['id'],
+            'tool_id': item['tool']['id'],
+            'employee_id': _supabase.auth.currentUser?.id,
+            'taken_time': nowISO,
+            'is_vacant': false
           });
         }
+      }
+
+      if (nextStatus == 'VERIFIED' && _usedTools.isNotEmpty) {
+        await _supabase.from('ticket_tools').update({
+          'return_time': nowISO,
+          'is_vacant': true
+        }).eq('ticket_id', _localTicket!['id']).isFilter('return_time', null);
       }
 
       if (_usedSpares.isNotEmpty) {
@@ -674,25 +764,17 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       if (nextStatus == 'COMPLETED' && _selectedImages.isNotEmpty) await _uploadImages(_localTicket!['id'], 'COMPLETED');
 
       if (nextStatus == 'ASSIGNED' && _selectedWorker != null) {
-        await _triggerNotification(
-          action: 'ASSIGNED',
-          ticketId: _localTicket!['id'],
-          ticketNo: _localTicket!['ticket_no'],
-          kitchenId: _localTicket!['kitchen_id'],
-          assignedToId: _selectedWorker,
-        );
+        await _triggerNotification(action: 'ASSIGNED', ticketId: _localTicket!['id'], ticketNo: _localTicket!['ticket_no'], kitchenId: _localTicket!['kitchen_id'], assignedToId: _selectedWorker);
       } else if (nextStatus == 'COMPLETED') {
-        await _triggerNotification(
-          action: 'COMPLETED',
-          ticketId: _localTicket!['id'],
-          ticketNo: _localTicket!['ticket_no'],
-          kitchenId: _localTicket!['kitchen_id'],
-        );
+        await _triggerNotification(action: 'COMPLETED', ticketId: _localTicket!['id'], ticketNo: _localTicket!['ticket_no'], kitchenId: _localTicket!['kitchen_id']);
       }
 
       if (mounted) {
         if (_localTicket != null) _localTicket!.addAll(updates);
         context.read<TicketProvider>().refreshTickets();
+
+        if (nextStatus == null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Updates saved successfully!', style: GoogleFonts.inter()), backgroundColor: Colors.green));
+
         Navigator.pop(context);
       }
     } catch (e) {
@@ -839,15 +921,71 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       } else { return null; }
     } else if (currentStatus == 'IN_PROGRESS') {
       if (isAssignedWorker) {
-        buttonText = "MARK COMPLETE";
-        nextStatus = 'COMPLETED';
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 54,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
+                      onPressed: _isLoading ? null : () => _updateTicketStatus(null, isAdmin),
+                      child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text("SAVE DRAFT", style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.5)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SizedBox(
+                    height: 54,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade600, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
+                      onPressed: _isLoading ? null : () => _updateTicketStatus('COMPLETED', isAdmin),
+                      child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text("MARK COMPLETE", style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.5)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
       } else if (isAdmin) {
         buttonText = "UPDATE TICKET";
       } else { return null; }
     } else if (currentStatus == 'COMPLETED') {
       if (isAdmin) {
-        buttonText = "VERIFY & CLOSE";
-        nextStatus = 'VERIFIED';
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 54,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
+                      onPressed: _isLoading ? null : () => _updateTicketStatus(null, isAdmin),
+                      child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text("UPDATE ONLY", style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.5)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SizedBox(
+                    height: 54,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade600, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
+                      onPressed: _isLoading ? null : () => _updateTicketStatus('VERIFIED', isAdmin),
+                      child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text("VERIFY & CLOSE", style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.5)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
       } else { return null; }
     }
 
@@ -899,7 +1037,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     final isAdmin = (authProv.activeRole == 'admin');
     final isAssignedWorker = _selectedWorker != null && _selectedWorker == currentUserId;
 
-    final canEditWorkDetails = (isAssignedWorker && currentStatus == 'IN_PROGRESS') || (isAdmin && (currentStatus == 'IN_PROGRESS' || currentStatus == 'COMPLETED'));
+    // ALLOWS ADMINS TO ALWAYS EDIT TOOLS/SPARES EVEN IF COMPLETED
+    final canEditWorkDetails = (isAssignedWorker && currentStatus == 'IN_PROGRESS') || (isAdmin && !isTicketClosed);
+
     final bool readOnlyFields = isTicketClosed || (isEditing && !isAdmin);
     final showCameraBox = (!isEditing || canEditWorkDetails) && currentStatus != 'VERIFIED';
 
@@ -939,7 +1079,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   TicketStatusBanner(currentStatus: currentStatus),
                   const SizedBox(height: 12),
 
-                  // NEW: RAISED TIME DISPLAY
+                  // RAISED TIME DISPLAY
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
@@ -1098,15 +1238,25 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         if (_usedTools.isEmpty) Text("No tools logged.", style: GoogleFonts.inter(fontSize: 13, color: Colors.grey.shade500, fontStyle: FontStyle.italic)),
                         ..._usedTools.map((item) {
                           final tool = item['tool'];
-                          final bool isExisting = item['is_existing'] == true;
+                          final bool isReturned = item['return_time'] != null;
+
                           return Container(
                             margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(color: Colors.blueGrey.shade50, borderRadius: BorderRadius.circular(8)),
+                            decoration: BoxDecoration(color: isReturned ? Colors.green.shade50 : Colors.blueGrey.shade50, borderRadius: BorderRadius.circular(8)),
                             child: Row(
                               children: [
-                                const Icon(Icons.handyman_outlined, size: 16, color: navy), const SizedBox(width: 8),
-                                Expanded(child: Text(tool['tool_name'], style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: navy))),
-                                if (canEditWorkDetails && !isExisting) IconButton(icon: const Icon(Icons.delete, color: Colors.redAccent, size: 18), onPressed: () => setState(() => _usedTools.remove(item)))
+                                Icon(isReturned ? Icons.check_circle : Icons.handyman_outlined, size: 16, color: isReturned ? Colors.green : navy), const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(tool['tool_name'], style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: isReturned ? Colors.green.shade800 : navy)),
+                                      if (isReturned) Text("Returned", style: GoogleFonts.inter(fontSize: 10, color: Colors.green.shade700))
+                                    ],
+                                  ),
+                                ),
+                                if (canEditWorkDetails)
+                                  IconButton(icon: const Icon(Icons.delete, color: Colors.redAccent, size: 18), onPressed: () => _removeTool(item))
                               ],
                             ),
                           );
@@ -1155,7 +1305,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         if (_usedSpares.isEmpty) Text("No spares selected.", style: GoogleFonts.inter(fontSize: 13, color: Colors.grey.shade500, fontStyle: FontStyle.italic)),
                         ..._usedSpares.map((item) {
                           final spare = item['spare'];
-                          final bool isExisting = item['is_existing'] == true;
                           return Container(
                             margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(color: Colors.blueGrey.shade50, borderRadius: BorderRadius.circular(8)),
@@ -1172,14 +1321,55 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                                   ),
                                 ),
                                 Text("Qty: ${item['qty']}", style: GoogleFonts.inter(fontWeight: FontWeight.w900, color: navy)),
-                                if (canEditWorkDetails && !isExisting) IconButton(icon: const Icon(Icons.delete, color: Colors.redAccent, size: 18), onPressed: () => setState(() => _usedSpares.remove(item)))
+                                if (canEditWorkDetails)
+                                  IconButton(icon: const Icon(Icons.delete, color: Colors.redAccent, size: 18), onPressed: () => _removeSpare(item))
                               ],
                             ),
                           );
                         }).toList(),
                       ],
                     ),
-                  )
+                  ),
+
+                  // WORKER ACKNOWLEDGEMENT FOR TOOL RETURNS
+                  if (currentStatus == 'IN_PROGRESS' && isAssignedWorker && _usedTools.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    Container(
+                      decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.orange.shade300)
+                      ),
+                      child: CheckboxListTile(
+                        title: Text("I have returned all tools", style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.orange.shade800)),
+                        subtitle: Text("Please return all checked-out tools to the inventory before marking complete.", style: GoogleFonts.inter(fontSize: 12, color: Colors.orange.shade700)),
+                        value: _workerToolsReturned,
+                        activeColor: Colors.orange.shade700,
+                        checkboxShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                        onChanged: (val) => setState(() => _workerToolsReturned = val ?? false),
+                      ),
+                    ),
+                  ],
+
+                  // ADMIN VERIFICATION FOR TOOL RETURNS
+                  if (currentStatus == 'COMPLETED' && isAdmin && _usedTools.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    Container(
+                      decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.green.shade300)
+                      ),
+                      child: CheckboxListTile(
+                        title: Text("All Tools Returned", style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.green.shade800)),
+                        subtitle: Text("Acknowledge that all checked-out tools have been safely returned.", style: GoogleFonts.inter(fontSize: 12, color: Colors.green.shade700)),
+                        value: _toolsReturned,
+                        activeColor: Colors.green.shade700,
+                        checkboxShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                        onChanged: (val) => setState(() => _toolsReturned = val ?? false),
+                      ),
+                    ),
+                  ],
                 ],
 
                 const SizedBox(height: 20),
