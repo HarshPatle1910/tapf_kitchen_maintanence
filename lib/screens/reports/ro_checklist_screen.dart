@@ -417,9 +417,9 @@ class _ROChecklistFormScreenState extends State<ROChecklistFormScreen> {
 
       } else {
         _logId = logRes['id'];
-        _feedWaterCtrl.text = logRes['feed_water']?.toString() ?? "0";
-        _productWaterCtrl.text = logRes['product_water']?.toString() ?? "0";
-        _rejectWaterCtrl.text = logRes['reject_water']?.toString() ?? "0";
+        _feedWaterCtrl.text = logRes['feed_water']?.toString() ?? "";
+        _productWaterCtrl.text = logRes['product_water']?.toString() ?? "";
+        _rejectWaterCtrl.text = logRes['reject_water']?.toString() ?? "";
         _isVerified = logRes['verified_by'] != null;
         _isReadOnly = _isVerified;
 
