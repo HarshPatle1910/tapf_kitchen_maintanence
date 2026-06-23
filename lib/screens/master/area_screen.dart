@@ -115,107 +115,137 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
     String tempZone = _zoneFilter;
     String tempSort = _sortBy;
 
+    // Controllers for the new autocomplete inside the bottom sheet
+    final zoneFilterCtrl = TextEditingController();
+    final zoneFilterFocusNode = FocusNode();
+
+    // Pre-fill if a zone is currently filtered
+    if (tempZone != 'ALL') {
+      final match = _activeZones.firstWhere((z) => z['id'].toString() == tempZone, orElse: () => <String, dynamic>{});
+      if (match.isNotEmpty) {
+        zoneFilterCtrl.text = match['display_name'];
+      }
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(left: 24, right: 24, top: 12, bottom: MediaQuery.of(context).padding.bottom + 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(child: Container(width: 48, height: 5, margin: const EdgeInsets.only(bottom: 24), decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
+        return GestureDetector(
+          onTap: () => FocusManager.instance.primaryFocus?.unfocus(), // Dismiss keyboard on tap outside
+          behavior: HitTestBehavior.opaque,
+          child: StatefulBuilder(
+            builder: (context, setModalState) {
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom, // Pushes sheet above keyboard
+                ),
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 24, right: 24, top: 12, bottom: 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(child: Container(width: 48, height: 5, margin: const EdgeInsets.only(bottom: 24), decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("Sort & Filter", style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: navy)),
-                      TextButton(
-                        onPressed: () {
-                          setModalState(() {
-                            tempStatus = 'ALL';
-                            tempZone = 'ALL';
-                            tempSort = 'NEWEST';
-                          });
-                        },
-                        style: TextButton.styleFrom(foregroundColor: Colors.red),
-                        child: Text("Reset All", style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text("Sort & Filter", style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: navy)),
+                            TextButton(
+                              onPressed: () {
+                                setModalState(() {
+                                  tempStatus = 'ALL';
+                                  tempZone = 'ALL';
+                                  tempSort = 'NEWEST';
+                                  zoneFilterCtrl.clear();
+                                });
+                              },
+                              style: TextButton.styleFrom(foregroundColor: Colors.red),
+                              child: Text("Reset All", style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 24),
 
-                  Text("Sort By", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.grey.shade500, fontSize: 13, letterSpacing: 0.5)),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8, runSpacing: 8,
-                    children: [
-                      _buildChip("Newest First", tempSort == 'NEWEST', () => setModalState(() => tempSort = 'NEWEST')),
-                      _buildChip("Name (A-Z)", tempSort == 'NAME_ASC', () => setModalState(() => tempSort = 'NAME_ASC')),
-                      _buildChip("Name (Z-A)", tempSort == 'NAME_DESC', () => setModalState(() => tempSort = 'NAME_DESC')),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
+                        Text("Sort By", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.grey.shade500, fontSize: 13, letterSpacing: 0.5)),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8, runSpacing: 8,
+                          children: [
+                            _buildChip("Newest First", tempSort == 'NEWEST', () => setModalState(() => tempSort = 'NEWEST')),
+                            _buildChip("Name (A-Z)", tempSort == 'NAME_ASC', () => setModalState(() => tempSort = 'NAME_ASC')),
+                            _buildChip("Name (Z-A)", tempSort == 'NAME_DESC', () => setModalState(() => tempSort = 'NAME_DESC')),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
 
-                  Text("Status", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.grey.shade500, fontSize: 13, letterSpacing: 0.5)),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8, runSpacing: 8,
-                    children: [
-                      _buildChip("All", tempStatus == 'ALL', () => setModalState(() => tempStatus = 'ALL')),
-                      _buildChip("Active", tempStatus == 'ACTIVE', () => setModalState(() => tempStatus = 'ACTIVE')),
-                      _buildChip("Inactive", tempStatus == 'INACTIVE', () => setModalState(() => tempStatus = 'INACTIVE')),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
+                        Text("Status", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.grey.shade500, fontSize: 13, letterSpacing: 0.5)),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8, runSpacing: 8,
+                          children: [
+                            _buildChip("All", tempStatus == 'ALL', () => setModalState(() => tempStatus = 'ALL')),
+                            _buildChip("Active", tempStatus == 'ACTIVE', () => setModalState(() => tempStatus = 'ACTIVE')),
+                            _buildChip("Inactive", tempStatus == 'INACTIVE', () => setModalState(() => tempStatus = 'INACTIVE')),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
 
-                  Text("Filter by Zone", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.grey.shade500, fontSize: 13, letterSpacing: 0.5)),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: tempZone,
-                    decoration: InputDecoration(
-                      filled: true, fillColor: Colors.white,
-                      prefixIcon: const Icon(Icons.layers_outlined, color: Colors.grey),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: golden, width: 2)),
+                        Text("Filter by Zone", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.grey.shade500, fontSize: 13, letterSpacing: 0.5)),
+                        const SizedBox(height: 12),
+
+                        _buildSleekAutocomplete(
+                          hint: "Search Zone (Clear for All) *",
+                          icon: Icons.layers_outlined,
+                          controller: zoneFilterCtrl,
+                          focusNode: zoneFilterFocusNode,
+                          options: _activeZones,
+                          isDisabled: false,
+                          onSelected: (val) {
+                            setModalState(() {
+                              tempZone = val['id'].toString();
+                            });
+                          },
+                          onCleared: () {
+                            setModalState(() {
+                              tempZone = 'ALL';
+                            });
+                          },
+                        ),
+
+                        const SizedBox(height: 40),
+                        SizedBox(
+                          width: double.infinity, height: 54,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: navy, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), elevation: 0),
+                            onPressed: () {
+                              setState(() {
+                                _statusFilter = tempStatus;
+                                _zoneFilter = tempZone;
+                                _sortBy = tempSort;
+                              });
+                              Navigator.pop(ctx);
+                            },
+                            child: Text("APPLY FILTERS", style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 0.5)),
+                          ),
+                        ),
+                      ],
                     ),
-                    items: [
-                      DropdownMenuItem(value: 'ALL', child: Text("All Zones", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy))),
-                      ..._activeZones.map((z) => DropdownMenuItem(value: z['id'].toString(), child: Text(z['name'].toString(), style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy))))
-                    ],
-                    onChanged: (val) => setModalState(() => tempZone = val!),
                   ),
-
-                  const SizedBox(height: 40),
-                  SizedBox(
-                    width: double.infinity, height: 54,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: navy, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), elevation: 0),
-                      onPressed: () {
-                        setState(() {
-                          _statusFilter = tempStatus;
-                          _zoneFilter = tempZone;
-                          _sortBy = tempSort;
-                        });
-                        Navigator.pop(ctx);
-                      },
-                      child: Text("APPLY FILTERS", style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 0.5)),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+                ),
+              );
+            },
+          ),
         );
       },
-    );
+    ).whenComplete(() {
+      zoneFilterCtrl.dispose();
+      zoneFilterFocusNode.dispose();
+    });
   }
 
   void _showAreaForm({Map<String, dynamic>? existingArea}) {
@@ -228,9 +258,6 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
 
     if (existingArea != null) {
       zoneCtrl.text = existingArea['m_zone']?['name'] ?? '';
-    } else if (_activeZones.isNotEmpty) {
-      selectedZoneId = _activeZones.first['id'].toString();
-      zoneCtrl.text = _activeZones.first['name'].toString();
     }
 
     final formKey = GlobalKey<FormState>();
@@ -241,95 +268,105 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Padding(
-            padding: EdgeInsets.only(left: 24, right: 24, top: 16, bottom: MediaQuery.of(context).viewInsets.bottom + 24),
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(child: Container(width: 48, height: 5, margin: const EdgeInsets.only(bottom: 24), decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
-                  Text(existingArea == null ? "Add New Area" : "Edit Area", style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: navy)),
-                  const SizedBox(height: 24),
-
-                  // REPLACED Dropdown with Sleek Autocomplete
-                  _buildSleekAutocomplete(
-                    hint: "Search Parent Zone *",
-                    icon: Icons.layers_outlined,
-                    controller: zoneCtrl,
-                    focusNode: zoneFocusNode,
-                    options: _activeZones,
-                    isDisabled: false,
-                    onSelected: (val) {
-                      setModalState(() {
-                        selectedZoneId = val['id'].toString();
-                      });
-                    },
-                    onCleared: () {
-                      setModalState(() {
-                        selectedZoneId = null;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  TextFormField(
-                    controller: nameController,
-                    validator: (val) => val == null || val.trim().isEmpty ? 'Area Name is required' : null,
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy),
-                    textCapitalization: TextCapitalization.words,
-                    decoration: InputDecoration(
-                      labelText: "Area Name *",
-                      labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
-                      prefixIcon: const Icon(Icons.place_outlined, color: Colors.grey),
-                      filled: true, fillColor: Colors.white,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: golden, width: 2)),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  SizedBox(
-                    width: double.infinity, height: 54,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: navy, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), elevation: 0),
-                      onPressed: isSaving ? null : () async {
-                        if (!formKey.currentState!.validate()) return;
-
-                        if (selectedZoneId == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select a parent Zone.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
-                          return;
-                        }
-
-                        setModalState(() => isSaving = true);
-                        try {
-                          if (existingArea == null) {
-                            await _supabase.from('m_area').insert({'area_name': nameController.text.trim(), 'zone_id': selectedZoneId});
-                          } else {
-                            await _supabase.from('m_area').update({'area_name': nameController.text.trim(), 'zone_id': selectedZoneId}).eq('id', existingArea['id']);
-                          }
-                          if (mounted) {
-                            Navigator.pop(ctx);
-                            _fetchData();
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Area saved successfully!', style: GoogleFonts.inter()), backgroundColor: Colors.green));
-                          }
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e', style: GoogleFonts.inter()), backgroundColor: Colors.red));
-                          setModalState(() => isSaving = false);
-                        }
-                      },
-                      child: isSaving ? const CircularProgressIndicator(color: Colors.white) : Text("SAVE AREA", style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 0.5)),
-                    ),
-                  ),
-                ],
+      builder: (ctx) => GestureDetector(
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(), // Dismiss keyboard on tap outside
+        behavior: HitTestBehavior.opaque,
+        child: StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom, // Pushes sheet above keyboard
               ),
-            ),
-          );
-        },
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 24, right: 24, top: 16, bottom: 24),
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(child: Container(width: 48, height: 5, margin: const EdgeInsets.only(bottom: 24), decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
+                        Text(existingArea == null ? "Add New Area" : "Edit Area", style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: navy)),
+                        const SizedBox(height: 24),
+
+                        _buildSleekAutocomplete(
+                          hint: "Search Parent Zone *",
+                          icon: Icons.layers_outlined,
+                          controller: zoneCtrl,
+                          focusNode: zoneFocusNode,
+                          options: _activeZones,
+                          isDisabled: false,
+                          onSelected: (val) {
+                            setModalState(() {
+                              selectedZoneId = val['id'].toString();
+                            });
+                          },
+                          onCleared: () {
+                            setModalState(() {
+                              selectedZoneId = null;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        TextFormField(
+                          controller: nameController,
+                          validator: (val) => val == null || val.trim().isEmpty ? 'Area Name is required' : null,
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy),
+                          textCapitalization: TextCapitalization.words,
+                          decoration: InputDecoration(
+                            labelText: "Area Name *",
+                            labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
+                            prefixIcon: const Icon(Icons.place_outlined, color: Colors.grey),
+                            filled: true, fillColor: Colors.white,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: golden, width: 2)),
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+
+                        SizedBox(
+                          width: double.infinity, height: 54,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: navy, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), elevation: 0),
+                            onPressed: isSaving ? null : () async {
+                              if (!formKey.currentState!.validate()) return;
+
+                              if (selectedZoneId == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select a parent Zone.', style: GoogleFonts.inter()), backgroundColor: Colors.red));
+                                return;
+                              }
+
+                              setModalState(() => isSaving = true);
+                              try {
+                                if (existingArea == null) {
+                                  await _supabase.from('m_area').insert({'area_name': nameController.text.trim(), 'zone_id': selectedZoneId});
+                                } else {
+                                  await _supabase.from('m_area').update({'area_name': nameController.text.trim(), 'zone_id': selectedZoneId}).eq('id', existingArea['id']);
+                                }
+                                if (mounted) {
+                                  Navigator.pop(ctx);
+                                  _fetchData();
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Area saved successfully!', style: GoogleFonts.inter()), backgroundColor: Colors.green));
+                                }
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e', style: GoogleFonts.inter()), backgroundColor: Colors.red));
+                                setModalState(() => isSaving = false);
+                              }
+                            },
+                            child: isSaving ? const CircularProgressIndicator(color: Colors.white) : Text("SAVE AREA", style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 0.5)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -382,6 +419,12 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
             },
           ) : null,
         ),
+        onTap: () {
+          // Immediately show options when tapped, even if empty
+          if (!isDisabled && ctrl.text.isEmpty) {
+            ctrl.notifyListeners();
+          }
+        },
       ),
       optionsViewBuilder: (ctx, onSel, opts) => Align(
         alignment: Alignment.topLeft,
