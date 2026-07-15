@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 
 import '../core/constants/api_constants.dart';
+import '../core/services/firebase_media_service.dart';
 
 class TicketProvider with ChangeNotifier {
   final _supabase = Supabase.instance.client;
@@ -235,6 +237,45 @@ class TicketProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint("Error fetching stats: $e");
+    }
+  }
+
+  Future uploadTicketMedia({
+    required File file,
+    required String ticketId,
+    required String uploadStage,
+    required String mediaType,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    final mediaService = FirebaseMediaService();
+
+    // 1. Upload to Firebase
+    final uploadResult = await mediaService.compressAndUpload(
+      file: file,
+      ticketId: ticketId,
+      uploadStage: uploadStage,
+      mediaType: mediaType,
+    );
+
+    if (uploadResult != null) {
+      // 2. Save reference to Supabase
+      try {
+        await _supabase.from('ticket_media').insert({
+          'ticket_id': ticketId,
+          'media_url': uploadResult['media_url'],
+          'file_name': uploadResult['file_name'],
+          'file_size': uploadResult['file_size'],
+          'content_type': uploadResult['content_type'],
+          'media_type': mediaType,
+          'upload_stage': uploadStage,
+          'uploaded_by': userId,
+        });
+        debugPrint("Media successfully saved to Supabase");
+      } catch (e) {
+        debugPrint("Failed to save media record to Supabase: \$e");
+      }
     }
   }
 

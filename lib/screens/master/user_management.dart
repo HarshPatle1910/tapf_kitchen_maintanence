@@ -975,15 +975,15 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.analytics_outlined,
-                                      color: navy,
-                                    ),
-                                    tooltip: "Report Access",
-                                    onPressed: () =>
-                                        _showReportAccessDialog(user),
-                                  ),
+                                  // IconButton(
+                                  //   icon: const Icon(
+                                  //     Icons.analytics_outlined,
+                                  //     color: navy,
+                                  //   ),
+                                  //   tooltip: "Report Access",
+                                  //   onPressed: () =>
+                                  //       _showReportAccessDialog(user),
+                                  // ),
                                   IconButton(
                                     icon: const Icon(
                                       Icons.edit_square,

@@ -5,14 +5,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../providers/auth_provider.dart';
 
-// --- Master Screen Imports ---
-import 'master/area_screen.dart';
-import 'master/kitchen_screen.dart';
-import 'master/spares/spare_screen.dart';
-import 'master/vendor_screen.dart';
-import 'master/zone_screen.dart';
-import 'master/equipment_master_screen.dart';
-import 'master/tools_screen.dart';
+// // --- Master Screen Imports ---
+// import 'master/area_screen.dart';
+// import 'master/kitchen_screen.dart';
+// import 'master/spares/spare_screen.dart';
+// import 'master/vendor_screen.dart';
+// import 'master/zone_screen.dart';
+// import 'master/equipment_master_screen.dart';
+// import 'master/tools_screen.dart';
 
 class MoreScreen extends StatefulWidget {
   const MoreScreen({super.key});
@@ -163,7 +163,7 @@ class _MoreScreenState extends State<MoreScreen> {
     final String displayName = authProv.userName ?? "User";
     final String displayRole = (authProv.activeRole ?? 'Worker').toUpperCase();
     final String initials = displayName.trim().isNotEmpty ? displayName.trim()[0].toUpperCase() : 'U';
-    final bool isAdmin = authProv.activeRole == 'admin';
+    // final bool isAdmin = authProv.activeRole == 'admin';
 
     return Scaffold(
       backgroundColor: background,
@@ -222,26 +222,26 @@ class _MoreScreenState extends State<MoreScreen> {
               ),
               const SizedBox(height: 32),
 
-              if (isAdmin) ...[
-                // --- Section: Configuration ---
-                _buildSectionTitle("Facility Configuration"),
-                _buildMenuCard([
-                  // _MenuItem(Icons.kitchen_outlined, "Kitchen Master", const KitchenMasterScreen(), context),
-                  _MenuItem(Icons.place_outlined, "Area Master", const AreaMasterScreen(), context),
-                  _MenuItem(Icons.layers_outlined, "Zone Master", const ZoneMasterScreen(), context),
-                ]),
-                const SizedBox(height: 24),
-
-                // --- Section: Assets & Inventory ---
-                _buildSectionTitle("Assets & Inventory"),
-                _buildMenuCard([
-                  _MenuItem(Icons.precision_manufacturing_outlined, "Equipment Registry", const EquipmentMasterScreen(), context),
-                  _MenuItem(Icons.build_circle_outlined, "Spares Master", const SparesMasterScreen(), context),
-                  _MenuItem(Icons.handyman_outlined, "Tools Master", const ToolsMasterScreen(), context),
-                  _MenuItem(Icons.local_shipping_outlined, "Vendor Directory", const VendorMasterScreen(), context),
-                ]),
-                const SizedBox(height: 32),
-              ],
+              // if (isAdmin) ...[
+              //   // --- Section: Configuration ---
+              //   _buildSectionTitle("Facility Configuration"),
+              //   _buildMenuCard([
+              //     // _MenuItem(Icons.kitchen_outlined, "Kitchen Master", const KitchenMasterScreen(), context),
+              //     _MenuItem(Icons.place_outlined, "Area Master", const AreaMasterScreen(), context),
+              //     _MenuItem(Icons.layers_outlined, "Zone Master", const ZoneMasterScreen(), context),
+              //   ]),
+              //   const SizedBox(height: 24),
+              //
+              //   // --- Section: Assets & Inventory ---
+              //   _buildSectionTitle("Assets & Inventory"),
+              //   _buildMenuCard([
+              //     _MenuItem(Icons.precision_manufacturing_outlined, "Equipment Registry", const EquipmentMasterScreen(), context),
+              //     _MenuItem(Icons.build_circle_outlined, "Spares Master", const SparesMasterScreen(), context),
+              //     _MenuItem(Icons.handyman_outlined, "Tools Master", const ToolsMasterScreen(), context),
+              //     _MenuItem(Icons.local_shipping_outlined, "Vendor Directory", const VendorMasterScreen(), context),
+              //   ]),
+              //   const SizedBox(height: 32),
+              // ],
 
               // --- Logout Button ---
               SizedBox(

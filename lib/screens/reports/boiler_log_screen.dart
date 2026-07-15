@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:signature/signature.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 import '../../core/constants/api_constants.dart';
 import '../../providers/auth_provider.dart';
@@ -970,10 +971,12 @@ class _BoilerLogFormScreenState extends State<BoilerLogFormScreen> {
           if (signatureBytes != null) {
             final fileName =
                 'boiler_signatures/${DateTime.now().millisecondsSinceEpoch}_op$i.png';
-            await _supabase.storage
-                .from('ticket-media')
-                .uploadBinary(fileName, signatureBytes);
-            uploadedSigns[i] = fileName;
+            
+            final ref = FirebaseStorage.instance.ref().child(fileName);
+            await ref.putData(signatureBytes, SettableMetadata(contentType: 'image/png'));
+            final downloadUrl = await ref.getDownloadURL();
+            
+            uploadedSigns[i] = downloadUrl;
           }
         } else {
           uploadedSigns[i] = _operators[i]['url']; // retain existing

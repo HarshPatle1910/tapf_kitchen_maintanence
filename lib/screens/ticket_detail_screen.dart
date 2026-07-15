@@ -8,6 +8,8 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/ticket_provider.dart';
@@ -281,15 +283,29 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     try {
       final mediaRecords = await _supabase
           .from('ticket_media')
-          .select('storage_path, upload_stage')
+          .select('*')
           .eq('ticket_id', _localTicket!['id']);
+
+      if (mounted && mediaRecords.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'No media records found for this ticket in Supabase!',
+            ),
+          ),
+        );
+      }
+
       List<String> before = [];
       List<String> after = [];
 
       for (var record in mediaRecords) {
-        final url = _supabase.storage
-            .from('ticket-media')
-            .getPublicUrl(record['storage_path']);
+        String url = record['media_url'] ?? '';
+        // If the path doesn't start with http, it means it's an old Supabase storage path
+        if (!url.startsWith('http')) {
+          url = _supabase.storage.from('ticket-media').getPublicUrl(url);
+        }
+
         if (record['upload_stage'] == 'COMPLETED')
           after.add(url);
         else
@@ -301,6 +317,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           _afterUrls = after;
         });
     } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error fetching media: $e')));
+      }
       debugPrint("Error fetching media: $e");
     } finally {
       if (mounted) setState(() => _isLoadingMedia = false);
@@ -803,23 +824,50 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   }
 
   // --- SUBMIT / UPDATE LOGIC ---
-  Future<void> _uploadImages(String ticketId, String stage) async {
+  Future<void> _uploadImages(
+    String ticketId,
+    String ticketNo,
+    String stage,
+  ) async {
     final userId = _supabase.auth.currentUser?.id;
+    final pathStage = stage.toLowerCase() == 'completed' ? 'closed' : 'raised';
+
     for (var img in _selectedImages) {
       final fileExt = img.name.contains('.') ? img.name.split('.').last : 'jpg';
       final fileName =
           '${stage.toLowerCase()}_${DateTime.now().microsecondsSinceEpoch}.$fileExt';
-      final storagePath = '$ticketId/$fileName';
+      final storagePath = 'PMT_Tickets/$ticketNo/$pathStage/$fileName';
 
+      // Upload to Firebase Storage
+      final ref = FirebaseStorage.instance.ref().child(storagePath);
       final imageBytes = await img.readAsBytes();
-      await _supabase.storage
-          .from('ticket-media')
-          .uploadBinary(storagePath, imageBytes);
+
+      // Compress the image
+      final compressedBytes = await FlutterImageCompress.compressWithList(
+        imageBytes,
+        minHeight: 1080,
+        minWidth: 1080,
+        quality: 70,
+      );
+
+      final uploadTask = await ref.putData(
+        compressedBytes,
+        SettableMetadata(contentType: 'image/$fileExt'),
+      );
+
+      // Get the download URL
+      final downloadUrl = await ref.getDownloadURL();
+
+      // Save the Firebase download URL in Supabase
       await _supabase.from('ticket_media').insert({
         'ticket_id': ticketId,
-        'storage_path': storagePath,
+        'media_url': downloadUrl,
         'upload_stage': stage,
         'uploaded_by': userId,
+        'file_name': img.name,
+        'file_size': compressedBytes.length,
+        'content_type': 'image/$fileExt',
+        'media_type': 'photo',
       });
     }
   }
@@ -928,7 +976,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         await _supabase.from('ticket_equipments').insert(equipmentInserts);
 
       if (_selectedImages.isNotEmpty)
-        await _uploadImages(newTicket['id'], 'RAISED');
+        await _uploadImages(
+          newTicket['id'],
+          newTicket['ticket_no'] ?? 'UNKNOWN',
+          'RAISED',
+        );
 
       await _triggerNotification(
         action: 'RAISED',
@@ -1144,7 +1196,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           .update(updates)
           .eq('id', _localTicket!['id']);
       if (nextStatus == 'COMPLETED' && _selectedImages.isNotEmpty)
-        await _uploadImages(_localTicket!['id'], 'COMPLETED');
+        await _uploadImages(
+          _localTicket!['id'],
+          _localTicket!['ticket_no'] ?? 'UNKNOWN',
+          'COMPLETED',
+        );
 
       if (nextStatus == 'ASSIGNED' && _selectedWorker != null) {
         await _triggerNotification(
@@ -1936,9 +1992,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                           if (showCameraBox) ...[
                             if (isEditing) const Divider(height: 32),
                             Text(
-                              canEditWorkDetails
-                                  ? "Upload Completion Photos *"
-                                  : "Add Issue Photos *",
+                              (!isEditing || !canEditWorkDetails)
+                                  ? "Upload issue photo *"
+                                  : "Upload Completion Photos *",
                               style: GoogleFonts.inter(
                                 fontWeight: FontWeight.w600,
                                 color: Colors.grey.shade700,
@@ -2675,7 +2731,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                               color: Colors.grey,
                             ),
                             suffixIcon: const Icon(
-                                Icons.keyboard_arrow_down, color: navy, size: 20
+                              Icons.keyboard_arrow_down,
+                              color: navy,
+                              size: 20,
                             ),
                             filled: true,
                             fillColor: isTicketClosed

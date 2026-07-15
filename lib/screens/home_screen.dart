@@ -13,7 +13,7 @@ import '../widgets/ticket_card.dart';
 import '../widgets/filter_bottom_sheet.dart';
 
 // --- Screen Imports for Navigation ---
-import 'reports/reports_screen.dart';
+// import 'reports/reports_screen.dart';
 import 'master/user_management.dart';
 import 'more_screen.dart';
 
@@ -38,8 +38,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Master list to ensure we don't show the tab for deprecated/invalid codes
   final List<String> _validReportCodes = [
-    "MNT-02", "MT-03", "MT-15", "MT-05", "MT-06", "MT-07",
-    "MT-16", "MT-10", "MT-11", "MT-13", "MT-14", "MT-08"
+    "MNT-02",
+    "MT-03",
+    "MT-15",
+    "MT-05",
+    "MT-06",
+    "MT-07",
+    "MT-16",
+    "MT-10",
+    "MT-11",
+    "MT-13",
+    "MT-14",
+    "MT-08",
   ];
 
   @override
@@ -55,20 +65,28 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Resolves the currently active kitchen and triggers a fetch if it changed
-  void _resolveKitchenAndFetch(TicketProvider ticketProv, AuthProvider authProv) {
+  void _resolveKitchenAndFetch(
+    TicketProvider ticketProv,
+    AuthProvider authProv,
+  ) {
     String currentKitchenId = ticketProv.kitchenFilter;
 
     // Resolve 'ALL' or missing to the first actual assigned kitchen
-    if (currentKitchenId == 'ALL' || !authProv.assignedKitchens.any((k) => k['id'].toString() == currentKitchenId)) {
+    if (currentKitchenId == 'ALL' ||
+        !authProv.assignedKitchens.any(
+          (k) => k['id'].toString() == currentKitchenId,
+        )) {
       if (authProv.assignedKitchens.isNotEmpty) {
         currentKitchenId = authProv.assignedKitchens.first['id'].toString();
       } else {
-        if (mounted && _isLoadingAccess) setState(() => _isLoadingAccess = false);
+        if (mounted && _isLoadingAccess)
+          setState(() => _isLoadingAccess = false);
         return;
       }
     }
 
-    if (currentKitchenId.isNotEmpty && currentKitchenId != _lastCheckedKitchenId) {
+    if (currentKitchenId.isNotEmpty &&
+        currentKitchenId != _lastCheckedKitchenId) {
       _checkAndFetchPermissions(currentKitchenId);
     }
   }
@@ -92,13 +110,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
         if (mounted) {
           setState(() {
-            _allowedReportCodes = List<String>.from(res.map((x) => x['report_code']));
+            _allowedReportCodes = List<String>.from(
+              res.map((x) => x['report_code']),
+            );
             _isLoadingAccess = false;
           });
         }
       }
     } catch (e) {
-      if (mounted) setState(() { _isLoadingAccess = false; _allowedReportCodes = []; });
+      if (mounted)
+        setState(() {
+          _isLoadingAccess = false;
+          _allowedReportCodes = [];
+        });
     }
   }
 
@@ -111,18 +135,20 @@ class _HomeScreenState extends State<HomeScreen> {
     _resolveKitchenAndFetch(ticketProv, authProv);
 
     final bool isAdmin = authProv.activeRole == 'admin';
-    final bool hasValidReports = _allowedReportCodes.any((code) => _validReportCodes.contains(code));
+    final bool hasValidReports = _allowedReportCodes.any(
+      (code) => _validReportCodes.contains(code),
+    );
 
     // Show Reports Tab if Admin OR if they have access to at least 1 valid report in current kitchen
     final bool showReportsTab = isAdmin || hasValidReports;
 
     final List<Widget> pages = [
       const _HomeTicketView(),
-      if (showReportsTab)
-        ReportsScreen(
-          allowedReportCodes: _allowedReportCodes,
-          isAdmin: isAdmin,
-        ),
+      // if (showReportsTab)
+      //   ReportsScreen(
+      //     allowedReportCodes: _allowedReportCodes,
+      //     isAdmin: isAdmin,
+      //   ),
       if (isAdmin) const UserManagementScreen(),
       const MoreScreen(),
     ];
@@ -133,12 +159,12 @@ class _HomeScreenState extends State<HomeScreen> {
         activeIcon: Icon(Icons.home),
         label: 'Home',
       ),
-      if (showReportsTab)
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.analytics_outlined),
-          activeIcon: Icon(Icons.analytics),
-          label: 'Reports',
-        ),
+      // if (showReportsTab)
+      //   const BottomNavigationBarItem(
+      //     icon: Icon(Icons.analytics_outlined),
+      //     activeIcon: Icon(Icons.analytics),
+      //     label: 'Reports',
+      //   ),
       if (isAdmin)
         const BottomNavigationBarItem(
           icon: Icon(Icons.people_outline),
@@ -247,7 +273,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
       String targetKitchenId = ticketProv.kitchenFilter;
       if (targetKitchenId == 'ALL' ||
           !authProv.assignedKitchens.any(
-                (k) => k['id'].toString() == targetKitchenId,
+            (k) => k['id'].toString() == targetKitchenId,
           )) {
         if (authProv.assignedKitchens.isNotEmpty) {
           targetKitchenId = authProv.assignedKitchens.first['id'].toString();
@@ -266,11 +292,11 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
           _kitchenZones = List<Map<String, dynamic>>.from(res)
               .map(
                 (z) => {
-              'id': z['id'],
-              'name': z['name'],
-              'display_name': z['name'],
-            },
-          )
+                  'id': z['id'],
+                  'name': z['name'],
+                  'display_name': z['name'],
+                },
+              )
               .toList();
         });
       }
@@ -295,7 +321,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
     String? validDropdownValue = ticketProvider.kitchenFilter;
     if (validDropdownValue == 'ALL' ||
         !authProv.assignedKitchens.any(
-              (k) => k['id'].toString() == validDropdownValue,
+          (k) => k['id'].toString() == validDropdownValue,
         )) {
       validDropdownValue = authProv.assignedKitchens.isNotEmpty
           ? authProv.assignedKitchens.first['id'].toString()
@@ -304,10 +330,10 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
 
     final bool hasActiveFilters =
         ticketProvider.priorityFilter != 'ALL' ||
-            ticketProvider.startDate != null ||
-            ticketProvider.zoneFilter != 'ALL' ||
-            ticketProvider.assignedToMeFilter ||
-            ticketProvider.raisedByMeFilter;
+        ticketProvider.startDate != null ||
+        ticketProvider.zoneFilter != 'ALL' ||
+        ticketProvider.assignedToMeFilter ||
+        ticketProvider.raisedByMeFilter;
     final bool isSingleKitchen = authProv.assignedKitchens.length <= 1;
 
     return GestureDetector(
@@ -352,7 +378,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                       Text(
                         authProv.assignedKitchens.isNotEmpty
                             ? authProv.assignedKitchens.first['name'] ??
-                            'Unknown Kitchen'
+                                  'Unknown Kitchen'
                             : 'No Kitchens',
                         style: GoogleFonts.inter(
                           fontSize: 15,
@@ -392,15 +418,15 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                             items: authProv.assignedKitchens
                                 .map(
                                   (k) => DropdownMenuItem(
-                                value: k['id'].toString(),
-                                child: Text(
-                                  k['name'] ?? 'Unknown',
-                                  style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.w700,
+                                    value: k['id'].toString(),
+                                    child: Text(
+                                      k['name'] ?? 'Unknown',
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                            )
+                                )
                                 .toList(),
                             onChanged: (val) {
                               if (val != null) {
@@ -531,27 +557,27 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                                     focusNode: _searchFocusNode,
                                     optionsBuilder:
                                         (TextEditingValue textEditingValue) {
-                                      if (textEditingValue.text.isEmpty)
-                                        return const Iterable<
-                                            Map<String, dynamic>
-                                        >.empty();
-                                      final query = textEditingValue.text
-                                          .toLowerCase();
-                                      return ticketProvider.tickets.where((
-                                          ticket,
+                                          if (textEditingValue.text.isEmpty)
+                                            return const Iterable<
+                                              Map<String, dynamic>
+                                            >.empty();
+                                          final query = textEditingValue.text
+                                              .toLowerCase();
+                                          return ticketProvider.tickets.where((
+                                            ticket,
                                           ) {
-                                        final title =
-                                        (ticket['title'] ?? '')
-                                            .toLowerCase();
-                                        final no =
-                                        (ticket['ticket_no'] ?? '')
-                                            .toLowerCase();
-                                        return title.contains(query) ||
-                                            no.contains(query);
-                                      });
-                                    },
+                                            final title =
+                                                (ticket['title'] ?? '')
+                                                    .toLowerCase();
+                                            final no =
+                                                (ticket['ticket_no'] ?? '')
+                                                    .toLowerCase();
+                                            return title.contains(query) ||
+                                                no.contains(query);
+                                          });
+                                        },
                                     displayStringForOption: (option) =>
-                                    option['ticket_no'] ?? '',
+                                        option['ticket_no'] ?? '',
                                     onSelected: (selection) {
                                       _searchController.clear();
                                       _searchFocusNode.unfocus();
@@ -566,177 +592,177 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                                     },
                                     fieldViewBuilder:
                                         (
-                                        BuildContext context,
-                                        TextEditingController
-                                        textEditingController,
-                                        FocusNode focusNode,
-                                        VoidCallback onFieldSubmitted,
+                                          BuildContext context,
+                                          TextEditingController
+                                          textEditingController,
+                                          FocusNode focusNode,
+                                          VoidCallback onFieldSubmitted,
                                         ) {
-                                      return TextField(
-                                        controller: textEditingController,
-                                        focusNode: focusNode,
-                                        onSubmitted: (value) {
-                                          onFieldSubmitted();
-                                          context
-                                              .read<TicketProvider>()
-                                              .setSearchQuery(value);
-                                        },
-                                        style: GoogleFonts.inter(
-                                          fontWeight: FontWeight.w600,
-                                          color: navy,
-                                        ),
-                                        decoration: InputDecoration(
-                                          hintText:
-                                          "Search title or ticket #...",
-                                          hintStyle: GoogleFonts.inter(
-                                            color: Colors.grey.shade400,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                          prefixIcon: const Icon(
-                                            Icons.search,
-                                            color: Colors.grey,
-                                          ),
-                                          suffixIcon:
-                                          textEditingController
-                                              .text
-                                              .isNotEmpty
-                                              ? IconButton(
-                                            icon: const Icon(
-                                              Icons.clear,
-                                              color: Colors.grey,
-                                              size: 20,
-                                            ),
-                                            onPressed: () {
-                                              textEditingController
-                                                  .clear();
+                                          return TextField(
+                                            controller: textEditingController,
+                                            focusNode: focusNode,
+                                            onSubmitted: (value) {
+                                              onFieldSubmitted();
                                               context
-                                                  .read<
-                                                  TicketProvider
-                                              >()
-                                                  .setSearchQuery('');
-                                              focusNode.unfocus();
+                                                  .read<TicketProvider>()
+                                                  .setSearchQuery(value);
                                             },
-                                          )
-                                              : null,
-                                          filled: true,
-                                          fillColor: Colors.grey.shade50,
-                                          contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            vertical: 14,
-                                          ),
-                                          border: OutlineInputBorder(
-                                            borderRadius:
-                                            BorderRadius.circular(12),
-                                            borderSide: BorderSide.none,
-                                          ),
-                                          focusedBorder: OutlineInputBorder(
-                                            borderRadius:
-                                            BorderRadius.circular(12),
-                                            borderSide: const BorderSide(
-                                              color: golden,
-                                              width: 2,
+                                            style: GoogleFonts.inter(
+                                              fontWeight: FontWeight.w600,
+                                              color: navy,
                                             ),
-                                          ),
-                                        ),
-                                      );
-                                    },
+                                            decoration: InputDecoration(
+                                              hintText:
+                                                  "Search title or ticket #...",
+                                              hintStyle: GoogleFonts.inter(
+                                                color: Colors.grey.shade400,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                              prefixIcon: const Icon(
+                                                Icons.search,
+                                                color: Colors.grey,
+                                              ),
+                                              suffixIcon:
+                                                  textEditingController
+                                                      .text
+                                                      .isNotEmpty
+                                                  ? IconButton(
+                                                      icon: const Icon(
+                                                        Icons.clear,
+                                                        color: Colors.grey,
+                                                        size: 20,
+                                                      ),
+                                                      onPressed: () {
+                                                        textEditingController
+                                                            .clear();
+                                                        context
+                                                            .read<
+                                                              TicketProvider
+                                                            >()
+                                                            .setSearchQuery('');
+                                                        focusNode.unfocus();
+                                                      },
+                                                    )
+                                                  : null,
+                                              filled: true,
+                                              fillColor: Colors.grey.shade50,
+                                              contentPadding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 14,
+                                                  ),
+                                              border: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                borderSide: BorderSide.none,
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                borderSide: const BorderSide(
+                                                  color: golden,
+                                                  width: 2,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
                                     optionsViewBuilder:
                                         (
-                                        BuildContext context,
-                                        AutocompleteOnSelected<
+                                          BuildContext context,
+                                          AutocompleteOnSelected<
                                             Map<String, dynamic>
-                                        >
-                                        onSelected,
-                                        Iterable<Map<String, dynamic>>
-                                        options,
+                                          >
+                                          onSelected,
+                                          Iterable<Map<String, dynamic>>
+                                          options,
                                         ) {
-                                      return Align(
-                                        alignment: Alignment.topLeft,
-                                        child: Material(
-                                          elevation: 4.0,
-                                          borderRadius:
-                                          BorderRadius.circular(12),
-                                          child: Container(
-                                            width:
-                                            MediaQuery.of(
-                                              context,
-                                            ).size.width -
-                                                86,
-                                            constraints:
-                                            const BoxConstraints(
-                                              maxHeight: 250,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
+                                          return Align(
+                                            alignment: Alignment.topLeft,
+                                            child: Material(
+                                              elevation: 4.0,
                                               borderRadius:
-                                              BorderRadius.circular(12),
-                                            ),
-                                            child: ListView.separated(
-                                              padding: EdgeInsets.zero,
-                                              shrinkWrap: true,
-                                              itemCount: options.length,
-                                              separatorBuilder:
-                                                  (context, index) =>
-                                                  Divider(
-                                                    height: 1,
-                                                    color: Colors
-                                                        .grey
-                                                        .shade100,
-                                                  ),
-                                              itemBuilder:
-                                                  (
-                                                  BuildContext context,
-                                                  int index,
-                                                  ) {
-                                                final option = options
-                                                    .elementAt(index);
-                                                return ListTile(
-                                                  title: Text(
-                                                    option['title'] ??
-                                                        'No Title',
-                                                    style:
-                                                    GoogleFonts.inter(
-                                                      fontWeight:
-                                                      FontWeight
-                                                          .w600,
-                                                      fontSize: 13,
-                                                      color: navy,
+                                                  BorderRadius.circular(12),
+                                              child: Container(
+                                                width:
+                                                    MediaQuery.of(
+                                                      context,
+                                                    ).size.width -
+                                                    86,
+                                                constraints:
+                                                    const BoxConstraints(
+                                                      maxHeight: 250,
                                                     ),
-                                                    maxLines: 1,
-                                                    overflow:
-                                                    TextOverflow
-                                                        .ellipsis,
-                                                  ),
-                                                  subtitle: Text(
-                                                    option['ticket_no'] ??
-                                                        '#---',
-                                                    style:
-                                                    GoogleFonts.inter(
-                                                      fontSize: 11,
-                                                      color: Colors
-                                                          .grey
-                                                          .shade500,
-                                                      fontWeight:
-                                                      FontWeight
-                                                          .bold,
-                                                    ),
-                                                  ),
-                                                  trailing: const Icon(
-                                                    Icons.chevron_right,
-                                                    size: 18,
-                                                    color: Colors.grey,
-                                                  ),
-                                                  onTap: () =>
-                                                      onSelected(
-                                                        option,
-                                                      ),
-                                                );
-                                              },
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                child: ListView.separated(
+                                                  padding: EdgeInsets.zero,
+                                                  shrinkWrap: true,
+                                                  itemCount: options.length,
+                                                  separatorBuilder:
+                                                      (context, index) =>
+                                                          Divider(
+                                                            height: 1,
+                                                            color: Colors
+                                                                .grey
+                                                                .shade100,
+                                                          ),
+                                                  itemBuilder:
+                                                      (
+                                                        BuildContext context,
+                                                        int index,
+                                                      ) {
+                                                        final option = options
+                                                            .elementAt(index);
+                                                        return ListTile(
+                                                          title: Text(
+                                                            option['title'] ??
+                                                                'No Title',
+                                                            style:
+                                                                GoogleFonts.inter(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                  fontSize: 13,
+                                                                  color: navy,
+                                                                ),
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                          subtitle: Text(
+                                                            option['ticket_no'] ??
+                                                                '#---',
+                                                            style:
+                                                                GoogleFonts.inter(
+                                                                  fontSize: 11,
+                                                                  color: Colors
+                                                                      .grey
+                                                                      .shade500,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                ),
+                                                          ),
+                                                          trailing: const Icon(
+                                                            Icons.chevron_right,
+                                                            size: 18,
+                                                            color: Colors.grey,
+                                                          ),
+                                                          onTap: () =>
+                                                              onSelected(
+                                                                option,
+                                                              ),
+                                                        );
+                                                      },
+                                                ),
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                      );
-                                    },
+                                          );
+                                        },
                                   ),
                                 ),
                               ),
@@ -795,7 +821,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
-                        (context, index) {
+                    (context, index) {
                       if (index == ticketProvider.tickets.length) {
                         return const Padding(
                           padding: EdgeInsets.all(16.0),
@@ -804,12 +830,10 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                           ),
                         );
                       }
-                      return TicketCard(
-                        ticket: ticketProvider.tickets[index],
-                      );
+                      return TicketCard(ticket: ticketProvider.tickets[index]);
                     },
                     childCount:
-                    ticketProvider.tickets.length +
+                        ticketProvider.tickets.length +
                         (ticketProvider.isLoading ? 1 : 0),
                   ),
                 ),
@@ -839,12 +863,12 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
   }
 
   Widget _buildStatCard(
-      String label,
-      int count,
-      Color color,
-      String targetStatus,
-      TicketProvider provider,
-      ) {
+    String label,
+    int count,
+    Color color,
+    String targetStatus,
+    TicketProvider provider,
+  ) {
     final bool isSelected = provider.statusFilter == targetStatus;
     return InkWell(
       onTap: () {
@@ -868,12 +892,12 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
           boxShadow: isSelected
               ? []
               : [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
