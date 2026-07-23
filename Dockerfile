@@ -2,15 +2,17 @@
 FROM ubuntu:22.04 AS build
 
 # Install required dependencies
-RUN apt-get update && apt-get install -y curl git unzip xz-utils zip libglu1-mesa
+RUN apt-get update && apt-get install -y curl git unzip xz-utils zip libglu1-mesa ca-certificates
 
 # Set up environment variables
 ENV FLUTTER_HOME=/opt/flutter
-ENV FLUTTER_VERSION=3.27.1-stable
 ENV PATH="${FLUTTER_HOME}/bin:${PATH}"
+ENV FLUTTER_NO_CLI_ANALYTICS=true
 
 # Download and install Flutter
 RUN git clone https://github.com/flutter/flutter.git -b stable ${FLUTTER_HOME}
+RUN git config --global --add safe.directory ${FLUTTER_HOME}
+RUN flutter config --no-analytics
 RUN flutter doctor
 
 # Copy the app source code
@@ -18,6 +20,7 @@ WORKDIR /app
 COPY . .
 
 # Build the Flutter web application
+RUN git config --global --add safe.directory /app
 RUN flutter clean
 RUN flutter pub get
 RUN flutter build web --release
