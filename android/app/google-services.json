@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "679778128088",
+    "project_id": "kitchen-maintenance-app",
+    "storage_bucket": "kitchen-maintenance-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:679778128088:android:c0f640d836c8836bf707ad",
+        "android_client_info": {
+          "package_name": "com.example.kitchen_maintanence"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyALXh3cFppDj7uBhp01F0JipdXBbGpQy_4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
