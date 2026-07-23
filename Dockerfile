@@ -18,6 +18,21 @@ RUN flutter doctor
 # Copy the app source code
 WORKDIR /app
 COPY . .
+# Receive variables from Railway
+ARG SUPABASE_URL
+ARG SUPABASE_ANON_KEY
+ARG IS_PRODUCTION
+ARG RAILWAY_URL
+ARG LOCAL_IP
+ARG NOTIFICATION_API_KEY
+
+# Create the .env file
+RUN echo "SUPABASE_URL=$SUPABASE_URL" >> .env && \
+    echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> .env && \
+    echo "IS_PRODUCTION=$IS_PRODUCTION" >> .env && \
+    echo "RAILWAY_URL=$RAILWAY_URL" >> .env && \
+    echo "LOCAL_IP=$LOCAL_IP" >> .env && \
+    echo "NOTIFICATION_API_KEY=$NOTIFICATION_API_KEY" >> .env
 
 # Build the Flutter web application
 RUN git config --global --add safe.directory /app
