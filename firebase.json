@@ -1,1 +1,55 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"kitchen-maintenance-app","appId":"1:679778128088:android:c0f640d836c8836bf707ad","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"kitchen-maintenance-app","appId":"1:679778128088:ios:380e0e6ba0ed21fbf707ad","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"macos":{"default":{"projectId":"kitchen-maintenance-app","appId":"1:679778128088:ios:380e0e6ba0ed21fbf707ad","uploadDebugSymbols":false,"fileOutput":"macos/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"kitchen-maintenance-app","configurations":{"android":"1:679778128088:android:c0f640d836c8836bf707ad","ios":"1:679778128088:ios:380e0e6ba0ed21fbf707ad","macos":"1:679778128088:ios:380e0e6ba0ed21fbf707ad","web":"1:679778128088:web:90a70d3201cc2619f707ad","windows":"1:679778128088:web:65bf835e02af4204f707ad"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "kitchen-maintenance-app",
+          "appId": "1:679778128088:android:c0f640d836c8836bf707ad",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "kitchen-maintenance-app",
+          "appId": "1:679778128088:ios:380e0e6ba0ed21fbf707ad",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "macos": {
+        "default": {
+          "projectId": "kitchen-maintenance-app",
+          "appId": "1:679778128088:ios:380e0e6ba0ed21fbf707ad",
+          "uploadDebugSymbols": false,
+          "fileOutput": "macos/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "kitchen-maintenance-app",
+          "configurations": {
+            "android": "1:679778128088:android:c0f640d836c8836bf707ad",
+            "ios": "1:679778128088:ios:380e0e6ba0ed21fbf707ad",
+            "macos": "1:679778128088:ios:380e0e6ba0ed21fbf707ad",
+            "web": "1:679778128088:web:90a70d3201cc2619f707ad",
+            "windows": "1:679778128088:web:65bf835e02af4204f707ad"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
