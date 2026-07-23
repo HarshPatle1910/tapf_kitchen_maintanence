@@ -127,7 +127,7 @@ class ForceUpdateScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF26538D).withOpacity(0.1),
+                  color: const Color(0xFF26538D).withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.system_update_rounded, size: 80, color: Color(0xFF26538D)),

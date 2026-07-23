@@ -4,16 +4,18 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import '../core/constants/api_constants.dart';
 import '../core/services/firebase_media_service.dart';
 
 class TicketProvider with ChangeNotifier {
   final _supabase = Supabase.instance.client;
-  List<Map<String, dynamic>> _tickets = [];
+  final List<Map<String, dynamic>> _tickets = [];
   bool _isLoading = false;
   int _offset = 0;
-  final int _limit = 20;
+  final int _itemsPerPage = 10;
+  int _currentPage = 1;
 
   // --- Filter & Sort States ---
   String _searchQuery = '';
@@ -59,6 +61,17 @@ class TicketProvider with ChangeNotifier {
   int get inProgress => _inProgress;
   int get completed => _completed;
   int get verified => _verified;
+  
+  int get currentPage => _currentPage;
+  int get currentFilterTotal {
+    if (_statusFilter == 'TO DO') return _toDo;
+    if (_statusFilter == 'IN PROGRESS') return _inProgress;
+    if (_statusFilter == 'COMPLETED') return _completed;
+    if (_statusFilter == 'VERIFIED') return _verified;
+    return _total;
+  }
+  int get totalPages => (currentFilterTotal / _itemsPerPage).ceil() == 0 ? 1 : (currentFilterTotal / _itemsPerPage).ceil();
+  int get itemsPerPage => _itemsPerPage;
 
   // ============================================================================
   // NOTIFICATION TRIGGER LOGIC
@@ -70,22 +83,28 @@ class TicketProvider with ChangeNotifier {
     required String ticketNo,
     required String kitchenId,
     String? assignedToId,
+    String? raisedById,
   }) async {
     try {
       final url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/notifications/trigger');
+      final String apiKey = dotenv.env['NOTIFICATION_API_KEY'] ?? '';
 
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+        },
         body: jsonEncode({
           "action": action,
           "ticket_id": ticketId,
           "ticket_no": ticketNo,
           "kitchen_id": kitchenId,
           "assigned_to_id": assignedToId,
+          "raised_by_id": raisedById ?? _supabase.auth.currentUser?.id,
         }),
       );
-      debugPrint('Notification Triggered: ${response.statusCode}');
+      debugPrint('Notification Trigger [$action]: ${response.statusCode} - ${response.body}');
     } catch (e) {
       debugPrint("Failed to trigger notification: $e");
     }
@@ -160,6 +179,7 @@ class TicketProvider with ChangeNotifier {
 
   Future<void> refreshTickets({bool isRealtime = false}) async {
     _offset = 0;
+    _currentPage = 1;
     if (_allowedKitchenIds.isNotEmpty) {
       // Run both concurrently for faster UI updates
       await Future.wait([
@@ -167,6 +187,13 @@ class TicketProvider with ChangeNotifier {
         fetchTickets(forceRefresh: isRealtime),
       ]);
     }
+  }
+
+  void goToPage(int page) {
+    if (page < 1 || page > totalPages) return;
+    _currentPage = page;
+    _offset = (_currentPage - 1) * _itemsPerPage;
+    fetchTickets();
   }
 
   // UPDATED: Now respects all filters (Zone, Priority, Date, Search) for accurate tab counts
@@ -286,7 +313,11 @@ class TicketProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    if (loadMore) _offset += _limit;
+    if (loadMore) {
+       // loadMore is no longer used for infinite scroll, but we keep the logic if needed
+       _offset += _itemsPerPage;
+       _currentPage++;
+    }
 
     try {
       var query = _supabase.from('tickets').select('''
@@ -357,7 +388,7 @@ class TicketProvider with ChangeNotifier {
       }
 
       final bool isAscending = _sortBy == 'DATE_ASC';
-      final response = await query.order('ticket_raised_time', ascending: isAscending).range(_offset, _offset + _limit - 1);
+      final response = await query.order('ticket_raised_time', ascending: isAscending).range(_offset, _offset + _itemsPerPage - 1);
 
       if (!loadMore) _tickets.clear();
       _tickets.addAll(List<Map<String, dynamic>>.from(response));

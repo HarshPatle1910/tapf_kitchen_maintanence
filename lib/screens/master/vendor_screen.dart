@@ -338,7 +338,7 @@ class _VendorMasterScreenState extends State<VendorMasterScreen> {
     return ChoiceChip(
       label: Text(label, style: GoogleFonts.inter(fontWeight: isSelected ? FontWeight.bold : FontWeight.w600, color: isSelected ? navy : Colors.grey.shade700)),
       selected: isSelected, onSelected: (_) => onTap(),
-      selectedColor: navy.withOpacity(0.08), backgroundColor: Colors.white, showCheckmark: false,
+      selectedColor: navy.withValues(alpha: 0.08), backgroundColor: Colors.white, showCheckmark: false,
       side: BorderSide(color: isSelected ? navy : Colors.grey.shade300, width: isSelected ? 1.5 : 1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     );
@@ -353,10 +353,10 @@ class _VendorMasterScreenState extends State<VendorMasterScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? baseColor.withOpacity(0.1) : Colors.white,
+          color: isSelected ? baseColor.withValues(alpha: 0.1) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: isSelected ? baseColor : Colors.transparent, width: 1.5),
-          boxShadow: isSelected ? [] : [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 6, offset: const Offset(0, 2))],
+          boxShadow: isSelected ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2))],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -415,7 +415,7 @@ class _VendorMasterScreenState extends State<VendorMasterScreen> {
                         children: [
                           Expanded(
                             child: Container(
-                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))]),
+                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))]),
                               child: TextField(
                                 controller: _searchController, focusNode: _searchFocusNode, onChanged: (value) => setState(() => _searchQuery = value),
                                 style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy),
@@ -437,7 +437,7 @@ class _VendorMasterScreenState extends State<VendorMasterScreen> {
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
                                 color: hasActiveFilters ? navy : Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: hasActiveFilters ? navy : Colors.white),
-                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
                               ),
                               child: Icon(Icons.tune, color: hasActiveFilters ? Colors.white : navy),
                             ),

@@ -31,11 +31,10 @@ class _FilterBottomSheetWidget extends StatefulWidget {
   final List<Map<String, dynamic>> kitchenZones;
 
   const _FilterBottomSheetWidget({
-    Key? key,
     required this.provider,
     required this.authProv,
     required this.kitchenZones,
-  }) : super(key: key);
+  });
 
   @override
   State<_FilterBottomSheetWidget> createState() => _FilterBottomSheetWidgetState();
@@ -93,7 +92,7 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
       label: Text(label, style: GoogleFonts.inter(fontWeight: isSelected ? FontWeight.bold : FontWeight.w500, color: isSelected ? navy : Colors.black87)),
       selected: isSelected,
       onSelected: (_) => onTap(),
-      selectedColor: golden.withOpacity(0.3),
+      selectedColor: golden.withValues(alpha: 0.3),
       backgroundColor: Colors.grey.shade100,
       side: BorderSide(color: isSelected ? golden : Colors.grey.shade300),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -180,7 +179,7 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
                             SwitchListTile(
                               title: Text("My Tasks Only", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy)),
                               subtitle: Text("Show tickets assigned to me", style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade600)),
-                              activeColor: golden,
+                              activeThumbColor: golden,
                               value: tempAssignedToMe,
                               onChanged: (val) => setState(() => tempAssignedToMe = val),
                             ),
@@ -188,7 +187,7 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
                             SwitchListTile(
                               title: Text("Raised By Me", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy)),
                               subtitle: Text("Show tickets I have raised", style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade600)),
-                              activeColor: golden,
+                              activeThumbColor: golden,
                               value: tempRaisedByMe,
                               onChanged: (val) => setState(() => tempRaisedByMe = val),
                             ),
@@ -232,7 +231,7 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
                                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
                                 child: ListView.separated(
                                   padding: EdgeInsets.zero, shrinkWrap: true, itemCount: opts.length,
-                                  separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
+                                  separatorBuilder: (_, _) => Divider(height: 1, color: Colors.grey.shade200),
                                   itemBuilder: (ctx, idx) => ListTile(title: Text(opts.elementAt(idx)['display_name'], style: GoogleFonts.inter(fontSize: 13, color: navy, fontWeight: FontWeight.w500)), onTap: () => onSel(opts.elementAt(idx))),
                                 ),
                               ),

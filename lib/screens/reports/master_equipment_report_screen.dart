@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
 
@@ -191,7 +190,7 @@ class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
                         flex: 3,
                         child: DropdownButtonFormField<int>(
                           decoration: _minimalDecor(),
-                          value: _selectedMonth,
+                          initialValue: _selectedMonth,
                           isExpanded: true,
                           borderRadius: BorderRadius.circular(16),
                           dropdownColor: Colors.white,
@@ -213,7 +212,7 @@ class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
                         flex: 2,
                         child: DropdownButtonFormField<int>(
                           decoration: _minimalDecor(),
-                          value: _selectedYear,
+                          initialValue: _selectedYear,
                           isExpanded: true,
                           borderRadius: BorderRadius.circular(16),
                           dropdownColor: Colors.white,
@@ -244,7 +243,7 @@ class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
                 ChoiceChip(
                   label: Text("Excel (.xlsx)", style: GoogleFonts.inter(fontWeight: _selectedFormat == 'xlsx' ? FontWeight.w600 : FontWeight.normal)),
                   selected: _selectedFormat == 'xlsx',
-                  selectedColor: primary.withOpacity(0.1),
+                  selectedColor: primary.withValues(alpha: 0.1),
                   backgroundColor: surface,
                   side: BorderSide.none,
                   showCheckmark: false,
@@ -255,7 +254,7 @@ class _EquipmentReportScreenState extends State<EquipmentReportScreen> {
                 ChoiceChip(
                   label: Text("PDF (.pdf)", style: GoogleFonts.inter(fontWeight: _selectedFormat == 'pdf' ? FontWeight.w600 : FontWeight.normal)),
                   selected: _selectedFormat == 'pdf',
-                  selectedColor: primary.withOpacity(0.1),
+                  selectedColor: primary.withValues(alpha: 0.1),
                   backgroundColor: surface,
                   side: BorderSide.none,
                   showCheckmark: false,

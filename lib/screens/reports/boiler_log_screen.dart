@@ -65,8 +65,9 @@ class _BoilerLogListScreenState extends State<BoilerLogListScreen> {
     final ticketProv = context.read<TicketProvider>();
     String targetKitchenId = ticketProv.kitchenFilter;
     if (targetKitchenId == 'ALL' || targetKitchenId.isEmpty) {
-      if (authProv.assignedKitchens.isNotEmpty)
+      if (authProv.assignedKitchens.isNotEmpty) {
         return authProv.assignedKitchens.first['id'].toString();
+      }
       return null;
     }
     return targetKitchenId;
@@ -180,8 +181,9 @@ class _BoilerLogListScreenState extends State<BoilerLogListScreen> {
       _selectedYear = newYear;
       if (_selectedYear == 2026 && _selectedMonth < 5) _selectedMonth = 5;
       if (_selectedYear == DateTime.now().year &&
-          _selectedMonth > DateTime.now().month)
+          _selectedMonth > DateTime.now().month) {
         _selectedMonth = DateTime.now().month;
+      }
     });
     _fetchData();
   }
@@ -210,9 +212,9 @@ class _BoilerLogListScreenState extends State<BoilerLogListScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: primary.withOpacity(0.05),
+                  color: primary.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: primary.withOpacity(0.1)),
+                  border: Border.all(color: primary.withValues(alpha: 0.1)),
                 ),
                 child: Row(
                   children: [
@@ -253,7 +255,7 @@ class _BoilerLogListScreenState extends State<BoilerLogListScreen> {
                       ),
                     ),
                     selected: format == 'xlsx',
-                    selectedColor: primary.withOpacity(0.1),
+                    selectedColor: primary.withValues(alpha: 0.1),
                     side: BorderSide(
                       color: format == 'xlsx' ? primary : Colors.grey.shade300,
                     ),
@@ -273,7 +275,7 @@ class _BoilerLogListScreenState extends State<BoilerLogListScreen> {
                       ),
                     ),
                     selected: format == 'pdf',
-                    selectedColor: primary.withOpacity(0.1),
+                    selectedColor: primary.withValues(alpha: 0.1),
                     side: BorderSide(
                       color: format == 'pdf' ? primary : Colors.grey.shade300,
                     ),
@@ -361,13 +363,14 @@ class _BoilerLogListScreenState extends State<BoilerLogListScreen> {
       }
     } catch (e) {
       if (mounted) Navigator.pop(context);
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Export Failed: $e'),
             backgroundColor: Colors.red,
           ),
         );
+      }
     }
   }
 
@@ -423,7 +426,7 @@ class _BoilerLogListScreenState extends State<BoilerLogListScreen> {
                         borderSide: BorderSide(color: Colors.grey.shade200),
                       ),
                     ),
-                    value: _selectedMonth,
+                    initialValue: _selectedMonth,
                     icon: const Icon(Icons.arrow_drop_down, color: primary),
                     items: _getMonthItems(),
                     onChanged: (v) {
@@ -453,7 +456,7 @@ class _BoilerLogListScreenState extends State<BoilerLogListScreen> {
                         borderSide: BorderSide(color: Colors.grey.shade200),
                       ),
                     ),
-                    value: _selectedYear,
+                    initialValue: _selectedYear,
                     icon: const Icon(Icons.arrow_drop_down, color: primary),
                     items: _getYearItems(),
                     onChanged: _onYearChanged,
@@ -471,7 +474,7 @@ class _BoilerLogListScreenState extends State<BoilerLogListScreen> {
                     child: ListView.separated(
                       padding: const EdgeInsets.all(16),
                       itemCount: dates.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (ctx, i) {
                         final targetDate = dates[dates.length - 1 - i];
                         final dateStr = targetDate.toIso8601String().split(
@@ -690,10 +693,10 @@ class _BoilerLogFormScreenState extends State<BoilerLogFormScreen> {
   final _remarksCtrl = TextEditingController();
 
   // DYNAMIC: Hourly Readings List
-  List<Map<String, dynamic>> _dynamicReadings = [];
+  final List<Map<String, dynamic>> _dynamicReadings = [];
 
   // DYNAMIC: Operators List (Max 4)
-  List<Map<String, dynamic>> _operators = [];
+  final List<Map<String, dynamic>> _operators = [];
 
   @override
   void initState() {
@@ -850,8 +853,9 @@ class _BoilerLogFormScreenState extends State<BoilerLogFormScreen> {
     }
 
     // Default setups if completely empty
-    if (_dynamicReadings.isEmpty)
+    if (_dynamicReadings.isEmpty) {
       _addReadingUI(timeStr: _timeOfDayToDBString(TimeOfDay.now()));
+    }
     if (_operators.isEmpty) _addOperatorUI(null, null);
 
     if (mounted) setState(() => _isLoading = false);
@@ -1144,7 +1148,7 @@ class _BoilerLogFormScreenState extends State<BoilerLogFormScreen> {
                       ),
                     ),
                     selected: format == 'xlsx',
-                    selectedColor: primary.withOpacity(0.1),
+                    selectedColor: primary.withValues(alpha: 0.1),
                     side: BorderSide(
                       color: format == 'xlsx' ? primary : Colors.grey.shade300,
                     ),
@@ -1164,7 +1168,7 @@ class _BoilerLogFormScreenState extends State<BoilerLogFormScreen> {
                       ),
                     ),
                     selected: format == 'pdf',
-                    selectedColor: primary.withOpacity(0.1),
+                    selectedColor: primary.withValues(alpha: 0.1),
                     side: BorderSide(
                       color: format == 'pdf' ? primary : Colors.grey.shade300,
                     ),
@@ -1247,13 +1251,14 @@ class _BoilerLogFormScreenState extends State<BoilerLogFormScreen> {
       }
     } catch (e) {
       if (mounted) Navigator.pop(context);
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Export Failed: $e'),
             backgroundColor: Colors.red,
           ),
         );
+      }
     }
   }
 
@@ -1379,7 +1384,7 @@ class _BoilerLogFormScreenState extends State<BoilerLogFormScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1413,10 +1418,11 @@ class _BoilerLogFormScreenState extends State<BoilerLogFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading)
+    if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: primary)),
       );
+    }
     final dateStr =
         "${widget.date.day.toString().padLeft(2, '0')}/${widget.date.month.toString().padLeft(2, '0')}/${widget.date.year}";
 
@@ -1846,7 +1852,7 @@ class _BoilerLogFormScreenState extends State<BoilerLogFormScreen> {
 
                             // SELECT OPERATOR DROPDOWN
                             DropdownButtonFormField<String>(
-                              value: op['id'],
+                              initialValue: op['id'],
                               decoration: _decor("Select Operator"),
                               items: _userList
                                   .map(
@@ -1914,7 +1920,7 @@ class _BoilerLogFormScreenState extends State<BoilerLogFormScreen> {
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     border: Border.all(
-                                      color: primary.withOpacity(0.3),
+                                      color: primary.withValues(alpha: 0.3),
                                       width: 1.5,
                                     ),
                                     borderRadius: BorderRadius.circular(12),
@@ -2027,7 +2033,7 @@ class _BoilerLogFormScreenState extends State<BoilerLogFormScreen> {
                     color: surface,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, -4),
                       ),

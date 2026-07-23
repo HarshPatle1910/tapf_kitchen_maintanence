@@ -5,8 +5,6 @@ import 'package:open_filex/open_filex.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/api_constants.dart';
@@ -202,7 +200,7 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
                         ),
                       ),
                       selected: exportMode == 'daily',
-                      selectedColor: primary.withOpacity(0.1),
+                      selectedColor: primary.withValues(alpha: 0.1),
                       backgroundColor: surface,
                       side: BorderSide.none,
                       showCheckmark: false,
@@ -220,7 +218,7 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
                         ),
                       ),
                       selected: exportMode == 'monthly',
-                      selectedColor: primary.withOpacity(0.1),
+                      selectedColor: primary.withValues(alpha: 0.1),
                       backgroundColor: surface,
                       side: BorderSide.none,
                       showCheckmark: false,
@@ -248,8 +246,9 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
                           child: child!,
                         ),
                       );
-                      if (picked != null)
+                      if (picked != null) {
                         setDialogState(() => selectedDate = picked);
+                      }
                     },
                     child: InputDecorator(
                       decoration: minimalDialogDecor("Select Date"),
@@ -269,7 +268,7 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
                       Expanded(
                         child: DropdownButtonFormField<int>(
                           decoration: minimalDialogDecor("Month"),
-                          value: selectedMonth,
+                          initialValue: selectedMonth,
                           borderRadius: BorderRadius.circular(16),
                           dropdownColor: Colors.white,
                           icon: const Icon(
@@ -294,7 +293,7 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
                       Expanded(
                         child: DropdownButtonFormField<int>(
                           decoration: minimalDialogDecor("Year"),
-                          value: selectedYear,
+                          initialValue: selectedYear,
                           borderRadius: BorderRadius.circular(16),
                           dropdownColor: Colors.white,
                           icon: const Icon(
@@ -343,7 +342,7 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
                         ),
                       ),
                       selected: format == 'docx',
-                      selectedColor: primary.withOpacity(0.1),
+                      selectedColor: primary.withValues(alpha: 0.1),
                       backgroundColor: surface,
                       side: BorderSide.none,
                       showCheckmark: false,
@@ -360,7 +359,7 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
                         ),
                       ),
                       selected: format == 'pdf',
-                      selectedColor: primary.withOpacity(0.1),
+                      selectedColor: primary.withValues(alpha: 0.1),
                       backgroundColor: surface,
                       side: BorderSide.none,
                       showCheckmark: false,
@@ -461,12 +460,13 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
 
       if (response.statusCode == 200) {
         Directory? saveDir;
-        if (Platform.isAndroid)
+        if (Platform.isAndroid) {
           saveDir = Directory('/storage/emulated/0/Download/Tools Reports');
-        else
+        } else {
           saveDir = Directory(
             '${(await getApplicationDocumentsDirectory()).path}/Tools Reports',
           );
+        }
         if (!await saveDir.exists()) await saveDir.create(recursive: true);
 
         final file = File('${saveDir.path}/$expectedFilename');
@@ -479,13 +479,14 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
       }
     } catch (e) {
       if (mounted) Navigator.pop(context);
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Export Failed: $e'),
             backgroundColor: Colors.red,
           ),
         );
+      }
     }
   }
 
@@ -565,7 +566,7 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: primary.withOpacity(0.1),
+                          color: primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -594,7 +595,7 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
                           controller: controller,
                           padding: const EdgeInsets.all(16),
                           itemCount: history.length,
-                          separatorBuilder: (_, __) =>
+                          separatorBuilder: (_, _) =>
                               const SizedBox(height: 16),
                           itemBuilder: (ctx, i) {
                             final h = history[i];
@@ -643,7 +644,7 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
                                             vertical: 2,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: primary.withOpacity(0.08),
+                                            color: primary.withValues(alpha: 0.08),
                                             borderRadius: BorderRadius.circular(
                                               4,
                                             ),
@@ -807,7 +808,7 @@ class _ToolsTacklesScreenState extends State<ToolsTacklesScreen> {
                         : ListView.separated(
                             padding: const EdgeInsets.all(16),
                             itemCount: filteredTools.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (_, _) =>
                                 const SizedBox(height: 12),
                             itemBuilder: (ctx, i) {
                               final tool = filteredTools[i];

@@ -5,7 +5,6 @@ import 'package:open_filex/open_filex.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
 
@@ -253,7 +252,7 @@ class _BreakdownReportScreenState extends State<BreakdownReportScreen> {
                   ChoiceChip(
                     label: Text("Single Ticket", style: GoogleFonts.inter(fontWeight: _queryMode == 'ticket' ? FontWeight.w600 : FontWeight.normal)),
                     selected: _queryMode == 'ticket',
-                    selectedColor: primary.withOpacity(0.1),
+                    selectedColor: primary.withValues(alpha: 0.1),
                     backgroundColor: surface,
                     side: BorderSide.none,
                     showCheckmark: false,
@@ -267,7 +266,7 @@ class _BreakdownReportScreenState extends State<BreakdownReportScreen> {
                   ChoiceChip(
                     label: Text("Monthly Bulk", style: GoogleFonts.inter(fontWeight: _queryMode == 'monthly' ? FontWeight.w600 : FontWeight.normal)),
                     selected: _queryMode == 'monthly',
-                    selectedColor: primary.withOpacity(0.1),
+                    selectedColor: primary.withValues(alpha: 0.1),
                     backgroundColor: surface,
                     side: BorderSide.none,
                     showCheckmark: false,
@@ -332,7 +331,7 @@ class _BreakdownReportScreenState extends State<BreakdownReportScreen> {
                               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.grey.shade100)),
                               child: ListView.separated(
                                 padding: EdgeInsets.zero, shrinkWrap: true, itemCount: opts.length,
-                                separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade100),
+                                separatorBuilder: (_, _) => Divider(height: 1, color: Colors.grey.shade100),
                                 itemBuilder: (ctx, idx) => ListTile(
                                   dense: true,
                                   title: Text(opts.elementAt(idx)['ticket_no'], style: GoogleFonts.inter(fontSize: 14, color: primary, fontWeight: FontWeight.w600)),
@@ -356,7 +355,7 @@ class _BreakdownReportScreenState extends State<BreakdownReportScreen> {
                             flex: 3,
                             child: DropdownButtonFormField<int>(
                               decoration: _minimalDecor(),
-                              value: _selectedMonth,
+                              initialValue: _selectedMonth,
                               isExpanded: true,
                               borderRadius: BorderRadius.circular(16), dropdownColor: Colors.white,
                               hint: Text("Month", style: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 14)),
@@ -372,7 +371,7 @@ class _BreakdownReportScreenState extends State<BreakdownReportScreen> {
                             flex: 2,
                             child: DropdownButtonFormField<int>(
                               decoration: _minimalDecor(),
-                              value: _selectedYear,
+                              initialValue: _selectedYear,
                               isExpanded: true,
                               borderRadius: BorderRadius.circular(16), dropdownColor: Colors.white,
                               hint: Text("Year", style: GoogleFonts.inter(color: Colors.grey.shade400, fontSize: 14)),
@@ -400,7 +399,7 @@ class _BreakdownReportScreenState extends State<BreakdownReportScreen> {
                   ChoiceChip(
                     label: Text("Word (.docx)", style: GoogleFonts.inter(fontWeight: _selectedFormat == 'docx' ? FontWeight.w600 : FontWeight.normal)),
                     selected: _selectedFormat == 'docx',
-                    selectedColor: primary.withOpacity(0.1),
+                    selectedColor: primary.withValues(alpha: 0.1),
                     backgroundColor: surface,
                     side: BorderSide.none,
                     showCheckmark: false,
@@ -411,7 +410,7 @@ class _BreakdownReportScreenState extends State<BreakdownReportScreen> {
                   ChoiceChip(
                     label: Text("PDF (.pdf)", style: GoogleFonts.inter(fontWeight: _selectedFormat == 'pdf' ? FontWeight.w600 : FontWeight.normal)),
                     selected: _selectedFormat == 'pdf',
-                    selectedColor: primary.withOpacity(0.1),
+                    selectedColor: primary.withValues(alpha: 0.1),
                     backgroundColor: surface,
                     side: BorderSide.none,
                     showCheckmark: false,

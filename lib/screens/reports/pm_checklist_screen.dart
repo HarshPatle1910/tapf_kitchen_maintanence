@@ -5,7 +5,6 @@ import 'package:open_filex/open_filex.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 
 import '../../core/constants/api_constants.dart';
@@ -195,7 +194,7 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
                         ),
                       ),
                       selected: exportMode == 'month',
-                      selectedColor: primary.withOpacity(0.1),
+                      selectedColor: primary.withValues(alpha: 0.1),
                       showCheckmark: false,
                       side: BorderSide.none,
                       backgroundColor: surface,
@@ -214,7 +213,7 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
                         ),
                       ),
                       selected: exportMode == 'machine',
-                      selectedColor: primary.withOpacity(0.1),
+                      selectedColor: primary.withValues(alpha: 0.1),
                       showCheckmark: false,
                       side: BorderSide.none,
                       backgroundColor: surface,
@@ -231,7 +230,7 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
                       Expanded(
                         child: DropdownButtonFormField<int>(
                           decoration: minimalDialogDecor("Month"),
-                          value: selectedMonth,
+                          initialValue: selectedMonth,
                           borderRadius: BorderRadius.circular(16),
                           dropdownColor: Colors.white,
                           items: List.generate(
@@ -252,7 +251,7 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
                       Expanded(
                         child: DropdownButtonFormField<int>(
                           decoration: minimalDialogDecor("Year"),
-                          value: selectedYear,
+                          initialValue: selectedYear,
                           borderRadius: BorderRadius.circular(16),
                           dropdownColor: Colors.white,
                           items: [2024, 2025, 2026, 2027]
@@ -326,7 +325,7 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
                             padding: EdgeInsets.zero,
                             shrinkWrap: true,
                             itemCount: opts.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (_, _) =>
                                 Divider(height: 1, color: Colors.grey.shade100),
                             itemBuilder: (ctx, idx) => ListTile(
                               dense: true,
@@ -369,7 +368,7 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
                         ),
                       ),
                       selected: format == 'xlsx',
-                      selectedColor: primary.withOpacity(0.1),
+                      selectedColor: primary.withValues(alpha: 0.1),
                       showCheckmark: false,
                       side: BorderSide.none,
                       backgroundColor: surface,
@@ -386,7 +385,7 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
                         ),
                       ),
                       selected: format == 'pdf',
-                      selectedColor: primary.withOpacity(0.1),
+                      selectedColor: primary.withValues(alpha: 0.1),
                       showCheckmark: false,
                       side: BorderSide.none,
                       backgroundColor: surface,
@@ -513,13 +512,14 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
     } catch (e) {
       if (mounted) Navigator.pop(context);
       debugPrint("Export Failed: $e");
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Export Failed: $e'),
             backgroundColor: Colors.red,
           ),
         );
+      }
     }
   }
 
@@ -614,7 +614,7 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
                   : ListView.separated(
                 padding: const EdgeInsets.all(16),
                 itemCount: filteredChecklists.length,
-                separatorBuilder: (_, __) =>
+                separatorBuilder: (_, _) =>
                 const SizedBox(height: 12),
                 itemBuilder: (ctx, i) {
                   final item = filteredChecklists[i];
@@ -702,7 +702,7 @@ class _PMChecklistScreenState extends State<PMChecklistScreen> {
                                         vertical: 2,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: primary.withOpacity(
+                                        color: primary.withValues(alpha: 
                                           0.08,
                                         ),
                                         borderRadius:
@@ -1023,10 +1023,11 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading)
+    if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: primary)),
       );
+    }
 
     final bool isEditing = widget.existingChecklist != null;
 
@@ -1129,8 +1130,9 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
                           : null,
                     ),
                     onChanged: (val) {
-                      if (val.isEmpty)
+                      if (val.isEmpty) {
                         setState(() => _selectedEquipmentId = null);
+                      }
                     },
                   ),
                   optionsViewBuilder: (ctx, onSel, opts) => Align(
@@ -1152,7 +1154,7 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
                           padding: EdgeInsets.zero,
                           shrinkWrap: true,
                           itemCount: opts.length,
-                          separatorBuilder: (_, __) =>
+                          separatorBuilder: (_, _) =>
                               Divider(height: 1, color: Colors.grey.shade100),
                           itemBuilder: (ctx, idx) => ListTile(
                             dense: true,
@@ -1194,8 +1196,9 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
                             child: child!,
                           ),
                         );
-                        if (picked != null)
+                        if (picked != null) {
                           setState(() => _selectedDate = picked);
+                        }
                       },
                       child: InputDecorator(
                         decoration: _minimalDecor("Date"),
@@ -1214,7 +1217,7 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       decoration: _minimalDecor("Frequency"),
-                      value: _selectedFrequency,
+                      initialValue: _selectedFrequency,
                       borderRadius: BorderRadius.circular(16),
                       dropdownColor: Colors.white,
                       icon: const Icon(
@@ -1280,7 +1283,7 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _activities.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 16),
+                separatorBuilder: (_, _) => const SizedBox(height: 16),
                 itemBuilder: (ctx, i) {
                   final activity = _activities[i];
                   return Container(
@@ -1347,7 +1350,7 @@ class _CreatePMChecklistScreenState extends State<CreatePMChecklistScreen> {
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
                           decoration: _minimalDecor("Status"),
-                          value: activity['status']!.text,
+                          initialValue: activity['status']!.text,
                           borderRadius: BorderRadius.circular(16),
                           dropdownColor: Colors.white,
                           icon: const Icon(

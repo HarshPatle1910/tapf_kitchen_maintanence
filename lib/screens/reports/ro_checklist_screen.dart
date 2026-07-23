@@ -148,7 +148,7 @@ class _ROChecklistListScreenState extends State<ROChecklistListScreen> {
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: primary.withOpacity(0.05), borderRadius: BorderRadius.circular(12), border: Border.all(color: primary.withOpacity(0.1))),
+                decoration: BoxDecoration(color: primary.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(12), border: Border.all(color: primary.withValues(alpha: 0.1))),
                 child: Row(
                   children: [
                     const Icon(Icons.calendar_month, color: primary, size: 20),
@@ -162,9 +162,9 @@ class _ROChecklistListScreenState extends State<ROChecklistListScreen> {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  ChoiceChip(label: Text("Excel (.xlsx)", style: GoogleFonts.inter(fontWeight: format == 'xlsx' ? FontWeight.bold : FontWeight.normal)), selected: format == 'xlsx', selectedColor: primary.withOpacity(0.1), side: BorderSide(color: format == 'xlsx' ? primary : Colors.grey.shade300), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), onSelected: (v) => setDialogState(() => format = 'xlsx')),
+                  ChoiceChip(label: Text("Excel (.xlsx)", style: GoogleFonts.inter(fontWeight: format == 'xlsx' ? FontWeight.bold : FontWeight.normal)), selected: format == 'xlsx', selectedColor: primary.withValues(alpha: 0.1), side: BorderSide(color: format == 'xlsx' ? primary : Colors.grey.shade300), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), onSelected: (v) => setDialogState(() => format = 'xlsx')),
                   const SizedBox(width: 10),
-                  ChoiceChip(label: Text("PDF", style: GoogleFonts.inter(fontWeight: format == 'pdf' ? FontWeight.bold : FontWeight.normal)), selected: format == 'pdf', selectedColor: primary.withOpacity(0.1), side: BorderSide(color: format == 'pdf' ? primary : Colors.grey.shade300), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), onSelected: (v) => setDialogState(() => format = 'pdf')),
+                  ChoiceChip(label: Text("PDF", style: GoogleFonts.inter(fontWeight: format == 'pdf' ? FontWeight.bold : FontWeight.normal)), selected: format == 'pdf', selectedColor: primary.withValues(alpha: 0.1), side: BorderSide(color: format == 'pdf' ? primary : Colors.grey.shade300), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), onSelected: (v) => setDialogState(() => format = 'pdf')),
                 ],
               ),
             ],
@@ -238,7 +238,7 @@ class _ROChecklistListScreenState extends State<ROChecklistListScreen> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide(color: Colors.grey.shade200)),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide(color: Colors.grey.shade200)),
                     ),
-                    value: _selectedMonth, icon: const Icon(Icons.arrow_drop_down, color: primary),
+                    initialValue: _selectedMonth, icon: const Icon(Icons.arrow_drop_down, color: primary),
                     items: _getMonthItems(),
                     onChanged: (v) { setState(() => _selectedMonth = v!); _fetchData(); },
                   ),
@@ -252,7 +252,7 @@ class _ROChecklistListScreenState extends State<ROChecklistListScreen> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide(color: Colors.grey.shade200)),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide(color: Colors.grey.shade200)),
                     ),
-                    value: _selectedYear, icon: const Icon(Icons.arrow_drop_down, color: primary),
+                    initialValue: _selectedYear, icon: const Icon(Icons.arrow_drop_down, color: primary),
                     items: _getYearItems(),
                     onChanged: _onYearChanged,
                   ),
@@ -266,7 +266,7 @@ class _ROChecklistListScreenState extends State<ROChecklistListScreen> {
               color: primary, onRefresh: _fetchData,
               child: ListView.separated(
                 padding: const EdgeInsets.all(16), itemCount: dates.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (ctx, i) {
                   final targetDate = dates[dates.length - 1 - i];
                   final dateStr = targetDate.toIso8601String().split('T')[0];
@@ -523,7 +523,9 @@ class _ROChecklistFormScreenState extends State<ROChecklistFormScreen> {
       }
     } catch (e) {
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error saving: $e"), backgroundColor: Colors.red));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error saving: $e"), backgroundColor: Colors.red));
+      }
     }
   }
 
@@ -548,9 +550,9 @@ class _ROChecklistFormScreenState extends State<ROChecklistFormScreen> {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  ChoiceChip(label: Text("Excel", style: GoogleFonts.inter(fontWeight: format == 'xlsx' ? FontWeight.bold : FontWeight.normal)), selected: format == 'xlsx', selectedColor: primary.withOpacity(0.1), side: BorderSide(color: format == 'xlsx' ? primary : Colors.grey.shade300), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), onSelected: (v) => setDialogState(() => format = 'xlsx')),
+                  ChoiceChip(label: Text("Excel", style: GoogleFonts.inter(fontWeight: format == 'xlsx' ? FontWeight.bold : FontWeight.normal)), selected: format == 'xlsx', selectedColor: primary.withValues(alpha: 0.1), side: BorderSide(color: format == 'xlsx' ? primary : Colors.grey.shade300), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), onSelected: (v) => setDialogState(() => format = 'xlsx')),
                   const SizedBox(width: 10),
-                  ChoiceChip(label: Text("PDF", style: GoogleFonts.inter(fontWeight: format == 'pdf' ? FontWeight.bold : FontWeight.normal)), selected: format == 'pdf', selectedColor: primary.withOpacity(0.1), side: BorderSide(color: format == 'pdf' ? primary : Colors.grey.shade300), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), onSelected: (v) => setDialogState(() => format = 'pdf')),
+                  ChoiceChip(label: Text("PDF", style: GoogleFonts.inter(fontWeight: format == 'pdf' ? FontWeight.bold : FontWeight.normal)), selected: format == 'pdf', selectedColor: primary.withValues(alpha: 0.1), side: BorderSide(color: format == 'pdf' ? primary : Colors.grey.shade300), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), onSelected: (v) => setDialogState(() => format = 'pdf')),
                 ],
               ),
             ],
@@ -744,7 +746,7 @@ class _ROChecklistFormScreenState extends State<ROChecklistFormScreen> {
         bottomNavigationBar: _isReadOnly ? null : SafeArea(
           child: Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: surface, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))]),
+            decoration: BoxDecoration(color: surface, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -4))]),
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: _isVerified ? Colors.green.shade600 : primary, minimumSize: const Size(double.infinity, 54), elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
               onPressed: _isSaving ? null : _saveRecord,
@@ -849,7 +851,7 @@ class _ROMasterTemplateScreenState extends State<ROMasterTemplateScreen> {
                 SwitchListTile(
                   title: Text(isActive ? "Active (Visible)" : "Inactive (Hidden)", style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
                   value: isActive,
-                  activeColor: primary,
+                  activeThumbColor: primary,
                   onChanged: (v) => setDialogState(() => isActive = v),
                 )
               ],
@@ -878,13 +880,13 @@ class _ROMasterTemplateScreenState extends State<ROMasterTemplateScreen> {
                     await _supabase.from('m_ro_checklist_template').update(data).eq('id', existingRecord['id']);
                   }
 
-                  if (mounted) {
+                  if (ctx.mounted) {
                     Navigator.pop(ctx);
-                    _fetchTemplates();
+                    if (mounted) _fetchTemplates();
                   }
                 } catch (e) {
                   setDialogState(() => isDialogSaving = false);
-                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
                 }
               },
               child: isDialogSaving
@@ -916,7 +918,7 @@ class _ROMasterTemplateScreenState extends State<ROMasterTemplateScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
             margin: const EdgeInsets.only(bottom: 12),
             child: ListTile(
-              leading: CircleAvatar(backgroundColor: isActive ? primary.withOpacity(0.1) : Colors.grey.shade200, child: Text("${item['sequence_no']}", style: TextStyle(color: isActive ? primary : Colors.grey))),
+              leading: CircleAvatar(backgroundColor: isActive ? primary.withValues(alpha: 0.1) : Colors.grey.shade200, child: Text("${item['sequence_no']}", style: TextStyle(color: isActive ? primary : Colors.grey))),
               title: Text("${item['procedure_step']}", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: isActive ? Colors.black87 : Colors.grey)),
               subtitle: Text("Expected: ${item['expected_condition'] ?? '-'}", style: GoogleFonts.inter(fontSize: 12, color: Colors.grey)),
               trailing: IconButton(icon: const Icon(Icons.edit, color: primary), onPressed: () => _showTemplateDialog(existingRecord: item)),

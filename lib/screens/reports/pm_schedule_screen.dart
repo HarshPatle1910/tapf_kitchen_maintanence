@@ -1,3 +1,4 @@
+// ignore_for_file: unused_element, unused_field, unused_local_variable
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -5,13 +6,12 @@ import 'package:open_filex/open_filex.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 
 import '../../core/constants/api_constants.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/ticket_provider.dart';
-import 'pm_checklist_screen.dart'; // Ensure correct path if needed
+// Ensure correct path if needed
 
 // ============================================================================
 // 1. DASHBOARD SCREEN (List of Equipment & Status)
@@ -203,7 +203,7 @@ class _PMScheduleScreenState extends State<PMScheduleScreen> {
                   Expanded(
                     child: DropdownButtonFormField<int>(
                       decoration: minimalDialogDecor("Month"),
-                      value: selectedMonth,
+                      initialValue: selectedMonth,
                       borderRadius: BorderRadius.circular(16),
                       dropdownColor: Colors.white,
                       icon: const Icon(
@@ -228,7 +228,7 @@ class _PMScheduleScreenState extends State<PMScheduleScreen> {
                   Expanded(
                     child: DropdownButtonFormField<int>(
                       decoration: minimalDialogDecor("Year"),
-                      value: selectedYear,
+                      initialValue: selectedYear,
                       borderRadius: BorderRadius.circular(16),
                       dropdownColor: Colors.white,
                       icon: const Icon(
@@ -273,7 +273,7 @@ class _PMScheduleScreenState extends State<PMScheduleScreen> {
                       ),
                     ),
                     selected: format == 'xlsx',
-                    selectedColor: primary.withOpacity(0.1),
+                    selectedColor: primary.withValues(alpha: 0.1),
                     backgroundColor: surface,
                     side: BorderSide.none,
                     showCheckmark: false,
@@ -290,7 +290,7 @@ class _PMScheduleScreenState extends State<PMScheduleScreen> {
                       ),
                     ),
                     selected: format == 'pdf',
-                    selectedColor: primary.withOpacity(0.1),
+                    selectedColor: primary.withValues(alpha: 0.1),
                     backgroundColor: surface,
                     side: BorderSide.none,
                     showCheckmark: false,
@@ -371,13 +371,14 @@ class _PMScheduleScreenState extends State<PMScheduleScreen> {
       }
     } catch (e) {
       if (mounted) Navigator.pop(context);
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Export Failed: $e'),
             backgroundColor: Colors.red,
           ),
         );
+      }
     }
   }
 
@@ -389,10 +390,12 @@ class _PMScheduleScreenState extends State<PMScheduleScreen> {
 
       final sched = _latestSchedules[eq['id'].toString()];
       if (_selectedFilter == 'Unscheduled') return sched == null;
-      if (_selectedFilter == 'Planned')
+      if (_selectedFilter == 'Planned') {
         return sched != null && sched['is_achieved'] == false;
-      if (_selectedFilter == 'Achieved')
+      }
+      if (_selectedFilter == 'Achieved') {
         return sched != null && sched['is_achieved'] == true;
+      }
 
       return true;
     }).toList();
@@ -532,7 +535,7 @@ class _PMScheduleScreenState extends State<PMScheduleScreen> {
                   vertical: 8,
                 ),
                 itemCount: filteredRecords.length,
-                separatorBuilder: (_, __) =>
+                separatorBuilder: (_, _) =>
                 const SizedBox(height: 12),
                 itemBuilder: (ctx, i) {
                   final eq = filteredRecords[i];
@@ -556,7 +559,7 @@ class _PMScheduleScreenState extends State<PMScheduleScreen> {
                     } else if (isPlanned) {
                       statusText = "Planned: ${sched['plan_date']}";
                       statusColor = primary;
-                      statusBg = primary.withOpacity(0.08);
+                      statusBg = primary.withValues(alpha: 0.08);
                     }
                   }
 
@@ -723,13 +726,15 @@ class _CreateEditPMScheduleScreenState
 
     if (isEditing) {
       _isPlanned = widget.existingRecord!['is_planned'] ?? false;
-      if (widget.existingRecord!['plan_date'] != null)
+      if (widget.existingRecord!['plan_date'] != null) {
         _planDate = DateTime.tryParse(widget.existingRecord!['plan_date']);
+      }
       _isAchieved = widget.existingRecord!['is_achieved'] ?? false;
-      if (widget.existingRecord!['achieved_date'] != null)
+      if (widget.existingRecord!['achieved_date'] != null) {
         _achievedDate = DateTime.tryParse(
           widget.existingRecord!['achieved_date'],
         );
+      }
       _remarksController.text = widget.existingRecord!['remarks'] ?? '';
       _selectedDoneById = widget.existingRecord!['done_by_id'];
       _savedDoneByName = widget.existingRecord!['done_by_name'];
@@ -808,9 +813,11 @@ class _CreateEditPMScheduleScreenState
       }
     } catch (e) {
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error: $e")));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: $e")));
+      }
     }
   }
 
@@ -838,10 +845,11 @@ class _CreateEditPMScheduleScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading)
+    if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: primary)),
       );
+    }
     final bool isEditing = widget.existingRecord != null;
 
     return GestureDetector(
@@ -896,7 +904,7 @@ class _CreateEditPMScheduleScreenState
                   style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                 ),
                 value: _isAchieved,
-                activeColor: primary,
+                activeThumbColor: primary,
                 onChanged: (v) => setState(() => _isAchieved = v),
               ),
 

@@ -183,7 +183,7 @@ class _CriticalSparesReportScreenState extends State<CriticalSparesReportScreen>
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: primary.withOpacity(0.05), borderRadius: BorderRadius.circular(12), border: Border.all(color: primary.withOpacity(0.1))),
+                decoration: BoxDecoration(color: primary.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(12), border: Border.all(color: primary.withValues(alpha: 0.1))),
                 child: Row(
                   children: [
                     const Icon(Icons.calendar_month, color: primary, size: 20),
@@ -205,7 +205,7 @@ class _CriticalSparesReportScreenState extends State<CriticalSparesReportScreen>
                   ChoiceChip(
                       label: Text("Word (.docx)", style: GoogleFonts.inter(fontWeight: format == 'docx' ? FontWeight.bold : FontWeight.normal)),
                       selected: format == 'docx',
-                      selectedColor: primary.withOpacity(0.1),
+                      selectedColor: primary.withValues(alpha: 0.1),
                       side: BorderSide(color: format == 'docx' ? primary : Colors.grey.shade300),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                       onSelected: (v) => setDialogState(() => format = 'docx')
@@ -214,7 +214,7 @@ class _CriticalSparesReportScreenState extends State<CriticalSparesReportScreen>
                   ChoiceChip(
                       label: Text("PDF", style: GoogleFonts.inter(fontWeight: format == 'pdf' ? FontWeight.bold : FontWeight.normal)),
                       selected: format == 'pdf',
-                      selectedColor: primary.withOpacity(0.1),
+                      selectedColor: primary.withValues(alpha: 0.1),
                       side: BorderSide(color: format == 'pdf' ? primary : Colors.grey.shade300),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                       onSelected: (v) => setDialogState(() => format = 'pdf')
@@ -340,7 +340,7 @@ class _CriticalSparesReportScreenState extends State<CriticalSparesReportScreen>
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide(color: Colors.grey.shade200)),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide(color: Colors.grey.shade200)),
                     ),
-                    value: _selectedMonth,
+                    initialValue: _selectedMonth,
                     icon: const Icon(Icons.arrow_drop_down, color: primary),
                     items: List.generate(12, (i) => DropdownMenuItem(value: i + 1, child: Text(_months[i], style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))))),
                     onChanged: (v) {
@@ -360,7 +360,7 @@ class _CriticalSparesReportScreenState extends State<CriticalSparesReportScreen>
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide(color: Colors.grey.shade200)),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide(color: Colors.grey.shade200)),
                     ),
-                    value: _selectedYear,
+                    initialValue: _selectedYear,
                     icon: const Icon(Icons.arrow_drop_down, color: primary),
                     items: List.generate(10, (index) => 2026 + index).map((y) => DropdownMenuItem(value: y, child: Text(y.toString(), style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))))).toList(),
                     onChanged: (v) {
@@ -385,7 +385,7 @@ class _CriticalSparesReportScreenState extends State<CriticalSparesReportScreen>
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     scrollDirection: Axis.horizontal,
                     itemCount: _spareTypes.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    separatorBuilder: (_, _) => const SizedBox(width: 8),
                     itemBuilder: (context, index) {
                       final type = _spareTypes[index];
                       final isSelected = type == _selectedType;
@@ -453,7 +453,7 @@ class _CriticalSparesReportScreenState extends State<CriticalSparesReportScreen>
               child: ListView.separated(
                 padding: const EdgeInsets.all(16),
                 itemCount: _filteredRecords.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (ctx, i) {
                   final item = _filteredRecords[i];
                   final num onStock = item['on_stock'] ?? 0;
@@ -486,7 +486,7 @@ class _CriticalSparesReportScreenState extends State<CriticalSparesReportScreen>
                                     SizedBox(width: 8,),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(color: primary.withOpacity(0.08), borderRadius: BorderRadius.circular(4)),
+                                      decoration: BoxDecoration(color: primary.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(4)),
                                       child: Text("${item['spare_type'] ?? 'N/A'}", style: GoogleFonts.inter(color: primary, fontSize: 10, fontWeight: FontWeight.bold)),
                                     )
                                   ],

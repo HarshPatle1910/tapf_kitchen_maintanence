@@ -174,7 +174,7 @@ class _EquipmentMasterScreenState extends State<EquipmentMasterScreen> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: _searchFocusNode.hasFocus ? navy.withOpacity(0.1) : Colors.black.withOpacity(0.02),
+                      color: _searchFocusNode.hasFocus ? navy.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.02),
                       blurRadius: 8, offset: const Offset(0, 2),
                     ),
                   ],
@@ -253,7 +253,7 @@ class _EquipmentMasterScreenState extends State<EquipmentMasterScreen> {
 class _EquipmentFormBottomSheet extends StatefulWidget {
   final List<Map<String, dynamic>> allAreas;
 
-  const _EquipmentFormBottomSheet({Key? key, required this.allAreas}) : super(key: key);
+  const _EquipmentFormBottomSheet({required this.allAreas});
 
   @override
   State<_EquipmentFormBottomSheet> createState() => _EquipmentFormBottomSheetState();
@@ -501,7 +501,7 @@ class _EquipmentFormBottomSheetState extends State<_EquipmentFormBottomSheet> {
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
             child: ListView.separated(
               padding: EdgeInsets.zero, shrinkWrap: true, itemCount: opts.length,
-              separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
+              separatorBuilder: (_, _) => Divider(height: 1, color: Colors.grey.shade200),
               itemBuilder: (ctx, idx) => ListTile(
                 dense: true,
                 title: Text(opts.elementAt(idx)['display_name'], style: GoogleFonts.inter(fontSize: 13, color: navy, fontWeight: FontWeight.w500)),
@@ -553,7 +553,7 @@ class _EquipmentCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white, borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2))],
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Theme(
@@ -561,7 +561,7 @@ class _EquipmentCard extends StatelessWidget {
         child: ExpansionTile(
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           iconColor: navy, collapsedIconColor: Colors.grey,
-          leading: Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: navy.withOpacity(0.05), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.precision_manufacturing_rounded, color: navy)),
+          leading: Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: navy.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.precision_manufacturing_rounded, color: navy)),
           title: Text(item['name'] ?? 'Unnamed', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16, color: navy)),
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 6.0),
@@ -571,7 +571,7 @@ class _EquipmentCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: navy.withOpacity(0.1),
+                      color: navy.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(

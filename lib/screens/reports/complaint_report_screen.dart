@@ -5,7 +5,6 @@ import 'package:open_filex/open_filex.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
 
@@ -266,7 +265,7 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
                   ChoiceChip(
                     label: Text("Single Ticket", style: GoogleFonts.inter(fontWeight: _queryMode == 'ticket' ? FontWeight.w600 : FontWeight.normal)),
                     selected: _queryMode == 'ticket',
-                    selectedColor: primary.withOpacity(0.1),
+                    selectedColor: primary.withValues(alpha: 0.1),
                     backgroundColor: surface,
                     side: BorderSide.none,
                     showCheckmark: false,
@@ -280,7 +279,7 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
                   ChoiceChip(
                     label: Text("Date Range", style: GoogleFonts.inter(fontWeight: _queryMode == 'dateRange' ? FontWeight.w600 : FontWeight.normal)),
                     selected: _queryMode == 'dateRange',
-                    selectedColor: primary.withOpacity(0.1),
+                    selectedColor: primary.withValues(alpha: 0.1),
                     backgroundColor: surface,
                     side: BorderSide.none,
                     showCheckmark: false,
@@ -349,7 +348,7 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
                               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.grey.shade100)),
                               child: ListView.separated(
                                 padding: EdgeInsets.zero, shrinkWrap: true, itemCount: opts.length,
-                                separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade100),
+                                separatorBuilder: (_, _) => Divider(height: 1, color: Colors.grey.shade100),
                                 itemBuilder: (ctx, idx) => ListTile(
                                   dense: true,
                                   title: Text(opts.elementAt(idx)['ticket_no'], style: GoogleFonts.inter(fontSize: 14, color: primary, fontWeight: FontWeight.w600)),
@@ -406,7 +405,7 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
                   ChoiceChip(
                     label: Text("Excel (.xlsx)", style: GoogleFonts.inter(fontWeight: _selectedFormat == 'xlsx' ? FontWeight.w600 : FontWeight.normal)),
                     selected: _selectedFormat == 'xlsx',
-                    selectedColor: primary.withOpacity(0.1),
+                    selectedColor: primary.withValues(alpha: 0.1),
                     backgroundColor: surface,
                     side: BorderSide.none,
                     showCheckmark: false,
@@ -417,7 +416,7 @@ class _ComplaintReportScreenState extends State<ComplaintReportScreen> {
                   ChoiceChip(
                     label: Text("PDF (.pdf)", style: GoogleFonts.inter(fontWeight: _selectedFormat == 'pdf' ? FontWeight.w600 : FontWeight.normal)),
                     selected: _selectedFormat == 'pdf',
-                    selectedColor: primary.withOpacity(0.1),
+                    selectedColor: primary.withValues(alpha: 0.1),
                     backgroundColor: surface,
                     side: BorderSide.none,
                     showCheckmark: false,

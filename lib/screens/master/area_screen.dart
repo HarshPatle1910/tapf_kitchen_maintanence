@@ -422,6 +422,7 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
         onTap: () {
           // Immediately show options when tapped, even if empty
           if (!isDisabled && ctrl.text.isEmpty) {
+            // ignore: invalid_use_of_visible_for_testing_member, invalid_use_of_protected_member
             ctrl.notifyListeners();
           }
         },
@@ -438,7 +439,7 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
               padding: EdgeInsets.zero,
               shrinkWrap: true,
               itemCount: opts.length,
-              separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
+              separatorBuilder: (_, _) => Divider(height: 1, color: Colors.grey.shade200),
               itemBuilder: (ctx, idx) => ListTile(
                 dense: true,
                 title: Text(opts.elementAt(idx)['display_name'], style: GoogleFonts.inter(fontSize: 13, color: navy, fontWeight: FontWeight.w500)),
@@ -466,7 +467,7 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
       label: Text(label, style: GoogleFonts.inter(fontWeight: isSelected ? FontWeight.bold : FontWeight.w600, color: isSelected ? navy : Colors.grey.shade700)),
       selected: isSelected,
       onSelected: (_) => onTap(),
-      selectedColor: navy.withOpacity(0.08),
+      selectedColor: navy.withValues(alpha: 0.08),
       backgroundColor: Colors.white,
       showCheckmark: false,
       side: BorderSide(color: isSelected ? navy : Colors.grey.shade300, width: isSelected ? 1.5 : 1),
@@ -484,10 +485,10 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? baseColor.withOpacity(0.1) : Colors.white,
+          color: isSelected ? baseColor.withValues(alpha: 0.1) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: isSelected ? baseColor : Colors.transparent, width: 1.5),
-          boxShadow: isSelected ? [] : [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 6, offset: const Offset(0, 2))],
+          boxShadow: isSelected ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2))],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -564,7 +565,7 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+                                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
                                 ),
                                 child: TextField(
                                   controller: _searchController,
@@ -607,7 +608,7 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
                                   color: hasActiveFilters ? navy : Colors.white,
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(color: hasActiveFilters ? navy : Colors.white),
-                                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+                                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
                                 ),
                                 child: Icon(Icons.tune, color: hasActiveFilters ? Colors.white : navy),
                               ),
@@ -640,7 +641,7 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))], border: Border.all(color: Colors.grey.shade100)),
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))], border: Border.all(color: Colors.grey.shade100)),
                           child: ListTile(
                             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                             title: Text(area['area_name'], style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16, color: isActive ? navy : Colors.grey)),
@@ -653,7 +654,7 @@ class _AreaMasterScreenState extends State<AreaMasterScreen> {
                                   Expanded(child: Text(zoneName, style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 12, fontWeight: FontWeight.w500))),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(color: isActive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                    decoration: BoxDecoration(color: isActive ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
                                     child: Text(isActive ? "Active" : "Inactive", style: GoogleFonts.inter(color: isActive ? Colors.green : Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold)),
                                   )
                                 ],

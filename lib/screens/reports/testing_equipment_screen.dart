@@ -254,7 +254,7 @@ class _TestingEquipmentScreenState extends State<TestingEquipmentScreen> {
                     ),
                     selected: exportAll,
                     onSelected: (v) => setDialogState(() => exportAll = true),
-                    selectedColor: primary.withOpacity(0.1),
+                    selectedColor: primary.withValues(alpha: 0.1),
                     side: BorderSide(
                       color: exportAll ? primary : Colors.grey.shade300,
                     ),
@@ -275,7 +275,7 @@ class _TestingEquipmentScreenState extends State<TestingEquipmentScreen> {
                     ),
                     selected: !exportAll,
                     onSelected: (v) => setDialogState(() => exportAll = false),
-                    selectedColor: primary.withOpacity(0.1),
+                    selectedColor: primary.withValues(alpha: 0.1),
                     side: BorderSide(
                       color: !exportAll ? primary : Colors.grey.shade300,
                     ),
@@ -309,7 +309,7 @@ class _TestingEquipmentScreenState extends State<TestingEquipmentScreen> {
                             borderSide: BorderSide(color: Colors.grey.shade300),
                           ),
                         ),
-                        value: selectedMonth,
+                        initialValue: selectedMonth,
                         items: List.generate(
                           12,
                           (index) => DropdownMenuItem(
@@ -343,7 +343,7 @@ class _TestingEquipmentScreenState extends State<TestingEquipmentScreen> {
                             borderSide: BorderSide(color: Colors.grey.shade300),
                           ),
                         ),
-                        value: selectedYear,
+                        initialValue: selectedYear,
                         items: List.generate(
                           5,
                           (index) => DropdownMenuItem(
@@ -384,7 +384,7 @@ class _TestingEquipmentScreenState extends State<TestingEquipmentScreen> {
                       ),
                     ),
                     selected: format == 'docx',
-                    selectedColor: primary.withOpacity(0.1),
+                    selectedColor: primary.withValues(alpha: 0.1),
                     side: BorderSide(
                       color: format == 'docx' ? primary : Colors.grey.shade300,
                     ),
@@ -404,7 +404,7 @@ class _TestingEquipmentScreenState extends State<TestingEquipmentScreen> {
                       ),
                     ),
                     selected: format == 'pdf',
-                    selectedColor: primary.withOpacity(0.1),
+                    selectedColor: primary.withValues(alpha: 0.1),
                     side: BorderSide(
                       color: format == 'pdf' ? primary : Colors.grey.shade300,
                     ),
@@ -689,7 +689,7 @@ class _TestingEquipmentScreenState extends State<TestingEquipmentScreen> {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.02),
+                                color: Colors.black.withValues(alpha: 0.02),
                                 blurRadius: 6,
                                 offset: const Offset(0, 2),
                               ),
@@ -874,10 +874,9 @@ class _TestingEquipmentFormBottomSheet extends StatefulWidget {
   final List<Map<String, dynamic>> areas;
 
   const _TestingEquipmentFormBottomSheet({
-    Key? key,
     this.existingRecord,
     required this.areas,
-  }) : super(key: key);
+  });
 
   @override
   State<_TestingEquipmentFormBottomSheet> createState() =>
@@ -887,7 +886,6 @@ class _TestingEquipmentFormBottomSheet extends StatefulWidget {
 class _TestingEquipmentFormBottomSheetState
     extends State<_TestingEquipmentFormBottomSheet> {
   static const Color primary = Color(0xFF26538D);
-  static const Color golden = Color(0xFFD4AF37);
 
   final _supabase = Supabase.instance.client;
   final _formKey = GlobalKey<FormState>();
@@ -1330,7 +1328,7 @@ class _TestingEquipmentFormBottomSheetState
                           padding: EdgeInsets.zero,
                           shrinkWrap: true,
                           itemCount: opts.length,
-                          separatorBuilder: (_, __) =>
+                          separatorBuilder: (_, _) =>
                               Divider(height: 1, color: Colors.grey.shade200),
                           itemBuilder: (ctx, idx) => ListTile(
                             title: Text(
@@ -1363,7 +1361,7 @@ class _TestingEquipmentFormBottomSheetState
 
                 // Frequency Dropdown
                 DropdownButtonFormField<String>(
-                  value: _frequency,
+                  initialValue: _frequency,
                   validator: (v) => v == null ? 'Required' : null,
                   dropdownColor: Colors.white,
                   items: _freqOptions
@@ -1479,7 +1477,7 @@ class _TestingEquipmentFormBottomSheetState
                       ),
                     ),
                     value: _isActive,
-                    activeColor: Colors.green,
+                    activeThumbColor: Colors.green,
                     contentPadding: EdgeInsets.zero,
                     onChanged: (val) {
                       FocusScope.of(context).unfocus();

@@ -150,7 +150,7 @@ class _ElectricalLogListScreenState extends State<ElectricalLogListScreen> {
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: primary.withOpacity(0.05), borderRadius: BorderRadius.circular(12), border: Border.all(color: primary.withOpacity(0.1))),
+                decoration: BoxDecoration(color: primary.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(12), border: Border.all(color: primary.withValues(alpha: 0.1))),
                 child: Row(
                   children: [
                     const Icon(Icons.calendar_month, color: primary, size: 20),
@@ -164,9 +164,9 @@ class _ElectricalLogListScreenState extends State<ElectricalLogListScreen> {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  ChoiceChip(label: Text("Excel (.xlsx)", style: GoogleFonts.inter(fontWeight: format == 'xlsx' ? FontWeight.bold : FontWeight.normal)), selected: format == 'xlsx', selectedColor: primary.withOpacity(0.1), side: BorderSide(color: format == 'xlsx' ? primary : Colors.grey.shade300), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), onSelected: (v) => setDialogState(() => format = 'xlsx')),
+                  ChoiceChip(label: Text("Excel (.xlsx)", style: GoogleFonts.inter(fontWeight: format == 'xlsx' ? FontWeight.bold : FontWeight.normal)), selected: format == 'xlsx', selectedColor: primary.withValues(alpha: 0.1), side: BorderSide(color: format == 'xlsx' ? primary : Colors.grey.shade300), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), onSelected: (v) => setDialogState(() => format = 'xlsx')),
                   const SizedBox(width: 10),
-                  ChoiceChip(label: Text("PDF", style: GoogleFonts.inter(fontWeight: format == 'pdf' ? FontWeight.bold : FontWeight.normal)), selected: format == 'pdf', selectedColor: primary.withOpacity(0.1), side: BorderSide(color: format == 'pdf' ? primary : Colors.grey.shade300), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), onSelected: (v) => setDialogState(() => format = 'pdf')),
+                  ChoiceChip(label: Text("PDF", style: GoogleFonts.inter(fontWeight: format == 'pdf' ? FontWeight.bold : FontWeight.normal)), selected: format == 'pdf', selectedColor: primary.withValues(alpha: 0.1), side: BorderSide(color: format == 'pdf' ? primary : Colors.grey.shade300), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), onSelected: (v) => setDialogState(() => format = 'pdf')),
                 ],
               ),
             ],
@@ -233,7 +233,7 @@ class _ElectricalLogListScreenState extends State<ElectricalLogListScreen> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide(color: Colors.grey.shade200)),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide(color: Colors.grey.shade200)),
                     ),
-                    value: _selectedMonth,
+                    initialValue: _selectedMonth,
                     icon: const Icon(Icons.arrow_drop_down, color: primary),
                     items: _getMonthItems(),
                     onChanged: (v) { setState(() => _selectedMonth = v!); _fetchData(); },
@@ -248,7 +248,7 @@ class _ElectricalLogListScreenState extends State<ElectricalLogListScreen> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide(color: Colors.grey.shade200)),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide(color: Colors.grey.shade200)),
                     ),
-                    value: _selectedYear,
+                    initialValue: _selectedYear,
                     icon: const Icon(Icons.arrow_drop_down, color: primary),
                     items: _getYearItems(),
                     onChanged: _onYearChanged,
@@ -262,7 +262,7 @@ class _ElectricalLogListScreenState extends State<ElectricalLogListScreen> {
               color: primary, onRefresh: _fetchData,
               child: ListView.separated(
                 padding: const EdgeInsets.all(16), itemCount: dates.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (ctx, i) {
                   final targetDate = dates[dates.length - 1 - i];
                   final dateStr = targetDate.toIso8601String().split('T')[0];
@@ -586,9 +586,9 @@ class _ElectricalLogFormScreenState extends State<ElectricalLogFormScreen> {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  ChoiceChip(label: Text("Excel", style: GoogleFonts.inter(fontWeight: format == 'xlsx' ? FontWeight.bold : FontWeight.normal)), selected: format == 'xlsx', selectedColor: primary.withOpacity(0.1), side: BorderSide(color: format == 'xlsx' ? primary : Colors.grey.shade300), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), onSelected: (v) => setDialogState(() => format = 'xlsx')),
+                  ChoiceChip(label: Text("Excel", style: GoogleFonts.inter(fontWeight: format == 'xlsx' ? FontWeight.bold : FontWeight.normal)), selected: format == 'xlsx', selectedColor: primary.withValues(alpha: 0.1), side: BorderSide(color: format == 'xlsx' ? primary : Colors.grey.shade300), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), onSelected: (v) => setDialogState(() => format = 'xlsx')),
                   const SizedBox(width: 10),
-                  ChoiceChip(label: Text("PDF", style: GoogleFonts.inter(fontWeight: format == 'pdf' ? FontWeight.bold : FontWeight.normal)), selected: format == 'pdf', selectedColor: primary.withOpacity(0.1), side: BorderSide(color: format == 'pdf' ? primary : Colors.grey.shade300), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), onSelected: (v) => setDialogState(() => format = 'pdf')),
+                  ChoiceChip(label: Text("PDF", style: GoogleFonts.inter(fontWeight: format == 'pdf' ? FontWeight.bold : FontWeight.normal)), selected: format == 'pdf', selectedColor: primary.withValues(alpha: 0.1), side: BorderSide(color: format == 'pdf' ? primary : Colors.grey.shade300), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), onSelected: (v) => setDialogState(() => format = 'pdf')),
                 ],
               ),
             ],
@@ -866,7 +866,7 @@ class _ElectricalLogFormScreenState extends State<ElectricalLogFormScreen> {
             : SafeArea(
           child: Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: surface, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))]),
+            decoration: BoxDecoration(color: surface, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -4))]),
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                   backgroundColor: _isVerified ? Colors.green.shade600 : primary,

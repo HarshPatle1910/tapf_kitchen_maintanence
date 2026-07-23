@@ -191,11 +191,11 @@ class _SparesMasterScreenState extends State<SparesMasterScreen> {
                   const SizedBox(height: 24),
 
                   Container(
-                    decoration: BoxDecoration(color: Colors.red.withOpacity(0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.red.withOpacity(0.2))),
+                    decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.red.withValues(alpha: 0.2))),
                     child: SwitchListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                       title: Text("Critical Spares Only", style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.red.shade700)),
-                      activeColor: Colors.redAccent,
+                      activeThumbColor: Colors.redAccent,
                       value: tempCritical,
                       onChanged: (val) => setModalState(() => tempCritical = val),
                     ),
@@ -283,7 +283,7 @@ class _SparesMasterScreenState extends State<SparesMasterScreen> {
                         Expanded(
                           flex: 2,
                           child: DropdownButtonFormField<String>(
-                            value: _spareTypes.contains(spareType) ? spareType : 'OTHER',
+                            initialValue: _spareTypes.contains(spareType) ? spareType : 'OTHER',
                             dropdownColor: Colors.white, // FIX: White background for list
                             borderRadius: BorderRadius.circular(16), // FIX: Rounded list edges
                             decoration: InputDecoration(
@@ -304,7 +304,7 @@ class _SparesMasterScreenState extends State<SparesMasterScreen> {
                         Expanded(
                           flex: 1,
                           child: DropdownButtonFormField<String>(
-                            value: _uomList.contains(spareUOM) ? spareUOM : 'Nos',
+                            initialValue: _uomList.contains(spareUOM) ? spareUOM : 'Nos',
                             dropdownColor: Colors.white, // FIX: White background for list
                             borderRadius: BorderRadius.circular(16), // FIX: Rounded list edges
                             decoration: InputDecoration(
@@ -340,12 +340,12 @@ class _SparesMasterScreenState extends State<SparesMasterScreen> {
 
                     if (existingSpare != null) ...[
                       Container(
-                        decoration: BoxDecoration(color: Colors.red.withOpacity(0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.red.withOpacity(0.2))),
+                        decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.red.withValues(alpha: 0.2))),
                         child: SwitchListTile(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                           title: Text("Critical Spare", style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.red.shade700)),
                           subtitle: Text("Requires priority restocking", style: GoogleFonts.inter(fontSize: 12, color: Colors.red.shade400)),
-                          activeColor: Colors.redAccent,
+                          activeThumbColor: Colors.redAccent,
                           value: isCritical,
                           onChanged: (val) => setModalState(() => isCritical = val),
                         ),
@@ -464,7 +464,7 @@ class _SparesMasterScreenState extends State<SparesMasterScreen> {
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
             child: ListView.separated(
               padding: EdgeInsets.zero, shrinkWrap: true, itemCount: opts.length,
-              separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
+              separatorBuilder: (_, _) => Divider(height: 1, color: Colors.grey.shade200),
               itemBuilder: (ctx, idx) => ListTile(title: Text(opts.elementAt(idx)['display_name'], style: GoogleFonts.inter(fontSize: 13, color: navy, fontWeight: FontWeight.w500)), onTap: () => onSel(opts.elementAt(idx))),
             ),
           ),
@@ -477,7 +477,7 @@ class _SparesMasterScreenState extends State<SparesMasterScreen> {
     return ChoiceChip(
       label: Text(label, style: GoogleFonts.inter(fontWeight: isSelected ? FontWeight.bold : FontWeight.w600, color: isSelected ? navy : Colors.grey.shade700)),
       selected: isSelected, onSelected: (_) => onTap(),
-      selectedColor: navy.withOpacity(0.08), backgroundColor: Colors.white, showCheckmark: false,
+      selectedColor: navy.withValues(alpha: 0.08), backgroundColor: Colors.white, showCheckmark: false,
       side: BorderSide(color: isSelected ? navy : Colors.grey.shade300, width: isSelected ? 1.5 : 1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)), // FIX: Fully rounded chips
     );
@@ -487,16 +487,16 @@ class _SparesMasterScreenState extends State<SparesMasterScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: baseColor.withOpacity(0.08),
+        color: baseColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: baseColor.withOpacity(0.3), width: 1.5),
+        border: Border.all(color: baseColor.withValues(alpha: 0.3), width: 1.5),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(count.toString(), style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w900, color: baseColor)),
           const SizedBox(height: 2),
-          Text(label, style: GoogleFonts.inter(fontSize: 11, color: baseColor.withOpacity(0.8), fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(label, style: GoogleFonts.inter(fontSize: 11, color: baseColor.withValues(alpha: 0.8), fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),
     );
@@ -561,7 +561,7 @@ class _SparesMasterScreenState extends State<SparesMasterScreen> {
                         children: [
                           Expanded(
                             child: Container(
-                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))]),
+                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))]),
                               child: TextField(
                                 controller: _searchController, focusNode: _searchFocusNode, onChanged: (value) => setState(() => _searchQuery = value),
                                 style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy),
@@ -583,7 +583,7 @@ class _SparesMasterScreenState extends State<SparesMasterScreen> {
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
                                 color: hasActiveFilters ? navy : Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: hasActiveFilters ? navy : Colors.white),
-                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
                               ),
                               child: Icon(Icons.tune, color: hasActiveFilters ? Colors.white : navy),
                             ),
@@ -613,7 +613,7 @@ class _SparesMasterScreenState extends State<SparesMasterScreen> {
                         decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
-                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
                             border: Border.all(color: Colors.grey.shade100)
                         ),
                         child: ClipRRect(
@@ -639,7 +639,7 @@ class _SparesMasterScreenState extends State<SparesMasterScreen> {
                                           if (spare['is_critical'] == true)
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                              decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                                              decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
                                               child: Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
@@ -656,7 +656,7 @@ class _SparesMasterScreenState extends State<SparesMasterScreen> {
                                         children: [
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                                            decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
                                             child: Text(spare['spare_type'] ?? 'OTHER', style: GoogleFonts.inter(color: typeColor, fontSize: 10, fontWeight: FontWeight.w800)),
                                           ),
                                           const SizedBox(width: 12),

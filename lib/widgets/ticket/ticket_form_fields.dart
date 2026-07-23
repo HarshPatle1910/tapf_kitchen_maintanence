@@ -41,7 +41,7 @@ class TicketFormFields {
     required Function(String?)? onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: val, isExpanded: true, dropdownColor: Colors.white, borderRadius: BorderRadius.circular(12),
+      initialValue: val, isExpanded: true, dropdownColor: Colors.white, borderRadius: BorderRadius.circular(12),
       icon: const Icon(Icons.keyboard_arrow_down, color: navy, size: 20),
       style: GoogleFonts.inter(color: navy, fontWeight: FontWeight.w600, fontSize: 14),
       decoration: InputDecoration(
@@ -95,7 +95,7 @@ class TicketFormFields {
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
             child: ListView.separated(
               padding: EdgeInsets.zero, shrinkWrap: true, itemCount: opts.length,
-              separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
+              separatorBuilder: (_, _) => Divider(height: 1, color: Colors.grey.shade200),
               itemBuilder: (ctx, idx) => ListTile(
                 dense: true,
                 title: Text(opts.elementAt(idx)['display_name'], style: GoogleFonts.inter(fontSize: 13, color: navy, fontWeight: FontWeight.w500)),

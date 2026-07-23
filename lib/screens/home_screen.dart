@@ -1,3 +1,4 @@
+// ignore_for_file: unused_element, unused_field, unused_local_variable
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,6 +11,7 @@ import 'ticket_detail_screen.dart';
 import '../core/services/notification_service.dart';
 
 import '../widgets/ticket_card.dart';
+import '../widgets/web_ticket_card.dart';
 import '../widgets/filter_bottom_sheet.dart';
 
 // --- Screen Imports for Navigation ---
@@ -79,8 +81,9 @@ class _HomeScreenState extends State<HomeScreen> {
       if (authProv.assignedKitchens.isNotEmpty) {
         currentKitchenId = authProv.assignedKitchens.first['id'].toString();
       } else {
-        if (mounted && _isLoadingAccess)
+        if (mounted && _isLoadingAccess) {
           setState(() => _isLoadingAccess = false);
+        }
         return;
       }
     }
@@ -118,11 +121,12 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _isLoadingAccess = false;
           _allowedReportCodes = [];
         });
+      }
     }
   }
 
@@ -239,12 +243,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent - 200) {
-        context.read<TicketProvider>().fetchTickets(loadMore: true);
-      }
-    });
+    // _scrollController listener removed to disable infinite scroll
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProv = context.read<AuthProvider>();
@@ -317,6 +316,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
   Widget build(BuildContext context) {
     final ticketProvider = context.watch<TicketProvider>();
     final authProv = context.watch<AuthProvider>();
+    final isWeb = MediaQuery.of(context).size.width > 800;
 
     String? validDropdownValue = ticketProvider.kitchenFilter;
     if (validDropdownValue == 'ALL' ||
@@ -443,10 +443,13 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
             ],
           ),
         ),
-        body: RefreshIndicator(
-          color: golden,
-          backgroundColor: Colors.white,
-          onRefresh: () => ticketProvider.refreshTickets(),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1200),
+            child: RefreshIndicator(
+              color: golden,
+              backgroundColor: Colors.white,
+              onRefresh: () => ticketProvider.refreshTickets(),
           child: CustomScrollView(
             controller: _scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
@@ -478,62 +481,22 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                     child: Column(
                       children: [
                         Container(
-                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
-                          width: double.infinity,
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: _buildStatCard(
-                                  "Total",
-                                  ticketProvider.total,
-                                  Colors.blueGrey,
-                                  'ALL',
-                                  ticketProvider,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: _buildStatCard(
-                                  "To Do",
-                                  ticketProvider.toDo,
-                                  Colors.redAccent,
-                                  'TO DO',
-                                  ticketProvider,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: _buildStatCard(
-                                  "WIP",
-                                  ticketProvider.inProgress,
-                                  Colors.orange,
-                                  'IN PROGRESS',
-                                  ticketProvider,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: _buildStatCard(
-                                  "Done",
-                                  ticketProvider.completed,
-                                  Colors.green,
-                                  'COMPLETED',
-                                  ticketProvider,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: _buildStatCard(
-                                  "Verified",
-                                  ticketProvider.verified,
-                                  Colors.teal,
-                                  'VERIFIED',
-                                  ticketProvider,
-                                ),
-                              ),
-                            ],
+                            padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+                            width: double.infinity,
+                            child: Row(
+                              children: [
+                                Expanded(child: _buildStatCard("Total", ticketProvider.total, Colors.blueGrey, 'ALL', ticketProvider)),
+                                const SizedBox(width: 6),
+                                Expanded(child: _buildStatCard("To Do", ticketProvider.toDo, Colors.redAccent, 'TO DO', ticketProvider)),
+                                const SizedBox(width: 6),
+                                Expanded(child: _buildStatCard("WIP", ticketProvider.inProgress, Colors.orange, 'IN PROGRESS', ticketProvider)),
+                                const SizedBox(width: 6),
+                                Expanded(child: _buildStatCard("Done", ticketProvider.completed, Colors.green, 'COMPLETED', ticketProvider)),
+                                const SizedBox(width: 6),
+                                Expanded(child: _buildStatCard("Verified", ticketProvider.verified, Colors.teal, 'VERIFIED', ticketProvider)),
+                              ],
+                            ),
                           ),
-                        ),
 
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -557,10 +520,11 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                                     focusNode: _searchFocusNode,
                                     optionsBuilder:
                                         (TextEditingValue textEditingValue) {
-                                          if (textEditingValue.text.isEmpty)
+                                          if (textEditingValue.text.isEmpty) {
                                             return const Iterable<
                                               Map<String, dynamic>
                                             >.empty();
+                                          }
                                           final query = textEditingValue.text
                                               .toLowerCase();
                                           return ticketProvider.tickets.where((
@@ -818,7 +782,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
               ),
 
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
@@ -830,15 +794,23 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                           ),
                         );
                       }
-                      return TicketCard(ticket: ticketProvider.tickets[index]);
+                      final ticket = ticketProvider.tickets[index];
+                      return isWeb ? WebTicketCard(ticket: ticket) : TicketCard(ticket: ticket);
                     },
-                    childCount:
-                        ticketProvider.tickets.length +
-                        (ticketProvider.isLoading ? 1 : 0),
+                    childCount: ticketProvider.tickets.length + (ticketProvider.isLoading ? 1 : 0),
                   ),
                 ),
               ),
+              if (ticketProvider.tickets.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 80, top: 16),
+                    child: _buildPagination(ticketProvider),
+                  ),
+                ),
             ],
+          ),
+          ),
           ),
         ),
         floatingActionButton: FloatingActionButton.extended(
@@ -859,6 +831,34 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
           ),
         ),
       ),
+    );
+  }
+
+    Widget _buildPagination(TicketProvider ticketProvider) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.chevron_left),
+          onPressed: ticketProvider.currentPage > 1
+              ? () => ticketProvider.goToPage(ticketProvider.currentPage - 1)
+              : null,
+        ),
+        Text(
+          'Page ${ticketProvider.currentPage} of ${ticketProvider.totalPages}',
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: navy,
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.chevron_right),
+          onPressed: ticketProvider.currentPage < ticketProvider.totalPages
+              ? () => ticketProvider.goToPage(ticketProvider.currentPage + 1)
+              : null,
+        ),
+      ],
     );
   }
 

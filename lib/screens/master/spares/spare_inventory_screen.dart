@@ -126,8 +126,11 @@ class _SpareInventoryScreenState extends State<SpareInventoryScreen> {
     final String uom = widget.spare['uom'] ?? 'Nos';
 
     String statusText = "Healthy Stock";
-    if (_currentQty == 0) statusText = "Out of Stock";
-    else if (_currentQty <= _minAlert) statusText = "Low Stock";
+    if (_currentQty == 0) {
+      statusText = "Out of Stock";
+    } else if (_currentQty <= _minAlert) {
+      statusText = "Low Stock";
+    }
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -151,7 +154,7 @@ class _SpareInventoryScreenState extends State<SpareInventoryScreen> {
                 decoration: BoxDecoration(
                   color: navy,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: navy.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 6))],
+                  boxShadow: [BoxShadow(color: navy.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 6))],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

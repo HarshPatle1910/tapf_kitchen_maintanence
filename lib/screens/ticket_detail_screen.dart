@@ -189,6 +189,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     required String ticketNo,
     required String kitchenId,
     String? assignedToId,
+    String? raisedById,
   }) async {
     try {
       final url = Uri.parse(
@@ -196,7 +197,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       );
       final String apiKey = dotenv.env['NOTIFICATION_API_KEY'] ?? '';
 
-      await http.post(
+      final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json', 'x-api-key': apiKey},
         body: jsonEncode({
@@ -205,9 +206,10 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           "ticket_no": ticketNo,
           "kitchen_id": kitchenId,
           "assigned_to_id": assignedToId,
-          "raised_by_id": _supabase.auth.currentUser?.id,
+          "raised_by_id": raisedById ?? _supabase.auth.currentUser?.id,
         }),
       );
+      debugPrint("Notification API [$action] Response (${response.statusCode}): ${response.body}");
     } catch (e) {
       debugPrint("Failed to trigger notification API: $e");
     }
@@ -1202,20 +1204,29 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           'COMPLETED',
         );
 
-      if (nextStatus == 'ASSIGNED' && _selectedWorker != null) {
+      final String? effectiveStatus = nextStatus ?? updates['status']?.toString();
+      final String? previousWorker = _localTicket!['assigned_to_id']?.toString();
+      final bool isAssignedEvent = _selectedWorker != null &&
+          (_selectedWorker != previousWorker || effectiveStatus == 'ASSIGNED');
+
+      if (isAssignedEvent) {
         await _triggerNotification(
           action: 'ASSIGNED',
           ticketId: _localTicket!['id'],
-          ticketNo: _localTicket!['ticket_no'],
+          ticketNo: _localTicket!['ticket_no'] ?? 'UNKNOWN',
           kitchenId: _localTicket!['kitchen_id'],
           assignedToId: _selectedWorker,
+          raisedById: _localTicket!['raised_by_id'],
         );
-      } else if (nextStatus == 'COMPLETED') {
+      }
+
+      if (effectiveStatus == 'COMPLETED') {
         await _triggerNotification(
           action: 'COMPLETED',
           ticketId: _localTicket!['id'],
-          ticketNo: _localTicket!['ticket_no'],
+          ticketNo: _localTicket!['ticket_no'] ?? 'UNKNOWN',
           kitchenId: _localTicket!['kitchen_id'],
+          raisedById: _localTicket!['raised_by_id'],
         );
       }
 
@@ -1463,14 +1474,15 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   }
 
   Widget _buildMediaGallery() {
-    if (_isLoadingMedia)
+    if (_isLoadingMedia) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(16.0),
           child: CircularProgressIndicator(color: golden),
         ),
       );
-    if (_beforeUrls.isEmpty && _afterUrls.isEmpty)
+    }
+    if (_beforeUrls.isEmpty && _afterUrls.isEmpty) {
       return Text(
         "No photos attached yet.",
         style: GoogleFonts.inter(
@@ -1478,6 +1490,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           fontStyle: FontStyle.italic,
         ),
       );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1903,9 +1916,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Form(
             key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+            child: Builder(
+              builder: (context) {
+                final bool isWeb = MediaQuery.of(context).size.width > 800;
+
+                final Widget basicDetails = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                 if (isEditing) ...[
                   TicketStatusBanner(currentStatus: currentStatus),
                   const SizedBox(height: 12),
@@ -2251,9 +2268,15 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   ),
                 ),
 
-                if (currentStatus == 'IN_PROGRESS' ||
-                    currentStatus == 'COMPLETED' ||
-                    currentStatus == 'VERIFIED') ...[
+                  ],
+                );
+
+                final Widget workDetails = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (currentStatus == 'IN_PROGRESS' ||
+                        currentStatus == 'COMPLETED' ||
+                        currentStatus == 'VERIFIED') ...[
                   const SizedBox(height: 20),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -2686,11 +2709,17 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   ],
                 ],
 
-                const SizedBox(height: 20),
-                if (isEditing &&
-                    isAdmin &&
-                    (currentStatus == 'RAISED' ||
-                        currentStatus == 'ASSIGNED')) ...[
+                  ],
+                );
+
+                final Widget adminActions = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 20),
+                    if (isEditing &&
+                        isAdmin &&
+                        (currentStatus == 'RAISED' ||
+                            currentStatus == 'ASSIGNED')) ...[
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
@@ -2788,8 +2817,41 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   ),
                   const SizedBox(height: 24),
                 ],
-                const SizedBox(height: 200),
-              ],
+                  ],
+                );
+
+                return isWeb
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 1,
+                            child: basicDetails,
+                          ),
+                          const SizedBox(width: 24),
+                          Expanded(
+                            flex: 1,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                workDetails,
+                                adminActions,
+                                const SizedBox(height: 200),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          basicDetails,
+                          workDetails,
+                          adminActions,
+                          const SizedBox(height: 200),
+                        ],
+                      );
+              },
             ),
           ),
         ),

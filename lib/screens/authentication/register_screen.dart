@@ -109,7 +109,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         }
                       });
                     },
-                    selectedColor: navy.withOpacity(0.08),
+                    selectedColor: navy.withValues(alpha: 0.08),
                     backgroundColor: Colors.white,
                     checkmarkColor: navy,
                     side: BorderSide(color: isSelected ? navy : Colors.grey.shade300, width: isSelected ? 1.5 : 1),

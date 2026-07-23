@@ -1,3 +1,4 @@
+// ignore_for_file: unused_element, unused_field, unused_local_variable
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -267,15 +268,15 @@ class _MoreScreenState extends State<MoreScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12, left: 4),
-      child: Text(
-        title.toUpperCase(),
-        style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1.0, color: Colors.grey.shade500),
-      ),
-    );
-  }
+  // Widget _buildSectionTitle(String title) {
+  //   return Padding(
+  //     padding: const EdgeInsets.only(bottom: 12, left: 4),
+  //     child: Text(
+  //       title.toUpperCase(),
+  //       style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1.0, color: Colors.grey.shade500),
+  //     ),
+  //   );
+  // }
 
   Widget _buildMenuCard(List<_MenuItem> items) {
     return Container(

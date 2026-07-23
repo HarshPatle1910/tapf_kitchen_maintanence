@@ -1,9 +1,10 @@
+// ignore_for_file: unused_element, unused_field, unused_local_variable
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-
+import '../../providers/ticket_provider.dart';
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
 
@@ -70,9 +71,19 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       final List<Map<String, dynamic>> allUsers =
           List<Map<String, dynamic>>.from(userRes);
 
+      final ticketProv = context.read<TicketProvider>();
+      final selectedKitchenFilter = ticketProv.kitchenFilter;
+
       final filteredUsers = allUsers.where((u) {
-        if (u['status'] == false) return true; // Show all unapproved
         final userKs = u['user_kitchens'] as List<dynamic>? ?? [];
+
+        // If a specific kitchen is selected, ONLY show users assigned to that kitchen.
+        if (selectedKitchenFilter != 'ALL') {
+          return userKs.any((uk) => uk['kitchen_id'].toString() == selectedKitchenFilter);
+        }
+
+        // If 'ALL' kitchens selected, fallback to admin active kitchens logic
+        if (u['status'] == false) return true; // Show all unapproved
         if (userKs.isEmpty) return true; // Show users with no kitchens
         return userKs.any(
           (uk) => adminKitchenIds.contains(uk['kitchen_id'].toString()),
@@ -422,7 +433,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           .from('user_report_access')
           .select('report_code')
           .eq('user_id', userId)
-          .eq('kitchen_id', selectedKitchenId!);
+          .eq('kitchen_id', selectedKitchenId);
 
       assignedReportsForSelectedKitchen = List<String>.from(
         res.map((x) => x['report_code']),
@@ -459,10 +470,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         });
       } catch (e) {
         setModalState(() => isLoadingPermissions = false);
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text("Failed to load access: $e")));
+        }
       }
     }
 
@@ -656,14 +668,15 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                               value: isSelected,
                               onChanged: (val) {
                                 setModalState(() {
-                                  if (val == true)
+                                  if (val == true) {
                                     assignedReportsForSelectedKitchen.add(
                                       r['code']!,
                                     );
-                                  else
+                                  } else {
                                     assignedReportsForSelectedKitchen.remove(
                                       r['code']!,
                                     );
+                                  }
                                 });
                               },
                             );
@@ -762,36 +775,256 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
+
+  Widget _buildUserCard(Map<String, dynamic> user, List<Map<String, dynamic>> allKitchens) {
+    final isApproved = user['status'] ?? false;
+    final userKitchens = user['user_kitchens'] as List<dynamic>? ?? [];
+    final kNames = userKitchens
+        .map((uk) {
+          final matched = allKitchens.firstWhere(
+            (k) => k['id'] == uk['kitchen_id'],
+            orElse: () => {},
+          );
+          return matched['name'] ?? 'Unknown';
+        })
+        .join(", ");
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
+        leading: CircleAvatar(
+          radius: 24,
+          backgroundColor: isApproved
+              ? navy.withOpacity(0.1)
+              : Colors.orange.withOpacity(0.1),
+          child: Text(
+            user['name'].toString().toUpperCase()[0],
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.bold,
+              color: isApproved ? navy : Colors.orange,
+              fontSize: 18,
+            ),
+          ),
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                user['name'],
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (!isApproved)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  "NEW",
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "AMP: ${user['amp_id']} • ${user['role'].toString().toUpperCase()}",
+                style: GoogleFonts.inter(
+                  color: Colors.grey.shade800,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "Assigned: ${kNames.isEmpty ? 'None' : kNames}",
+                style: GoogleFonts.inter(
+                  color: Colors.grey.shade600,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(
+                Icons.edit_square,
+                color: golden,
+              ),
+              tooltip: "Edit User",
+              onPressed: () {
+                _searchFocusNode.unfocus();
+                _showApprovalDialog(user);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserList(List<Map<String, dynamic>> users) {
+    if (users.isEmpty) {
+      return Center(
+        child: Text(
+          "No users found.",
+          style: GoogleFonts.inter(color: Colors.grey),
+        ),
+      );
+    }
+    return RefreshIndicator(
+      color: golden,
+      backgroundColor: Colors.white,
+      onRefresh: _fetchData,
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: users.length,
+        itemBuilder: (context, i) {
+          return _buildUserCard(users[i], _allKitchens);
+        },
+      ),
+    );
+  }
+
+  Widget _buildWebLayout(List<Map<String, dynamic>> verifiedUsers, List<Map<String, dynamic>> pendingUsers) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.pending_actions, color: Colors.orange),
+                    const SizedBox(width: 8),
+                    Text(
+                      "Not Verified (${pendingUsers.length})",
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: navy,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(child: _buildUserList(pendingUsers)),
+            ],
+          ),
+        ),
+        Container(width: 1, color: Colors.grey.shade300),
+        Expanded(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.verified, color: Colors.green),
+                    const SizedBox(width: 8),
+                    Text(
+                      "Verified (${verifiedUsers.length})",
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: navy,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(child: _buildUserList(verifiedUsers)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filteredUsers = _users.where((u) {
-      final nameMatches = u['name'].toString().toLowerCase().contains(
-        _searchQuery.toLowerCase(),
-      );
-      final phoneMatches = u['mobile_no'].toString().contains(_searchQuery);
-      return nameMatches || phoneMatches;
+      if (_searchQuery.isEmpty) return true;
+      final query = _searchQuery.toLowerCase();
+      final n = u['name'].toString().toLowerCase();
+      final p = u['mobile_no'].toString().toLowerCase();
+      return n.contains(query) || p.contains(query);
     }).toList();
 
-    return GestureDetector(
-      onTap: () => _searchFocusNode.unfocus(),
+    final verifiedUsers = filteredUsers.where((u) => u['status'] == true).toList();
+    final pendingUsers = filteredUsers.where((u) => (u['status'] ?? false) == false).toList();
+
+    final isWeb = MediaQuery.of(context).size.width > 800;
+
+    return DefaultTabController(
+      length: 2,
       child: Scaffold(
         backgroundColor: background,
         appBar: AppBar(
-          backgroundColor: background,
+          backgroundColor: Colors.white,
           elevation: 0,
-          foregroundColor: navy,
+          automaticallyImplyLeading: false,
           title: Text(
-            "User Directory",
+            "User Management",
             style: GoogleFonts.inter(
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
+              color: navy,
+              fontWeight: FontWeight.bold,
             ),
           ),
+          bottom: !isWeb
+              ? TabBar(
+                  labelColor: navy,
+                  unselectedLabelColor: Colors.grey,
+                  indicatorColor: golden,
+                  tabs: [
+                    Tab(text: "Verified (${verifiedUsers.length})"),
+                    Tab(text: "Not Verified (${pendingUsers.length})"),
+                  ],
+                )
+              : null,
         ),
         body: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.all(16.0),
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -853,155 +1086,14 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   ? const Center(
                       child: CircularProgressIndicator(color: golden),
                     )
-                  : filteredUsers.isEmpty
-                  ? Center(
-                      child: Text(
-                        "No users found.",
-                        style: GoogleFonts.inter(color: Colors.grey),
-                      ),
-                    )
-                  : RefreshIndicator(
-                      color: golden,
-                      backgroundColor: Colors.white,
-                      onRefresh: _fetchData,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        itemCount: filteredUsers.length,
-                        itemBuilder: (context, i) {
-                          final user = filteredUsers[i];
-                          final isApproved = user['status'] ?? false;
-                          final userKitchens =
-                              user['user_kitchens'] as List<dynamic>? ?? [];
-                          final kNames = userKitchens
-                              .map((uk) {
-                                final matched = _allKitchens.firstWhere(
-                                  (k) => k['id'] == uk['kitchen_id'],
-                                  orElse: () => {},
-                                );
-                                return matched['name'] ?? 'Unknown';
-                              })
-                              .join(", ");
-
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.grey.shade200),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.02),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.all(16),
-                              leading: CircleAvatar(
-                                radius: 24,
-                                backgroundColor: isApproved
-                                    ? navy.withOpacity(0.1)
-                                    : Colors.orange.withOpacity(0.1),
-                                child: Text(
-                                  user['name'].toString().toUpperCase()[0],
-                                  style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.bold,
-                                    color: isApproved ? navy : Colors.orange,
-                                    fontSize: 18,
-                                  ),
-                                ),
-                              ),
-                              title: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      user['name'],
-                                      style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  if (!isApproved)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        "NEW",
-                                        style: GoogleFonts.inter(
-                                          fontSize: 10,
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              subtitle: Padding(
-                                padding: const EdgeInsets.only(top: 4.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "AMP: ${user['amp_id']} • ${user['role'].toString().toUpperCase()}",
-                                      style: GoogleFonts.inter(
-                                        color: Colors.grey.shade800,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "Assigned: ${kNames.isEmpty ? 'None' : kNames}",
-                                      style: GoogleFonts.inter(
-                                        color: Colors.grey.shade600,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // IconButton(
-                                  //   icon: const Icon(
-                                  //     Icons.analytics_outlined,
-                                  //     color: navy,
-                                  //   ),
-                                  //   tooltip: "Report Access",
-                                  //   onPressed: () =>
-                                  //       _showReportAccessDialog(user),
-                                  // ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.edit_square,
-                                      color: golden,
-                                    ),
-                                    tooltip: "Edit User",
-                                    onPressed: () {
-                                      _searchFocusNode.unfocus();
-                                      _showApprovalDialog(user);
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                  : isWeb
+                      ? _buildWebLayout(verifiedUsers, pendingUsers)
+                      : TabBarView(
+                          children: [
+                            _buildUserList(verifiedUsers),
+                            _buildUserList(pendingUsers),
+                          ],
+                        ),
             ),
           ],
         ),

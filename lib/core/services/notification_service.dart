@@ -1,4 +1,6 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+// ignore_for_file: avoid_print
+// ignore_for_file: avoid_print
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 

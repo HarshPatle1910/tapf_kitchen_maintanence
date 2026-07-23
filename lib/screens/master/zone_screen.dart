@@ -1,3 +1,4 @@
+// ignore_for_file: unused_element, unused_field, unused_local_variable
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -497,12 +498,11 @@ class _ZoneFormBottomSheet extends StatefulWidget {
   final String targetKitchenName;
 
   const _ZoneFormBottomSheet({
-    Key? key,
     this.existingZone,
     required this.kitchenUsers,
     required this.targetKitchenId,
     required this.targetKitchenName,
-  }) : super(key: key);
+  });
 
   @override
   State<_ZoneFormBottomSheet> createState() => _ZoneFormBottomSheetState();
@@ -703,7 +703,7 @@ class _ZoneFormBottomSheetState extends State<_ZoneFormBottomSheet> {
                           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
                           child: ListView.separated(
                             padding: EdgeInsets.zero, shrinkWrap: true, itemCount: options.length,
-                            separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade100),
+                            separatorBuilder: (_, _) => Divider(height: 1, color: Colors.grey.shade100),
                             itemBuilder: (BuildContext context, int index) {
                               final option = options.elementAt(index);
                               return ListTile(

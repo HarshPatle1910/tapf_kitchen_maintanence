@@ -1,3 +1,4 @@
+// ignore_for_file: unused_element, unused_field, unused_local_variable
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -356,13 +357,14 @@ class _DGLogListScreenState extends State<DGLogListScreen> {
       }
     } catch (e) {
       if (mounted) Navigator.pop(context);
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Export Failed: $e'),
             backgroundColor: Colors.red,
           ),
         );
+      }
     }
   }
 
@@ -499,7 +501,7 @@ class _DGLogListScreenState extends State<DGLogListScreen> {
                     child: ListView.separated(
                       padding: const EdgeInsets.all(16),
                       itemCount: _records.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (ctx, i) {
                         final item = _records[i];
                         final bool isVerified = item['is_verified'] == true;
@@ -989,10 +991,11 @@ class _DGLogFormScreenState extends State<DGLogFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading)
+    if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: primary)),
       );
+    }
     final bool isBlank = widget.existingRecord['total_running_hours'] == null;
 
     return GestureDetector(

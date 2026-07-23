@@ -269,7 +269,7 @@ class _ToolsMasterScreenState extends State<ToolsMasterScreen> {
                         decoration: InputDecoration(
                           labelText: "Date of Destruction (Optional)", labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
                           prefixIcon: const Icon(Icons.event_busy, color: Colors.redAccent),
-                          filled: true, fillColor: Colors.red.withOpacity(0.05), // Subtle red tint to warn user
+                          filled: true, fillColor: Colors.red.withValues(alpha: 0.05), // Subtle red tint to warn user
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.red.shade200)),
                           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.red.shade200)),
                           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.red, width: 2)),
@@ -386,7 +386,7 @@ class _ToolsMasterScreenState extends State<ToolsMasterScreen> {
     return ChoiceChip(
       label: Text(label, style: GoogleFonts.inter(fontWeight: isSelected ? FontWeight.bold : FontWeight.w600, color: isSelected ? navy : Colors.grey.shade700)),
       selected: isSelected, onSelected: (_) => onTap(),
-      selectedColor: navy.withOpacity(0.08), backgroundColor: Colors.white, showCheckmark: false,
+      selectedColor: navy.withValues(alpha: 0.08), backgroundColor: Colors.white, showCheckmark: false,
       side: BorderSide(color: isSelected ? navy : Colors.grey.shade300, width: isSelected ? 1.5 : 1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
     );
@@ -396,16 +396,16 @@ class _ToolsMasterScreenState extends State<ToolsMasterScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: baseColor.withOpacity(0.08),
+        color: baseColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: baseColor.withOpacity(0.3), width: 1.5),
+        border: Border.all(color: baseColor.withValues(alpha: 0.3), width: 1.5),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(count.toString(), style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w900, color: baseColor)),
           const SizedBox(height: 2),
-          Text(label, style: GoogleFonts.inter(fontSize: 11, color: baseColor.withOpacity(0.8), fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(label, style: GoogleFonts.inter(fontSize: 11, color: baseColor.withValues(alpha: 0.8), fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),
     );
@@ -418,9 +418,9 @@ class _ToolsMasterScreenState extends State<ToolsMasterScreen> {
       margin: const EdgeInsets.only(right: 8, bottom: 4),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: color.withOpacity(0.2))
+          border: Border.all(color: color.withValues(alpha: 0.2))
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -479,7 +479,7 @@ class _ToolsMasterScreenState extends State<ToolsMasterScreen> {
                         children: [
                           Expanded(
                             child: Container(
-                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))]),
+                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))]),
                               child: TextField(
                                 controller: _searchController, focusNode: _searchFocusNode, onChanged: (value) => setState(() => _searchQuery = value),
                                 style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy),
@@ -501,7 +501,7 @@ class _ToolsMasterScreenState extends State<ToolsMasterScreen> {
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
                                 color: hasActiveFilters ? navy : Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: hasActiveFilters ? navy : Colors.white),
-                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
                               ),
                               child: Icon(Icons.tune, color: hasActiveFilters ? Colors.white : navy),
                             ),
@@ -530,7 +530,7 @@ class _ToolsMasterScreenState extends State<ToolsMasterScreen> {
                         decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
-                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
                             border: Border.all(color: Colors.grey.shade100)
                         ),
                         child: ClipRRect(
@@ -552,7 +552,7 @@ class _ToolsMasterScreenState extends State<ToolsMasterScreen> {
                                         children: [
                                           Container(
                                             padding: const EdgeInsets.all(8),
-                                            decoration: BoxDecoration(color: navy.withOpacity(0.05), shape: BoxShape.circle),
+                                            decoration: BoxDecoration(color: navy.withValues(alpha: 0.05), shape: BoxShape.circle),
                                             child: const Icon(Icons.handyman, color: navy, size: 20),
                                           ),
                                           const SizedBox(width: 12),
@@ -564,7 +564,7 @@ class _ToolsMasterScreenState extends State<ToolsMasterScreen> {
                                           ),
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(color: isActive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                                            decoration: BoxDecoration(color: isActive ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
                                             child: Text(isActive ? "ACTIVE" : "DESTROYED", style: GoogleFonts.inter(color: isActive ? Colors.green : Colors.red, fontSize: 10, fontWeight: FontWeight.bold)),
                                           ),
                                           Padding(
