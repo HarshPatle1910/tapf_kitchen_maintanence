@@ -14,7 +14,7 @@ class TicketProvider with ChangeNotifier {
   final List<Map<String, dynamic>> _tickets = [];
   bool _isLoading = false;
   int _offset = 0;
-  final int _itemsPerPage = 10;
+  final int _itemsPerPage = 15;
   int _currentPage = 1;
 
   // --- Filter & Sort States ---
@@ -194,6 +194,12 @@ class TicketProvider with ChangeNotifier {
     _currentPage = page;
     _offset = (_currentPage - 1) * _itemsPerPage;
     fetchTickets();
+  }
+
+  Future<void> fetchMoreTickets() async {
+    if (tickets.length < currentFilterTotal && !_isLoading) {
+      await fetchTickets(loadMore: true);
+    }
   }
 
   // UPDATED: Now respects all filters (Zone, Priority, Date, Search) for accurate tab counts

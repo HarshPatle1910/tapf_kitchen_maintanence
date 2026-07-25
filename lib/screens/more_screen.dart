@@ -5,6 +5,12 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../providers/auth_provider.dart';
+import 'master/area_screen.dart';
+import 'master/equipment_master_screen.dart';
+import 'master/spares/spare_screen.dart';
+import 'master/tools_screen.dart';
+import 'master/vendor_screen.dart';
+import 'master/zone_screen.dart';
 
 // // --- Master Screen Imports ---
 // import 'master/area_screen.dart';
@@ -29,7 +35,10 @@ class _MoreScreenState extends State<MoreScreen> {
 
   final _supabase = Supabase.instance.client;
 
-  Future<void> _showUserDetails(BuildContext context, AuthProvider authProv) async {
+  Future<void> _showUserDetails(
+    BuildContext context,
+    AuthProvider authProv,
+  ) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) return;
 
@@ -37,11 +46,16 @@ class _MoreScreenState extends State<MoreScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator(color: primary)),
+      builder: (_) =>
+          const Center(child: CircularProgressIndicator(color: primary)),
     );
 
     try {
-      final res = await _supabase.from('m_user').select().eq('id', userId).maybeSingle();
+      final res = await _supabase
+          .from('m_user')
+          .select()
+          .eq('id', userId)
+          .maybeSingle();
 
       // Pop loading dialog
       if (mounted) Navigator.pop(context);
@@ -52,7 +66,9 @@ class _MoreScreenState extends State<MoreScreen> {
     } catch (e) {
       if (mounted) {
         Navigator.pop(context); // Pop loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to load details: $e")));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Failed to load details: $e")));
       }
     }
   }
@@ -62,32 +78,82 @@ class _MoreScreenState extends State<MoreScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
-        final initials = (user['name']?.toString().isNotEmpty ?? false) ? user['name'].toString().trim()[0].toUpperCase() : 'U';
+        final initials = (user['name']?.toString().isNotEmpty ?? false)
+            ? user['name'].toString().trim()[0].toUpperCase()
+            : 'U';
 
         return Padding(
-          padding: const EdgeInsets.only(left: 24, right: 24, top: 16, bottom: 40),
+          padding: const EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 16,
+            bottom: 40,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(width: 48, height: 5, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10))),
+              Container(
+                width: 48,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
               const SizedBox(height: 24),
 
               CircleAvatar(
                 radius: 40,
                 backgroundColor: primary.withOpacity(0.1),
-                child: Text(initials, style: GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.bold, color: primary)),
+                child: Text(
+                  initials,
+                  style: GoogleFonts.inter(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: primary,
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
-              Text(user['name'] ?? 'Unknown User', style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
+              Text(
+                user['name'] ?? 'Unknown User',
+                style: GoogleFonts.inter(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF0F172A),
+                ),
+              ),
 
               const SizedBox(height: 24),
-              _buildDetailRow(Icons.badge_outlined, "Employee ID", user['amp_id'] ?? 'N/A'),
-              _buildDetailRow(Icons.work_outline, "Department", user['department'] ?? 'N/A'),
-              _buildDetailRow(Icons.admin_panel_settings_outlined, "Role", (user['role'] ?? 'Worker').toString().toUpperCase()),
-              _buildDetailRow(Icons.phone_outlined, "Mobile No.", user['mobile_no'] ?? 'N/A'),
-              _buildDetailRow(Icons.home_outlined, "Address", user['address'] ?? 'N/A'),
+              _buildDetailRow(
+                Icons.badge_outlined,
+                "Employee ID",
+                user['amp_id'] ?? 'N/A',
+              ),
+              _buildDetailRow(
+                Icons.work_outline,
+                "Department",
+                user['department'] ?? 'N/A',
+              ),
+              _buildDetailRow(
+                Icons.admin_panel_settings_outlined,
+                "Role",
+                (user['role'] ?? 'Worker').toString().toUpperCase(),
+              ),
+              _buildDetailRow(
+                Icons.phone_outlined,
+                "Mobile No.",
+                user['mobile_no'] ?? 'N/A',
+              ),
+              _buildDetailRow(
+                Icons.home_outlined,
+                "Address",
+                user['address'] ?? 'N/A',
+              ),
             ],
           ),
         );
@@ -103,7 +169,10 @@ class _MoreScreenState extends State<MoreScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: primary.withOpacity(0.05), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(
+              color: primary.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Icon(icon, color: primary, size: 20),
           ),
           const SizedBox(width: 16),
@@ -111,12 +180,26 @@ class _MoreScreenState extends State<MoreScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade500)),
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(value, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
+                Text(
+                  value,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
@@ -132,26 +215,49 @@ class _MoreScreenState extends State<MoreScreen> {
           children: [
             const Icon(Icons.logout_rounded, color: Colors.red),
             const SizedBox(width: 10),
-            Text("Sign Out", style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
+            Text(
+              "Sign Out",
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
           ],
         ),
-        content: Text("Are you sure you want to sign out of your account?", style: GoogleFonts.inter(color: Colors.grey.shade700, fontSize: 15)),
+        content: Text(
+          "Are you sure you want to sign out of your account?",
+          style: GoogleFonts.inter(color: Colors.grey.shade700, fontSize: 15),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text("CANCEL", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.grey.shade500)),
+            child: Text(
+              "CANCEL",
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade500,
+              ),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             onPressed: () async {
               Navigator.pop(ctx);
               await authProv.logout();
             },
-            child: Text("SIGN OUT", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white)),
+            child: Text(
+              "SIGN OUT",
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
           ),
         ],
       ),
@@ -163,8 +269,10 @@ class _MoreScreenState extends State<MoreScreen> {
     final authProv = context.watch<AuthProvider>();
     final String displayName = authProv.userName ?? "User";
     final String displayRole = (authProv.activeRole ?? 'Worker').toUpperCase();
-    final String initials = displayName.trim().isNotEmpty ? displayName.trim()[0].toUpperCase() : 'U';
-    // final bool isAdmin = authProv.activeRole == 'admin';
+    final String initials = displayName.trim().isNotEmpty
+        ? displayName.trim()[0].toUpperCase()
+        : 'U';
+    final bool isAdmin = authProv.activeRole == 'admin';
 
     return Scaffold(
       backgroundColor: background,
@@ -198,19 +306,46 @@ class _MoreScreenState extends State<MoreScreen> {
                         CircleAvatar(
                           radius: 30,
                           backgroundColor: primary.withOpacity(0.1),
-                          child: Text(initials, style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: primary)),
+                          child: Text(
+                            initials,
+                            style: GoogleFonts.inter(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: primary,
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(displayName, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
+                              Text(
+                                displayName,
+                                style: GoogleFonts.inter(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                              ),
                               const SizedBox(height: 4),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(color: primary.withOpacity(0.08), borderRadius: BorderRadius.circular(6)),
-                                child: Text("Role: $displayRole", style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: primary)),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: primary.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  "Role: $displayRole",
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: primary,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -223,26 +358,56 @@ class _MoreScreenState extends State<MoreScreen> {
               ),
               const SizedBox(height: 32),
 
-              // if (isAdmin) ...[
-              //   // --- Section: Configuration ---
-              //   _buildSectionTitle("Facility Configuration"),
-              //   _buildMenuCard([
-              //     // _MenuItem(Icons.kitchen_outlined, "Kitchen Master", const KitchenMasterScreen(), context),
-              //     _MenuItem(Icons.place_outlined, "Area Master", const AreaMasterScreen(), context),
-              //     _MenuItem(Icons.layers_outlined, "Zone Master", const ZoneMasterScreen(), context),
-              //   ]),
-              //   const SizedBox(height: 24),
-              //
-              //   // --- Section: Assets & Inventory ---
-              //   _buildSectionTitle("Assets & Inventory"),
-              //   _buildMenuCard([
-              //     _MenuItem(Icons.precision_manufacturing_outlined, "Equipment Registry", const EquipmentMasterScreen(), context),
-              //     _MenuItem(Icons.build_circle_outlined, "Spares Master", const SparesMasterScreen(), context),
-              //     _MenuItem(Icons.handyman_outlined, "Tools Master", const ToolsMasterScreen(), context),
-              //     _MenuItem(Icons.local_shipping_outlined, "Vendor Directory", const VendorMasterScreen(), context),
-              //   ]),
-              //   const SizedBox(height: 32),
-              // ],
+              if (isAdmin) ...[
+                // --- Section: Configuration ---
+                _buildSectionTitle("Facility Configuration"),
+                _buildMenuCard([
+                  // _MenuItem(Icons.kitchen_outlined, "Kitchen Master", const KitchenMasterScreen(), context),
+                  _MenuItem(
+                    Icons.place_outlined,
+                    "Area Master",
+                    const AreaMasterScreen(),
+                    context,
+                  ),
+                  _MenuItem(
+                    Icons.layers_outlined,
+                    "Zone Master",
+                    const ZoneMasterScreen(),
+                    context,
+                  ),
+                ]),
+                const SizedBox(height: 24),
+
+                // --- Section: Assets & Inventory ---
+                _buildSectionTitle("Assets & Inventory"),
+                _buildMenuCard([
+                  _MenuItem(
+                    Icons.precision_manufacturing_outlined,
+                    "Equipment Registry",
+                    const EquipmentMasterScreen(),
+                    context,
+                  ),
+                  _MenuItem(
+                    Icons.build_circle_outlined,
+                    "Spares Master",
+                    const SparesMasterScreen(),
+                    context,
+                  ),
+                  _MenuItem(
+                    Icons.handyman_outlined,
+                    "Tools Master",
+                    const ToolsMasterScreen(),
+                    context,
+                  ),
+                  _MenuItem(
+                    Icons.local_shipping_outlined,
+                    "Vendor Directory",
+                    const VendorMasterScreen(),
+                    context,
+                  ),
+                ]),
+                const SizedBox(height: 32),
+              ],
 
               // --- Logout Button ---
               SizedBox(
@@ -253,10 +418,18 @@ class _MoreScreenState extends State<MoreScreen> {
                     foregroundColor: Colors.red,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   icon: const Icon(Icons.logout_rounded),
-                  label: Text("Sign Out", style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
+                  label: Text(
+                    "Sign Out",
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
                   onPressed: () => _confirmSignOut(context, authProv),
                 ),
               ),
@@ -268,15 +441,20 @@ class _MoreScreenState extends State<MoreScreen> {
     );
   }
 
-  // Widget _buildSectionTitle(String title) {
-  //   return Padding(
-  //     padding: const EdgeInsets.only(bottom: 12, left: 4),
-  //     child: Text(
-  //       title.toUpperCase(),
-  //       style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1.0, color: Colors.grey.shade500),
-  //     ),
-  //   );
-  // }
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12, left: 4),
+      child: Text(
+        title.toUpperCase(),
+        style: GoogleFonts.inter(
+          fontWeight: FontWeight.w800,
+          fontSize: 12,
+          letterSpacing: 1.0,
+          color: Colors.grey.shade500,
+        ),
+      ),
+    );
+  }
 
   Widget _buildMenuCard(List<_MenuItem> items) {
     return Container(
@@ -285,7 +463,11 @@ class _MoreScreenState extends State<MoreScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
@@ -297,17 +479,38 @@ class _MoreScreenState extends State<MoreScreen> {
           return Column(
             children: [
               ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 4,
+                ),
                 leading: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: primary.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(
+                    color: primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   child: Icon(item.icon, color: primary, size: 20),
                 ),
-                title: Text(item.title, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 15, color: const Color(0xFF0F172A))),
-                trailing: Icon(Icons.arrow_forward_ios_rounded, color: Colors.grey.shade300, size: 16),
-                onTap: () => Navigator.push(item.context, MaterialPageRoute(builder: (_) => item.screen)),
+                title: Text(
+                  item.title,
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+                trailing: Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: Colors.grey.shade300,
+                  size: 16,
+                ),
+                onTap: () => Navigator.push(
+                  item.context,
+                  MaterialPageRoute(builder: (_) => item.screen),
+                ),
               ),
-              if (!isLast) Divider(height: 1, indent: 64, color: Colors.grey.shade100),
+              if (!isLast)
+                Divider(height: 1, indent: 64, color: Colors.grey.shade100),
             ],
           );
         }).toList(),

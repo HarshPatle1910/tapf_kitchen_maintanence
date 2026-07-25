@@ -147,7 +147,7 @@ class AuthProvider with ChangeNotifier {
         _userName = data['name'];
 
         // Map the result into a clean list of maps
-        _assignedKitchens = (data['user_kitchens'] as List<dynamic>?)?.map((k) => {
+        _assignedKitchens = (data['user_kitchens'] as List<dynamic>?)?.map((k) => <String, dynamic>{
           'id': k['kitchen_id'].toString(),
           'name': k['m_kitchen']['name'].toString()
         }).toList() ?? [];

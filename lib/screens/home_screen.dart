@@ -12,7 +12,9 @@ import '../core/services/notification_service.dart';
 
 import '../widgets/ticket_card.dart';
 import '../widgets/web_ticket_card.dart';
+import '../widgets/web_ticket_table.dart';
 import '../widgets/filter_bottom_sheet.dart';
+import '../widgets/responsive_sidebar.dart';
 
 // --- Screen Imports for Navigation ---
 // import 'reports/reports_screen.dart';
@@ -37,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingAccess = true;
   List<String> _allowedReportCodes = [];
   String? _lastCheckedKitchenId;
+  bool _isSidebarFixed = true;
 
   // Master list to ensure we don't show the tab for deprecated/invalid codes
   final List<String> _validReportCodes = [
@@ -138,6 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Check if the kitchen was changed from the Ticket Dashboard dropdown
     _resolveKitchenAndFetch(ticketProv, authProv);
 
+    final isWeb = MediaQuery.of(context).size.width > 800;
     final bool isAdmin = authProv.activeRole == 'admin';
     final bool hasValidReports = _allowedReportCodes.any(
       (code) => _validReportCodes.contains(code),
@@ -185,8 +189,34 @@ class _HomeScreenState extends State<HomeScreen> {
     // Safety fallback: If tab disappears while user is on it, return them to Home
     if (_selectedIndex >= pages.length) _selectedIndex = 0;
 
+    Widget bodyContent = IndexedStack(index: _selectedIndex, children: pages);
+
+    if (isWeb) {
+      final List<SidebarItem> sidebarItems = [
+        SidebarItem(icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Home'),
+        // if (showReportsTab) SidebarItem(icon: Icons.analytics_outlined, activeIcon: Icons.analytics, label: 'Reports'),
+        if (isAdmin) SidebarItem(icon: Icons.people_outline, activeIcon: Icons.people, label: 'Users'),
+        SidebarItem(icon: Icons.menu, activeIcon: Icons.menu_open, label: 'More'),
+      ];
+
+      return Scaffold(
+        body: Row(
+          children: [
+            ResponsiveSidebar(
+              selectedIndex: _selectedIndex,
+              onItemSelected: (index) => setState(() => _selectedIndex = index),
+              isFixed: _isSidebarFixed,
+              onToggleFixed: () => setState(() => _isSidebarFixed = !_isSidebarFixed),
+              items: sidebarItems,
+            ),
+            Expanded(child: bodyContent),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
-      body: IndexedStack(index: _selectedIndex, children: pages),
+      body: bodyContent,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
@@ -359,98 +389,136 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Selected Kitchen",
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade500,
-                        letterSpacing: 0.5,
-                      ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "Selected Kitchen",
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade500,
+                      letterSpacing: 0.5,
                     ),
-                    const SizedBox(height: 2),
-                    if (isSingleKitchen)
-                      Text(
-                        authProv.assignedKitchens.isNotEmpty
-                            ? authProv.assignedKitchens.first['name'] ??
-                                  'Unknown Kitchen'
-                            : 'No Kitchens',
-                        style: GoogleFonts.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: navy,
-                          letterSpacing: -0.2,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      )
-                    else
-                      Container(
-                        height: 32,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            borderRadius: const BorderRadius.all(
-                              Radius.circular(12),
-                            ),
-                            value: validDropdownValue,
-                            isDense: true,
-                            icon: const Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              color: navy,
-                              size: 20,
-                            ),
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: navy,
-                            ),
-                            items: authProv.assignedKitchens
-                                .map(
-                                  (k) => DropdownMenuItem(
-                                    value: k['id'].toString(),
-                                    child: Text(
-                                      k['name'] ?? 'Unknown',
-                                      style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w700,
-                                      ),
+                  ),
+                  const SizedBox(height: 2),
+                  if (isSingleKitchen)
+                    Text(
+                      authProv.assignedKitchens.isNotEmpty
+                          ? authProv.assignedKitchens.first['name'] ??
+                                'Unknown Kitchen'
+                          : 'No Kitchens',
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: navy,
+                        letterSpacing: -0.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    )
+                  else
+                    Container(
+                      height: 32,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          borderRadius: const BorderRadius.all(
+                            Radius.circular(12),
+                          ),
+                          value: validDropdownValue,
+                          isDense: true,
+                          icon: const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: navy,
+                            size: 20,
+                          ),
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: navy,
+                          ),
+                          items: authProv.assignedKitchens
+                              .map(
+                                (k) => DropdownMenuItem(
+                                  value: k['id'].toString(),
+                                  child: Text(
+                                    k['name'] ?? 'Unknown',
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                )
-                                .toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                ticketProvider.setFilters(kitchenId: val);
-                                _fetchKitchenZones();
-                              }
-                            },
-                          ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              ticketProvider.setFilters(kitchenId: val);
+                              _fetchKitchenZones();
+                            }
+                          },
                         ),
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
+              if (isWeb) ...[
+                const SizedBox(width: 24),
+                Expanded(
+                  flex: 5,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: Row(
+                      children: [
+                        Expanded(child: _buildStatCard("Total", ticketProvider.total, Colors.blueGrey, 'ALL', ticketProvider)),
+                        const SizedBox(width: 6),
+                        Expanded(child: _buildStatCard("To Do", ticketProvider.toDo, Colors.redAccent, 'TO DO', ticketProvider)),
+                        const SizedBox(width: 6),
+                        Expanded(child: _buildStatCard("WIP", ticketProvider.inProgress, Colors.orange, 'IN PROGRESS', ticketProvider)),
+                        const SizedBox(width: 6),
+                        Expanded(child: _buildStatCard("Done", ticketProvider.completed, Colors.green, 'COMPLETED', ticketProvider)),
+                        const SizedBox(width: 6),
+                        Expanded(child: _buildStatCard("Verified", ticketProvider.verified, Colors.teal, 'VERIFIED', ticketProvider)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  flex: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: _buildSearchBarAndFilter(context, ticketProvider, authProv, hasActiveFilters),
+                  ),
+                ),
+              ]
             ],
           ),
+          actions: isWeb ? const [SizedBox(width: 16)] : null,
         ),
         body: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1200),
+            constraints: BoxConstraints(maxWidth: isWeb ? double.infinity : 1200),
             child: RefreshIndicator(
               color: golden,
               backgroundColor: Colors.white,
               onRefresh: () => ticketProvider.refreshTickets(),
-          child: CustomScrollView(
+          child: isWeb ? Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: WebTicketTable(
+              tickets: ticketProvider.tickets,
+              isLoading: ticketProvider.isLoading,
+              onLoadMore: ticketProvider.tickets.length < ticketProvider.currentFilterTotal 
+                  ? () => ticketProvider.fetchMoreTickets() 
+                  : null,
+            ),
+          ) : CustomScrollView(
             controller: _scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
@@ -786,28 +854,19 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                      if (index == ticketProvider.tickets.length) {
-                        return const Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Center(
-                            child: CircularProgressIndicator(color: golden),
-                          ),
-                        );
-                      }
                       final ticket = ticketProvider.tickets[index];
                       return isWeb ? WebTicketCard(ticket: ticket) : TicketCard(ticket: ticket);
                     },
-                    childCount: ticketProvider.tickets.length + (ticketProvider.isLoading ? 1 : 0),
+                    childCount: ticketProvider.tickets.length,
                   ),
                 ),
               ),
-              if (ticketProvider.tickets.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 80, top: 16),
-                    child: _buildPagination(ticketProvider),
-                  ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 80, top: 16),
+                  child: _buildPagination(ticketProvider),
                 ),
+              ),
             ],
           ),
           ),
@@ -834,7 +893,338 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
     );
   }
 
-    Widget _buildPagination(TicketProvider ticketProvider) {
+  Widget _buildSearchBarAndFilter(BuildContext context, TicketProvider ticketProvider, AuthProvider authProv, bool hasActiveFilters) {
+    final bool isWeb = MediaQuery.of(context).size.width > 800;
+    
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: isWeb 
+            ? TextField(
+                controller: _searchController,
+                focusNode: _searchFocusNode,
+                onChanged: (value) => ticketProvider.setSearchQuery(value),
+                onSubmitted: (value) => ticketProvider.setSearchQuery(value),
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  color: navy,
+                ),
+                decoration: InputDecoration(
+                  hintText: "Search title or ticket #...",
+                  hintStyle: GoogleFonts.inter(
+                    color: Colors.grey.shade400,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: Colors.grey,
+                  ),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(
+                            Icons.clear,
+                            color: Colors.grey,
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            ticketProvider.setSearchQuery('');
+                            _searchFocusNode.unfocus();
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: golden,
+                      width: 2,
+                    ),
+                  ),
+                ),
+              )
+            : RawAutocomplete<Map<String, dynamic>>(
+              textEditingController: _searchController,
+              focusNode: _searchFocusNode,
+              optionsBuilder:
+                  (TextEditingValue textEditingValue) {
+                    if (textEditingValue.text.isEmpty) {
+                      return const Iterable<
+                        Map<String, dynamic>
+                      >.empty();
+                    }
+                    final query = textEditingValue.text
+                        .toLowerCase();
+                    return ticketProvider.tickets.where((
+                      ticket,
+                    ) {
+                      final title =
+                          (ticket['title'] ?? '')
+                              .toLowerCase();
+                      final no =
+                          (ticket['ticket_no'] ?? '')
+                              .toLowerCase();
+                      return title.contains(query) ||
+                          no.contains(query);
+                    });
+                  },
+              displayStringForOption: (option) =>
+                  option['ticket_no'] ?? '',
+              onSelected: (selection) {
+                _searchController.clear();
+                _searchFocusNode.unfocus();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => TicketDetailScreen(
+                      ticket: selection,
+                    ),
+                  ),
+                );
+              },
+              fieldViewBuilder:
+                  (
+                    BuildContext context,
+                    TextEditingController
+                    textEditingController,
+                    FocusNode focusNode,
+                    VoidCallback onFieldSubmitted,
+                  ) {
+                    return TextField(
+                      controller: textEditingController,
+                      focusNode: focusNode,
+                      onSubmitted: (value) {
+                        onFieldSubmitted();
+                        context
+                            .read<TicketProvider>()
+                            .setSearchQuery(value);
+                      },
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                        color: navy,
+                      ),
+                      decoration: InputDecoration(
+                        hintText:
+                            "Search title or ticket #...",
+                        hintStyle: GoogleFonts.inter(
+                          color: Colors.grey.shade400,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          color: Colors.grey,
+                        ),
+                        suffixIcon:
+                            textEditingController
+                                .text
+                                .isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(
+                                  Icons.clear,
+                                  color: Colors.grey,
+                                  size: 20,
+                                ),
+                                onPressed: () {
+                                  textEditingController
+                                      .clear();
+                                  context
+                                      .read<
+                                        TicketProvider
+                                      >()
+                                      .setSearchQuery('');
+                                  focusNode.unfocus();
+                                },
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        contentPadding:
+                            const EdgeInsets.symmetric(
+                              vertical: 14,
+                            ),
+                        border: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: golden,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+              optionsViewBuilder:
+                  (
+                    BuildContext context,
+                    AutocompleteOnSelected<
+                      Map<String, dynamic>
+                    >
+                    onSelected,
+                    Iterable<Map<String, dynamic>>
+                    options,
+                  ) {
+                    return Align(
+                      alignment: Alignment.topLeft,
+                      child: Material(
+                        elevation: 4.0,
+                        borderRadius:
+                            BorderRadius.circular(12),
+                        child: Container(
+                          width:
+                              MediaQuery.of(
+                                context,
+                              ).size.width -
+                              86,
+                          constraints:
+                              const BoxConstraints(
+                                maxHeight: 250,
+                              ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius:
+                                BorderRadius.circular(12),
+                          ),
+                          child: ListView.separated(
+                            padding: EdgeInsets.zero,
+                            shrinkWrap: true,
+                            itemCount: options.length,
+                            separatorBuilder:
+                                (context, index) =>
+                                    Divider(
+                                      height: 1,
+                                      color: Colors
+                                          .grey
+                                          .shade100,
+                                    ),
+                            itemBuilder:
+                                (
+                                  BuildContext context,
+                                  int index,
+                                ) {
+                                  final option = options
+                                      .elementAt(index);
+                                  return ListTile(
+                                    title: Text(
+                                      option['title'] ??
+                                          'No Title',
+                                      style:
+                                          GoogleFonts.inter(
+                                            fontWeight:
+                                                FontWeight
+                                                    .w600,
+                                            fontSize: 13,
+                                            color: navy,
+                                          ),
+                                      maxLines: 1,
+                                      overflow:
+                                          TextOverflow
+                                              .ellipsis,
+                                    ),
+                                    subtitle: Text(
+                                      option['ticket_no'] ??
+                                          '#---',
+                                      style:
+                                          GoogleFonts.inter(
+                                            fontSize: 11,
+                                            color: Colors
+                                                .grey
+                                                .shade500,
+                                            fontWeight:
+                                                FontWeight
+                                                    .bold,
+                                          ),
+                                    ),
+                                    trailing: const Icon(
+                                      Icons.chevron_right,
+                                      size: 18,
+                                      color: Colors.grey,
+                                    ),
+                                    onTap: () =>
+                                        onSelected(
+                                          option,
+                                        ),
+                                  );
+                                },
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+
+        // Filter Trigger
+        InkWell(
+          onTap: () {
+            _searchFocusNode.unfocus();
+            showFilterBottomSheet(
+              context: context,
+              provider: ticketProvider,
+              authProv: authProv,
+              kitchenZones: _kitchenZones,
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: hasActiveFilters
+                  ? navy
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: hasActiveFilters
+                    ? navy
+                    : Colors.transparent,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.tune,
+              color: hasActiveFilters
+                  ? Colors.white
+                  : navy,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPagination(TicketProvider ticketProvider) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -844,6 +1234,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
               ? () => ticketProvider.goToPage(ticketProvider.currentPage - 1)
               : null,
         ),
+        const SizedBox(width: 8),
         Text(
           'Page ${ticketProvider.currentPage} of ${ticketProvider.totalPages}',
           style: GoogleFonts.inter(
@@ -852,6 +1243,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
             color: navy,
           ),
         ),
+        const SizedBox(width: 8),
         IconButton(
           icon: const Icon(Icons.chevron_right),
           onPressed: ticketProvider.currentPage < ticketProvider.totalPages
