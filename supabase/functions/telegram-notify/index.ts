@@ -56,6 +56,7 @@ serve(async (req) => {
         raised_by_id,
         assigned_to_id,
         area_id,
+        telegram_message_id,
         m_kitchen (name),
         m_area (
           area_name,
@@ -166,6 +167,10 @@ serve(async (req) => {
     let tgUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
     let tgPayload: any = { chat_id: cleanChatId };
 
+    if (type === "UPDATE" && record.status === "COMPLETED" && ticketInfo.telegram_message_id) {
+      tgPayload.reply_to_message_id = parseInt(ticketInfo.telegram_message_id);
+    }
+
     if (photoUrls.length === 1) {
       // EXACTLY ONE IMAGE -> Use sendPhoto
       tgUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
@@ -202,11 +207,14 @@ serve(async (req) => {
     if (!tgResponse.ok && (tgUrl.includes("sendPhoto") || tgUrl.includes("sendMediaGroup"))) {
       console.warn("⚠️ Failed to send photo/album to Telegram. Falling back to text-only sendMessage...");
       const fallbackUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-      const fallbackPayload = {
+      const fallbackPayload: any = {
         chat_id: cleanChatId,
         text: messageText,
         parse_mode: "HTML",
       };
+      if (type === "UPDATE" && record.status === "COMPLETED" && ticketInfo.telegram_message_id) {
+        fallbackPayload.reply_to_message_id = parseInt(ticketInfo.telegram_message_id);
+      }
       tgResponse = await fetch(fallbackUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -214,10 +222,36 @@ serve(async (req) => {
       });
     }
 
-    if (!tgResponse.ok) {
-      const tgError = await tgResponse.text();
-      console.error(`❌ Telegram API Error: ${tgError}`);
-      throw new Error(`Telegram API Error: ${tgError}`);
+    let tgData;
+    try {
+      tgData = await tgResponse.json();
+    } catch (e) {
+      console.error(`❌ Telegram API Error (Invalid JSON response)`);
+      throw new Error(`Telegram API Error: Invalid JSON response`);
+    }
+
+    if (!tgData.ok) {
+      console.error(`❌ Telegram API Error: ${JSON.stringify(tgData)}`);
+      throw new Error(`Telegram API Error: ${JSON.stringify(tgData)}`);
+    }
+
+    if (type === "INSERT") {
+      let messageIdToSave = null;
+      if (Array.isArray(tgData.result)) {
+        messageIdToSave = tgData.result[0].message_id;
+      } else if (tgData.result && tgData.result.message_id) {
+        messageIdToSave = tgData.result.message_id;
+      }
+      
+      if (messageIdToSave) {
+        const { error: updateError } = await supabase
+          .from("tickets")
+          .update({ telegram_message_id: messageIdToSave.toString() })
+          .eq("id", record.id);
+        if (updateError) {
+          console.error("Failed to update telegram_message_id:", updateError);
+        }
+      }
     }
 
     return new Response(JSON.stringify({ success: true, imageCount: photoUrls.length }), {

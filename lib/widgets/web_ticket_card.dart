@@ -104,10 +104,12 @@ class WebTicketCard extends StatelessWidget {
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            Icon(Icons.business, size: 14, color: Colors.grey.shade400),
+                            Icon(Icons.access_time_rounded, size: 14, color: Colors.grey.shade400),
                             const SizedBox(width: 4),
                             Text(
-                              ticket['m_kitchen']?['name'] ?? 'General',
+                              ticket['ticket_raised_time'] != null 
+                                  ? _formatDate(ticket['ticket_raised_time']) 
+                                  : 'Unknown Time',
                               style: GoogleFonts.inter(
                                 color: Colors.grey.shade600,
                                 fontSize: 12,
@@ -195,6 +197,18 @@ class WebTicketCard extends StatelessWidget {
       case 'MEDIUM': return _PriorityData(Colors.blue.shade600, 'MEDIUM');
       case 'LOW': return _PriorityData(Colors.green.shade600, 'LOW');
       default: return _PriorityData(Colors.grey, 'NONE');
+    }
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return 'Unknown Time';
+    try {
+      final DateTime date = DateTime.parse(dateStr).toLocal();
+      final int hour12 = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
+      final String amPm = date.hour >= 12 ? 'PM' : 'AM';
+      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} $hour12:${date.minute.toString().padLeft(2, '0')} $amPm';
+    } catch (e) {
+      return 'Unknown Time';
     }
   }
 }

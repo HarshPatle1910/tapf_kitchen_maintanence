@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/auth_provider.dart';
 import '../providers/ticket_provider.dart';
 
@@ -13,7 +14,9 @@ void showFilterBottomSheet({
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
     builder: (ctx) => _FilterBottomSheetWidget(
       provider: provider,
       authProv: authProv,
@@ -37,7 +40,8 @@ class _FilterBottomSheetWidget extends StatefulWidget {
   });
 
   @override
-  State<_FilterBottomSheetWidget> createState() => _FilterBottomSheetWidgetState();
+  State<_FilterBottomSheetWidget> createState() =>
+      _FilterBottomSheetWidgetState();
 }
 
 class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
@@ -49,6 +53,7 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
   late String tempSort;
   late String tempKitchen;
   late String tempZone;
+  late String tempArea;
   late bool tempAssignedToMe;
   late bool tempRaisedByMe;
   DateTime? tempStart;
@@ -57,11 +62,19 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
   late TextEditingController zoneSearchController;
   late FocusNode zoneFocusNode;
 
+  late TextEditingController areaSearchController;
+  late FocusNode areaFocusNode;
+
+  List<Map<String, dynamic>> _zoneAreas = [];
+  bool _isLoadingAreas = false;
+
   @override
   void initState() {
     super.initState();
     zoneSearchController = TextEditingController();
     zoneFocusNode = FocusNode();
+    areaSearchController = TextEditingController();
+    areaFocusNode = FocusNode();
 
     // Initialize states from the provider
     tempPriority = widget.provider.priorityFilter;
@@ -69,14 +82,53 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
     tempSort = widget.provider.sortBy;
     tempKitchen = widget.provider.kitchenFilter;
     tempZone = widget.provider.zoneFilter;
+    tempArea = widget.provider.areaFilter;
     tempAssignedToMe = widget.provider.assignedToMeFilter;
     tempRaisedByMe = widget.provider.raisedByMeFilter;
     tempStart = widget.provider.startDate;
     tempEnd = widget.provider.endDate;
 
     if (tempZone != 'ALL') {
-      final z = widget.kitchenZones.firstWhere((z) => z['id'].toString() == tempZone, orElse: () => <String, dynamic>{});
+      final z = widget.kitchenZones.firstWhere(
+        (z) => z['id'].toString() == tempZone,
+        orElse: () => <String, dynamic>{},
+      );
       if (z.isNotEmpty) zoneSearchController.text = z['name'].toString();
+    }
+    _fetchAreasForZone(tempZone);
+  }
+
+  Future<void> _fetchAreasForZone(String zoneId) async {
+    setState(() => _isLoadingAreas = true);
+    try {
+      var query = Supabase.instance.client.from('m_area').select();
+      if (zoneId != 'ALL') {
+        query = query.eq('zone_id', zoneId);
+      } else if (widget.kitchenZones.isNotEmpty) {
+        final zoneIds = widget.kitchenZones
+            .map((z) => z['id'].toString())
+            .toList();
+        query = query.inFilter('zone_id', zoneIds);
+      }
+      final res = await query;
+      if (mounted) {
+        setState(() {
+          _zoneAreas = List<Map<String, dynamic>>.from(res);
+          if (tempArea != 'ALL') {
+            final a = _zoneAreas.firstWhere(
+              (a) => a['id'].toString() == tempArea,
+              orElse: () => <String, dynamic>{},
+            );
+            if (a.isNotEmpty)
+              areaSearchController.text =
+                  (a['area_name'] ?? a['display_name'] ?? '').toString();
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching areas: $e");
+    } finally {
+      if (mounted) setState(() => _isLoadingAreas = false);
     }
   }
 
@@ -84,12 +136,20 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
   void dispose() {
     zoneSearchController.dispose();
     zoneFocusNode.dispose();
+    areaSearchController.dispose();
+    areaFocusNode.dispose();
     super.dispose();
   }
 
   Widget buildChip(String label, bool isSelected, VoidCallback onTap) {
     return ChoiceChip(
-      label: Text(label, style: GoogleFonts.inter(fontWeight: isSelected ? FontWeight.bold : FontWeight.w500, color: isSelected ? navy : Colors.black87)),
+      label: Text(
+        label,
+        style: GoogleFonts.inter(
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+          color: isSelected ? navy : Colors.black87,
+        ),
+      ),
       selected: isSelected,
       onSelected: (_) => onTap(),
       selectedColor: golden.withValues(alpha: 0.3),
@@ -104,16 +164,18 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
     FocusScope.of(context).unfocus();
 
     widget.provider.setFilters(
-        status: tempStatus,
-        priority: tempPriority,
-        kitchenId: tempKitchen,
-        zoneId: tempZone,
-        assignedToMe: tempAssignedToMe,
-        raisedByMe: tempRaisedByMe,
-        start: tempStart,
-        end: tempEnd,
-        sort: tempSort,
-        clearDates: tempStart == null // Passes true to clear the dates dynamically
+      status: tempStatus,
+      priority: tempPriority,
+      kitchenId: tempKitchen,
+      zoneId: tempZone,
+      areaId: tempArea,
+      assignedToMe: tempAssignedToMe,
+      raisedByMe: tempRaisedByMe,
+      start: tempStart,
+      end: tempEnd,
+      sort: tempSort,
+      clearDates:
+          tempStart == null, // Passes true to clear the dates dynamically
     );
     Navigator.pop(context);
   }
@@ -123,7 +185,9 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
       tempStatus = 'ALL';
       tempPriority = 'ALL';
       tempZone = 'ALL';
+      tempArea = 'ALL';
       zoneSearchController.clear();
+      areaSearchController.clear();
       tempAssignedToMe = false;
       tempRaisedByMe = false;
       tempStart = null;
@@ -136,7 +200,8 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
   Widget build(BuildContext context) {
     String dateText = "Select Date Range";
     if (tempStart != null && tempEnd != null) {
-      dateText = "${tempStart!.day}/${tempStart!.month}/${tempStart!.year}  -  ${tempEnd!.day}/${tempEnd!.month}/${tempEnd!.year}";
+      dateText =
+          "${tempStart!.day}/${tempStart!.month}/${tempStart!.year}  -  ${tempEnd!.day}/${tempEnd!.month}/${tempEnd!.year}";
     }
 
     return GestureDetector(
@@ -149,15 +214,38 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 24), decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Sort & Filter", style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: navy)),
+                  Text(
+                    "Sort & Filter",
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: navy,
+                    ),
+                  ),
                   TextButton(
                     onPressed: _resetAllFilters,
-                    child: Text("Reset All", style: GoogleFonts.inter(color: Colors.red, fontWeight: FontWeight.bold)),
+                    child: Text(
+                      "Reset All",
+                      style: GoogleFonts.inter(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -173,23 +261,53 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
 
                       // Toggles
                       Container(
-                        decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
                         child: Column(
                           children: [
                             SwitchListTile(
-                              title: Text("My Tasks Only", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy)),
-                              subtitle: Text("Show tickets assigned to me", style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade600)),
+                              title: Text(
+                                "My Tasks Only",
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w600,
+                                  color: navy,
+                                ),
+                              ),
+                              subtitle: Text(
+                                "Show tickets assigned to me",
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
                               activeThumbColor: golden,
                               value: tempAssignedToMe,
-                              onChanged: (val) => setState(() => tempAssignedToMe = val),
+                              onChanged: (val) =>
+                                  setState(() => tempAssignedToMe = val),
                             ),
                             Divider(height: 1, color: Colors.grey.shade200),
                             SwitchListTile(
-                              title: Text("Raised By Me", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy)),
-                              subtitle: Text("Show tickets I have raised", style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade600)),
+                              title: Text(
+                                "Raised By Me",
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w600,
+                                  color: navy,
+                                ),
+                              ),
+                              subtitle: Text(
+                                "Show tickets I have raised",
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
                               activeThumbColor: golden,
                               value: tempRaisedByMe,
-                              onChanged: (val) => setState(() => tempRaisedByMe = val),
+                              onChanged: (val) =>
+                                  setState(() => tempRaisedByMe = val),
                             ),
                           ],
                         ),
@@ -198,41 +316,136 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
 
                       // Zone Filter Autocomplete
                       if (widget.kitchenZones.isNotEmpty) ...[
-                        Text("Filter by Zone", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.grey.shade600)),
+                        Text(
+                          "Filter by Zone",
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         RawAutocomplete<Map<String, dynamic>>(
-                          textEditingController: zoneSearchController, focusNode: zoneFocusNode,
+                          textEditingController: zoneSearchController,
+                          focusNode: zoneFocusNode,
                           optionsBuilder: (val) {
                             if (val.text.isEmpty) return widget.kitchenZones;
-                            return widget.kitchenZones.where((opt) => opt['display_name'].toString().toLowerCase().contains(val.text.toLowerCase()));
+                            return widget.kitchenZones.where(
+                              (opt) => opt['display_name']
+                                  .toString()
+                                  .toLowerCase()
+                                  .contains(val.text.toLowerCase()),
+                            );
                           },
-                          displayStringForOption: (opt) => opt['display_name'].toString(),
-                          onSelected: (sel) { setState(() { tempZone = sel['id'].toString(); }); zoneFocusNode.unfocus(); },
-                          fieldViewBuilder: (ctx, ctrl, fNode, onSub) => TextFormField(
-                            controller: ctrl, focusNode: fNode,
-                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: navy),
-                            decoration: InputDecoration(
-                              labelText: "Search Zone (Clear for All)", labelStyle: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
-                              prefixIcon: const Icon(Icons.layers_outlined, color: Colors.grey, size: 20),
-                              filled: true, fillColor: Colors.grey.shade50,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: golden, width: 2)),
-                              suffixIcon: ctrl.text.isNotEmpty ? IconButton(icon: const Icon(Icons.clear, size: 16, color: Colors.grey), onPressed: () { ctrl.clear(); setState(() => tempZone = 'ALL'); }) : null,
-                            ),
-                          ),
+                          displayStringForOption: (opt) =>
+                              opt['display_name'].toString(),
+                          onSelected: (sel) {
+                            setState(() {
+                              tempZone = sel['id'].toString();
+                              tempArea = 'ALL';
+                              areaSearchController.clear();
+                            });
+                            _fetchAreasForZone(tempZone);
+                            zoneFocusNode.unfocus();
+                          },
+                          fieldViewBuilder: (ctx, ctrl, fNode, onSub) =>
+                              TextFormField(
+                                controller: ctrl,
+                                focusNode: fNode,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: navy,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText: "Search Zone (Clear for All)",
+                                  labelStyle: GoogleFonts.inter(
+                                    color: Colors.grey.shade500,
+                                    fontSize: 13,
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.layers_outlined,
+                                    color: Colors.grey,
+                                    size: 20,
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 14,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: golden,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  suffixIcon: ctrl.text.isNotEmpty
+                                      ? IconButton(
+                                          icon: const Icon(
+                                            Icons.clear,
+                                            size: 16,
+                                            color: Colors.grey,
+                                          ),
+                                          onPressed: () {
+                                            ctrl.clear();
+                                            setState(() {
+                                              tempZone = 'ALL';
+                                              tempArea = 'ALL';
+                                              areaSearchController.clear();
+                                              _zoneAreas.clear();
+                                            });
+                                          },
+                                        )
+                                      : null,
+                                ),
+                              ),
                           optionsViewBuilder: (ctx, onSel, opts) => Align(
                             alignment: Alignment.topLeft,
                             child: Material(
-                              elevation: 4.0, borderRadius: BorderRadius.circular(12),
+                              elevation: 4.0,
+                              borderRadius: BorderRadius.circular(12),
                               child: Container(
-                                constraints: BoxConstraints(maxHeight: 200, maxWidth: MediaQuery.of(context).size.width - 48),
-                                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                                constraints: BoxConstraints(
+                                  maxHeight: 200,
+                                  maxWidth:
+                                      MediaQuery.of(context).size.width - 48,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                                 child: ListView.separated(
-                                  padding: EdgeInsets.zero, shrinkWrap: true, itemCount: opts.length,
-                                  separatorBuilder: (_, _) => Divider(height: 1, color: Colors.grey.shade200),
-                                  itemBuilder: (ctx, idx) => ListTile(title: Text(opts.elementAt(idx)['display_name'], style: GoogleFonts.inter(fontSize: 13, color: navy, fontWeight: FontWeight.w500)), onTap: () => onSel(opts.elementAt(idx))),
+                                  padding: EdgeInsets.zero,
+                                  shrinkWrap: true,
+                                  itemCount: opts.length,
+                                  separatorBuilder: (_, _) => Divider(
+                                    height: 1,
+                                    color: Colors.grey.shade200,
+                                  ),
+                                  itemBuilder: (ctx, idx) => ListTile(
+                                    title: Text(
+                                      opts.elementAt(idx)['display_name'],
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        color: navy,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    onTap: () => onSel(opts.elementAt(idx)),
+                                  ),
                                 ),
                               ),
                             ),
@@ -241,58 +454,290 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
                         const SizedBox(height: 24),
                       ],
 
-                      Text("Sort By", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.grey.shade600)),
+                      Text(
+                        "Filter by Area",
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (_isLoadingAreas)
+                        const Center(child: CircularProgressIndicator())
+                      else
+                        RawAutocomplete<Map<String, dynamic>>(
+                          textEditingController: areaSearchController,
+                          focusNode: areaFocusNode,
+                          optionsBuilder: (val) {
+                            if (val.text.isEmpty) return _zoneAreas;
+                            return _zoneAreas.where(
+                              (opt) =>
+                                  (opt['area_name'] ??
+                                          opt['display_name'] ??
+                                          '')
+                                      .toString()
+                                      .toLowerCase()
+                                      .contains(val.text.toLowerCase()),
+                            );
+                          },
+                          displayStringForOption: (opt) =>
+                              (opt['area_name'] ?? opt['display_name'] ?? '')
+                                  .toString(),
+                          onSelected: (sel) {
+                            setState(() {
+                              tempArea = sel['id'].toString();
+                            });
+                            areaFocusNode.unfocus();
+                          },
+                          fieldViewBuilder: (ctx, ctrl, fNode, onSub) =>
+                              TextFormField(
+                                controller: ctrl,
+                                focusNode: fNode,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: navy,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText: "Search Area (Clear for All)",
+                                  labelStyle: GoogleFonts.inter(
+                                    color: Colors.grey.shade500,
+                                    fontSize: 13,
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.place_outlined,
+                                    color: Colors.grey,
+                                    size: 20,
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 14,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: golden,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  suffixIcon: ctrl.text.isNotEmpty
+                                      ? IconButton(
+                                          icon: const Icon(
+                                            Icons.clear,
+                                            size: 16,
+                                            color: Colors.grey,
+                                          ),
+                                          onPressed: () {
+                                            ctrl.clear();
+                                            setState(() => tempArea = 'ALL');
+                                          },
+                                        )
+                                      : null,
+                                ),
+                              ),
+                          optionsViewBuilder: (ctx, onSel, opts) => Align(
+                            alignment: Alignment.topLeft,
+                            child: Material(
+                              elevation: 4.0,
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                constraints: BoxConstraints(
+                                  maxHeight: 200,
+                                  maxWidth:
+                                      MediaQuery.of(context).size.width - 48,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: ListView.separated(
+                                  padding: EdgeInsets.zero,
+                                  shrinkWrap: true,
+                                  itemCount: opts.length,
+                                  separatorBuilder: (_, _) => Divider(
+                                    height: 1,
+                                    color: Colors.grey.shade200,
+                                  ),
+                                  itemBuilder: (ctx, idx) => ListTile(
+                                    title: Text(
+                                      (opts.elementAt(idx)['area_name'] ??
+                                              opts.elementAt(
+                                                idx,
+                                              )['display_name'] ??
+                                              '')
+                                          .toString(),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        color: navy,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    onTap: () => onSel(opts.elementAt(idx)),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 24),
+
+                      Text(
+                        "Sort By",
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       Wrap(
-                        spacing: 8, runSpacing: 8,
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
-                          buildChip("Newest First", tempSort == 'DATE_DESC', () => setState(() => tempSort = 'DATE_DESC')),
-                          buildChip("Oldest First", tempSort == 'DATE_ASC', () => setState(() => tempSort = 'DATE_ASC')),
-                          buildChip("Highest Priority", tempSort == 'PRIORITY_DESC', () => setState(() => tempSort = 'PRIORITY_DESC')),
+                          buildChip(
+                            "Newest First",
+                            tempSort == 'DATE_DESC',
+                            () => setState(() => tempSort = 'DATE_DESC'),
+                          ),
+                          buildChip(
+                            "Oldest First",
+                            tempSort == 'DATE_ASC',
+                            () => setState(() => tempSort = 'DATE_ASC'),
+                          ),
+                          buildChip(
+                            "Highest Priority",
+                            tempSort == 'PRIORITY_DESC',
+                            () => setState(() => tempSort = 'PRIORITY_DESC'),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 24),
 
-                      Text("Date Raised", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.grey.shade600)),
+                      Text(
+                        "Date Raised",
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       InkWell(
                         onTap: () async {
-                          FocusScope.of(context).unfocus(); // Ensure inputs lose focus before picker opens
-                          final DateTimeRange? picked = await showDateRangePicker(
-                            context: context, firstDate: DateTime(2020), lastDate: DateTime.now().add(const Duration(days: 1)),
-                            initialDateRange: tempStart != null && tempEnd != null ? DateTimeRange(start: tempStart!, end: tempEnd!) : null,
-                            builder: (context, child) => Theme(data: ThemeData.light().copyWith(colorScheme: const ColorScheme.light(primary: navy, onPrimary: Colors.white, onSurface: navy)), child: child!),
-                          );
+                          FocusScope.of(
+                            context,
+                          ).unfocus(); // Ensure inputs lose focus before picker opens
+                          final DateTimeRange? picked =
+                              await showDateRangePicker(
+                                context: context,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime.now().add(
+                                  const Duration(days: 1),
+                                ),
+                                initialDateRange:
+                                    tempStart != null && tempEnd != null
+                                    ? DateTimeRange(
+                                        start: tempStart!,
+                                        end: tempEnd!,
+                                      )
+                                    : null,
+                                builder: (context, child) => Theme(
+                                  data: ThemeData.light().copyWith(
+                                    colorScheme: const ColorScheme.light(
+                                      primary: navy,
+                                      onPrimary: Colors.white,
+                                      onSurface: navy,
+                                    ),
+                                  ),
+                                  child: child!,
+                                ),
+                              );
                           if (picked != null) {
-                            setState(() { tempStart = picked.start; tempEnd = picked.end; });
+                            setState(() {
+                              tempStart = picked.start;
+                              tempEnd = picked.end;
+                            });
                           }
                         },
                         borderRadius: BorderRadius.circular(10),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(10), color: Colors.grey.shade50),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(10),
+                            color: Colors.grey.shade50,
+                          ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(dateText, style: GoogleFonts.inter(color: tempStart == null ? Colors.grey.shade500 : navy, fontWeight: FontWeight.w600)),
+                              Text(
+                                dateText,
+                                style: GoogleFonts.inter(
+                                  color: tempStart == null
+                                      ? Colors.grey.shade500
+                                      : navy,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                               if (tempStart != null)
                                 GestureDetector(
-                                  onTap: () => setState(() { tempStart = null; tempEnd = null; }),
-                                  child: const Icon(Icons.close, size: 20, color: Colors.grey),
+                                  onTap: () => setState(() {
+                                    tempStart = null;
+                                    tempEnd = null;
+                                  }),
+                                  child: const Icon(
+                                    Icons.close,
+                                    size: 20,
+                                    color: Colors.grey,
+                                  ),
                                 )
                               else
-                                const Icon(Icons.calendar_today, size: 18, color: navy),
+                                const Icon(
+                                  Icons.calendar_today,
+                                  size: 18,
+                                  color: navy,
+                                ),
                             ],
                           ),
                         ),
                       ),
                       const SizedBox(height: 24),
 
-                      Text("Priority", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.grey.shade600)),
+                      Text(
+                        "Priority",
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       Wrap(
-                        spacing: 8, runSpacing: 8,
-                        children: ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((prio) => buildChip(prio, tempPriority == prio, () => setState(() => tempPriority = prio))).toList(),
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
+                            .map(
+                              (prio) => buildChip(
+                                prio,
+                                tempPriority == prio,
+                                () => setState(() => tempPriority = prio),
+                              ),
+                            )
+                            .toList(),
                       ),
                       const SizedBox(height: 24),
                     ],
@@ -301,13 +746,31 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
               ),
 
               Padding(
-                padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 24, top: 16),
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).padding.bottom + 24,
+                  top: 16,
+                ),
                 child: SizedBox(
-                  width: double.infinity, height: 54,
+                  width: double.infinity,
+                  height: 54,
                   child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: navy, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: navy,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                    ),
                     onPressed: _applyFilters,
-                    child: Text("APPLY FILTERS", style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 0.5)),
+                    child: Text(
+                      "APPLY FILTERS",
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                   ),
                 ),
               ),

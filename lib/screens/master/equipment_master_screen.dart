@@ -118,14 +118,15 @@ class _EquipmentMasterScreenState extends State<EquipmentMasterScreen> {
     _searchFocusNode.unfocus();
   }
 
-  Future<void> _showAddEquipmentDialog() async {
-    // Launch proper Stateful Widget Bottom Sheet
-    final result = await showModalBottomSheet(
+  Future<void> _showAddEquipmentDialog({Map<String, dynamic>? existingEquipment}) async {
+    final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => _EquipmentFormBottomSheet(allAreas: _allAreas),
+      builder: (context) {
+        return _EquipmentFormBottomSheet(allAreas: _allAreas, existingEquipment: existingEquipment);
+      },
     );
 
     if (result == true) {
@@ -226,7 +227,7 @@ class _EquipmentMasterScreenState extends State<EquipmentMasterScreen> {
                   itemCount: _equipment.length,
                   itemBuilder: (context, index) {
                     final item = _equipment[index];
-                    return _EquipmentCard(item: item, onDelete: () => _deleteEquipment(item['id']));
+                    return _EquipmentCard(item: item, onEdit: () => _showAddEquipmentDialog(existingEquipment: item));
                   },
                 ),
               ),
@@ -252,8 +253,9 @@ class _EquipmentMasterScreenState extends State<EquipmentMasterScreen> {
 // =====================================================================
 class _EquipmentFormBottomSheet extends StatefulWidget {
   final List<Map<String, dynamic>> allAreas;
+  final Map<String, dynamic>? existingEquipment;
 
-  const _EquipmentFormBottomSheet({required this.allAreas});
+  const _EquipmentFormBottomSheet({required this.allAreas, this.existingEquipment});
 
   @override
   State<_EquipmentFormBottomSheet> createState() => _EquipmentFormBottomSheetState();
@@ -280,11 +282,21 @@ class _EquipmentFormBottomSheetState extends State<_EquipmentFormBottomSheet> {
   @override
   void initState() {
     super.initState();
-    nameCtrl = TextEditingController();
-    codeCtrl = TextEditingController();
-    modelCtrl = TextEditingController();
-    remarksCtrl = TextEditingController();
-    areaCtrl = TextEditingController();
+    final eq = widget.existingEquipment;
+    nameCtrl = TextEditingController(text: eq?['name']);
+    codeCtrl = TextEditingController(text: eq?['equipment_code']);
+    modelCtrl = TextEditingController(text: eq?['model']);
+    remarksCtrl = TextEditingController(text: eq?['remarks']);
+    selectedAreaId = eq?['area_id']?.toString();
+    
+    if (eq != null && eq['m_area'] != null) {
+      areaCtrl = TextEditingController(text: eq['m_area']['area_name']);
+    } else {
+      areaCtrl = TextEditingController();
+    }
+    if (eq != null && eq['date_of_commision'] != null) {
+      commissionedDate = DateTime.tryParse(eq['date_of_commision']);
+    }
     areaFocusNode = FocusNode();
   }
 
@@ -320,14 +332,19 @@ class _EquipmentFormBottomSheetState extends State<_EquipmentFormBottomSheet> {
     setState(() => isSaving = true);
 
     try {
-      await _supabase.from('m_equipment').insert({
+      final data = {
         'name': nameCtrl.text,
         'area_id': selectedAreaId,
         'equipment_code': codeCtrl.text.trim().isEmpty ? null : codeCtrl.text.trim(),
         'model': modelCtrl.text.trim().isEmpty ? null : modelCtrl.text.trim(),
         'date_of_commision': commissionedDate?.toIso8601String().split('T')[0],
         'remarks': remarksCtrl.text.trim().isEmpty ? null : remarksCtrl.text.trim(),
-      });
+      };
+      if (widget.existingEquipment != null) {
+        await _supabase.from('m_equipment').update(data).eq('id', widget.existingEquipment!['id']);
+      } else {
+        await _supabase.from('m_equipment').insert(data);
+      }
 
       if (mounted) {
         navigator.pop(true);
@@ -369,7 +386,7 @@ class _EquipmentFormBottomSheetState extends State<_EquipmentFormBottomSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 24), decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
-                Text("Register Equipment", style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: navy)),
+                Text(widget.existingEquipment != null ? "Edit Equipment" : "Register Equipment", style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: navy)),
                 const SizedBox(height: 24),
 
                 _buildInputField(
@@ -539,10 +556,10 @@ class _EquipmentFormBottomSheetState extends State<_EquipmentFormBottomSheet> {
 // =====================================================================
 class _EquipmentCard extends StatelessWidget {
   final Map<String, dynamic> item;
-  final VoidCallback onDelete;
+  final VoidCallback onEdit;
   static const Color navy = Color(0xFF26538D);
 
-  const _EquipmentCard({required this.item, required this.onDelete});
+  const _EquipmentCard({required this.item, required this.onEdit});
 
   @override
   Widget build(BuildContext context) {
@@ -605,27 +622,10 @@ class _EquipmentCard extends StatelessWidget {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton.icon(
-                      style: TextButton.styleFrom(foregroundColor: Colors.red.shade600),
-                      icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                      label: Text("Remove Equipment", style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            title: Text("Confirm Removal", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: navy)),
-                            content: Text("Are you sure you want to remove '${item['name']}' from the registry?", style: GoogleFonts.inter(color: Colors.grey.shade700, height: 1.5)),
-                            actions: [
-                              TextButton(onPressed: () => Navigator.pop(ctx), child: Text("Cancel", style: GoogleFonts.inter(color: Colors.grey, fontWeight: FontWeight.bold))),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade600, foregroundColor: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                                onPressed: () { Navigator.pop(ctx); onDelete(); },
-                                child: Text("Remove", style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                      style: TextButton.styleFrom(foregroundColor: navy),
+                      icon: const Icon(Icons.edit_outlined, size: 20),
+                      label: Text("Edit Equipment", style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                      onPressed: onEdit,
                     ),
                   ),
                 ],

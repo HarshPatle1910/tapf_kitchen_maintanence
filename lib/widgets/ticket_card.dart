@@ -90,20 +90,22 @@ class TicketCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  Row(
-                    children: [
-                      Icon(Icons.kitchen, size: 14, color: Colors.grey.shade400),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          ticket['m_kitchen']?['name'] ?? 'General',
-                          style: GoogleFonts.inter(
-                            color: Colors.grey.shade600,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
+                    Row(
+                      children: [
+                        Icon(Icons.access_time_rounded, size: 14, color: Colors.grey.shade400),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            ticket['ticket_raised_time'] != null 
+                                ? _formatDate(ticket['ticket_raised_time']) 
+                                : 'Unknown Time',
+                            style: GoogleFonts.inter(
+                              color: Colors.grey.shade600,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
-                      ),
                       const SizedBox(width: 8),
                       Text(
                         "•  ${ticket['status']}",
@@ -156,6 +158,18 @@ class TicketCard extends StatelessWidget {
       case 'MEDIUM': return _PriorityData(Colors.blue.shade600, 'MEDIUM');
       case 'LOW': return _PriorityData(Colors.green.shade600, 'LOW');
       default: return _PriorityData(Colors.grey, 'NONE');
+    }
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return 'Unknown Time';
+    try {
+      final DateTime date = DateTime.parse(dateStr).toLocal();
+      final int hour12 = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
+      final String amPm = date.hour >= 12 ? 'PM' : 'AM';
+      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} $hour12:${date.minute.toString().padLeft(2, '0')} $amPm';
+    } catch (e) {
+      return 'Unknown Time';
     }
   }
 }

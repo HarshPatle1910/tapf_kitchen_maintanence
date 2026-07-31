@@ -1,0 +1,7 @@
+-- SQL to add new columns for Task 3 and Task 12
+ALTER TABLE tickets 
+ADD COLUMN IF NOT EXISTS admin_verified BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS raiser_verified BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS admin_verified_at TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS raiser_verified_at TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS telegram_message_id TEXT;

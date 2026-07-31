@@ -35,9 +35,11 @@ class TicketTimeline extends StatelessWidget {
   Widget build(BuildContext context) {
     final startTime = ticket['repair_start_time'];
     final compTime = ticket['ticket_completion_time'];
+    final adminVerifiedTime = ticket['admin_verified_at'];
+    final raiserVerifiedTime = ticket['raiser_verified_at'];
     final verifierId = ticket['verified_by_id'];
 
-    if (startTime == null && compTime == null && verifierId == null) return const SizedBox.shrink();
+    if (startTime == null && compTime == null && adminVerifiedTime == null && raiserVerifiedTime == null && verifierId == null) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -52,9 +54,21 @@ class TicketTimeline extends StatelessWidget {
           if (startTime != null && compTime != null) const SizedBox(height: 8),
 
           if (compTime != null) _buildTimeRow("Work Completed", compTime, Icons.check_circle, Colors.green),
-          if (compTime != null && verifierId != null) const SizedBox(height: 8),
+          
+          if (adminVerifiedTime != null) ...[
+            if (compTime != null) const SizedBox(height: 8),
+            _buildTimeRow("Admin Verified", adminVerifiedTime, Icons.admin_panel_settings, Colors.orange),
+          ],
+          
+          if (raiserVerifiedTime != null) ...[
+            if (compTime != null || adminVerifiedTime != null) const SizedBox(height: 8),
+            _buildTimeRow("Raiser Verified", raiserVerifiedTime, Icons.person, Colors.purple),
+          ],
 
-          if (verifierId != null) _buildTimeRow("Verified & Closed", ticket['updated_at'], Icons.verified, Colors.teal),
+          if (verifierId != null) ...[
+            if (compTime != null || adminVerifiedTime != null || raiserVerifiedTime != null) const SizedBox(height: 8),
+            _buildTimeRow("Verified & Closed", ticket['updated_at'], Icons.verified, Colors.teal),
+          ],
         ],
       ),
     );

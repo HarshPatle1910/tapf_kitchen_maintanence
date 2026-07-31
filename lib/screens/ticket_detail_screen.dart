@@ -41,6 +41,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   final _titleController = TextEditingController();
   final _causeController = TextEditingController();
   final _actionTakenController = TextEditingController();
+  final _customEquipmentController = TextEditingController();
+  bool _isCustomEquipment = false;
 
   // Spares and Tools remain autocomplete because they have hundreds of items
   final _spareSearchController = TextEditingController();
@@ -156,6 +158,15 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     _actionTakenController.text = _localTicket!['action_taken'] ?? '';
     _priority = _localTicket!['priority'] ?? 'MEDIUM';
     _category = _localTicket!['category'] ?? 'In Breakdown Condition';
+
+    if (_localTicket!['custom_equipment'] != null &&
+        _localTicket!['custom_equipment'].toString().isNotEmpty) {
+      _customEquipmentController.text = _localTicket!['custom_equipment'];
+      _isCustomEquipment = true;
+      _selectedEquipments = [
+        {'id': 'others', 'display_name': 'Others (Manual Entry)'},
+      ];
+    }
     _selectedAreaId = _localTicket!['area_id']?.toString();
     _selectedWorker = _localTicket!['assigned_to_id']?.toString();
 
@@ -183,15 +194,19 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     super.dispose();
   }
 
-  Future<void> _triggerNotification({
+  Future<String?> _triggerNotification({
     required String action,
     required String ticketId,
     required String ticketNo,
     required String kitchenId,
     String? assignedToId,
     String? raisedById,
+    String? telegramMessageId,
   }) async {
     try {
+      // Delay to ensure any just-uploaded images (ticket_media) are visible to the backend
+      await Future.delayed(const Duration(milliseconds: 3000));
+
       final url = Uri.parse(
         '${ApiConstants.pythonApiBaseUrl}/notifications/trigger',
       );
@@ -207,12 +222,29 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           "kitchen_id": kitchenId,
           "assigned_to_id": assignedToId,
           "raised_by_id": raisedById ?? _supabase.auth.currentUser?.id,
+          if (telegramMessageId != null)
+            "telegram_message_id": telegramMessageId,
         }),
       );
-      debugPrint("Notification API [$action] Response (${response.statusCode}): ${response.body}");
+      debugPrint(
+        "Notification API [$action] Response (${response.statusCode}): ${response.body}",
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        try {
+          final data = jsonDecode(response.body);
+          if (data['telegram_message_id'] != null)
+            return data['telegram_message_id'].toString();
+          if (data['message_id'] != null) return data['message_id'].toString();
+          if (data['data'] != null && data['data']['message_id'] != null)
+            return data['data']['message_id'].toString();
+          if (data['result'] != null && data['result']['message_id'] != null)
+            return data['result']['message_id'].toString();
+        } catch (_) {}
+      }
     } catch (e) {
       debugPrint("Failed to trigger notification API: $e");
     }
+    return null;
   }
 
   String _formatToCamelCase(String text) {
@@ -949,6 +981,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
       Map<String, dynamic> insertData = {
         'title': _titleController.text,
+        'custom_equipment': _isCustomEquipment
+            ? _customEquipmentController.text.trim()
+            : null,
         'priority': _priority,
         'category': _category,
         'area_id': _selectedAreaId,
@@ -963,19 +998,23 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           .select()
           .single();
 
-      final equipmentInserts = _selectedEquipments.map((eq) {
-        if (eq['is_testing'] == true) {
-          return {
-            'ticket_id': newTicket['id'],
-            'testing_equipment_id': eq['id'],
-          };
-        } else {
-          return {'ticket_id': newTicket['id'], 'equipment_id': eq['id']};
-        }
-      }).toList();
+      final equipmentInserts = _selectedEquipments
+          .where((eq) => eq['id'] != 'others')
+          .map((eq) {
+            if (eq['is_testing'] == true) {
+              return {
+                'ticket_id': newTicket['id'],
+                'testing_equipment_id': eq['id'],
+              };
+            } else {
+              return {'ticket_id': newTicket['id'], 'equipment_id': eq['id']};
+            }
+          })
+          .toList();
 
-      if (equipmentInserts.isNotEmpty)
+      if (equipmentInserts.isNotEmpty) {
         await _supabase.from('ticket_equipments').insert(equipmentInserts);
+      }
 
       if (_selectedImages.isNotEmpty)
         await _uploadImages(
@@ -984,12 +1023,20 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           'RAISED',
         );
 
-      await _triggerNotification(
+      final String? returnedMessageId = await _triggerNotification(
         action: 'RAISED',
         ticketId: newTicket['id'],
         ticketNo: newTicket['ticket_no'] ?? 'NEW TICKET',
         kitchenId: exactKitchenId,
+        telegramMessageId: newTicket['telegram_message_id'],
       );
+
+      if (returnedMessageId != null) {
+        await _supabase
+            .from('tickets')
+            .update({'telegram_message_id': returnedMessageId})
+            .eq('id', newTicket['id']);
+      }
 
       if (mounted) {
         context.read<TicketProvider>().refreshTickets();
@@ -1095,13 +1142,42 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       final updates = <String, dynamic>{'updated_at': nowISO};
 
       if (nextStatus != null) {
-        updates['status'] = nextStatus;
-        if (nextStatus == 'IN_PROGRESS')
-          updates['repair_start_time'] = nowISO;
-        else if (nextStatus == 'COMPLETED') {
-          updates['ticket_completion_time'] = nowISO;
-        } else if (nextStatus == 'VERIFIED')
-          updates['verified_by_id'] = _supabase.auth.currentUser?.id;
+        if (nextStatus == 'VERIFIED') {
+          bool isRaiser =
+              _localTicket?['raised_by_id'] == _supabase.auth.currentUser?.id;
+          bool currentAdminVerified = _localTicket?['admin_verified'] ?? false;
+          bool currentRaiserVerified =
+              _localTicket?['raiser_verified'] ?? false;
+
+          if (isAdmin && !isRaiser) {
+            updates['admin_verified'] = true;
+            updates['admin_verified_at'] = nowISO;
+            currentAdminVerified = true;
+          } else if (isRaiser && !isAdmin) {
+            updates['raiser_verified'] = true;
+            updates['raiser_verified_at'] = nowISO;
+            currentRaiserVerified = true;
+          } else if (isAdmin && isRaiser) {
+            updates['admin_verified'] = true;
+            updates['admin_verified_at'] = nowISO;
+            updates['raiser_verified'] = true;
+            updates['raiser_verified_at'] = nowISO;
+            currentAdminVerified = true;
+            currentRaiserVerified = true;
+          }
+
+          if (currentAdminVerified && currentRaiserVerified) {
+            updates['status'] = nextStatus;
+            updates['verified_by_id'] = _supabase.auth.currentUser?.id;
+          }
+        } else {
+          updates['status'] = nextStatus;
+          if (nextStatus == 'IN_PROGRESS')
+            updates['repair_start_time'] = nowISO;
+          else if (nextStatus == 'COMPLETED') {
+            updates['ticket_completion_time'] = nowISO;
+          }
+        }
       }
 
       final isAssignedWorker =
@@ -1116,6 +1192,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
       if (isAdmin && !isTicketClosed) {
         updates['title'] = _titleController.text;
+        updates['custom_equipment'] = _isCustomEquipment
+            ? _customEquipmentController.text.trim()
+            : null;
         updates['priority'] = _priority;
         updates['category'] = _category;
         updates['area_id'] = _selectedAreaId;
@@ -1134,8 +1213,12 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
             .from('ticket_equipments')
             .delete()
             .eq('ticket_id', _localTicket!['id']);
-        if (_selectedEquipments.isNotEmpty) {
-          final newMappings = _selectedEquipments.map((eq) {
+
+        final validEquipments = _selectedEquipments
+            .where((eq) => eq['id'] != 'others')
+            .toList();
+        if (validEquipments.isNotEmpty) {
+          final newMappings = validEquipments.map((eq) {
             if (eq['is_testing'] == true) {
               return {
                 'ticket_id': _localTicket!['id'],
@@ -1197,16 +1280,21 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           .from('tickets')
           .update(updates)
           .eq('id', _localTicket!['id']);
-      if (nextStatus == 'COMPLETED' && _selectedImages.isNotEmpty)
+      final String? effectiveStatus =
+          nextStatus ?? updates['status']?.toString() ?? currentStatus;
+
+      if (effectiveStatus == 'COMPLETED' && _selectedImages.isNotEmpty) {
         await _uploadImages(
           _localTicket!['id'],
           _localTicket!['ticket_no'] ?? 'UNKNOWN',
           'COMPLETED',
         );
+      }
 
-      final String? effectiveStatus = nextStatus ?? updates['status']?.toString();
-      final String? previousWorker = _localTicket!['assigned_to_id']?.toString();
-      final bool isAssignedEvent = _selectedWorker != null &&
+      final String? previousWorker = _localTicket!['assigned_to_id']
+          ?.toString();
+      final bool isAssignedEvent =
+          _selectedWorker != null &&
           (_selectedWorker != previousWorker || effectiveStatus == 'ASSIGNED');
 
       if (isAssignedEvent) {
@@ -1217,6 +1305,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           kitchenId: _localTicket!['kitchen_id'],
           assignedToId: _selectedWorker,
           raisedById: _localTicket!['raised_by_id'],
+          telegramMessageId: _localTicket!['telegram_message_id'],
         );
       }
 
@@ -1227,6 +1316,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           ticketNo: _localTicket!['ticket_no'] ?? 'UNKNOWN',
           kitchenId: _localTicket!['kitchen_id'],
           raisedById: _localTicket!['raised_by_id'],
+          telegramMessageId: _localTicket!['telegram_message_id'],
         );
       }
 
@@ -1706,69 +1796,85 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         return null;
       }
     } else if (currentStatus == 'COMPLETED') {
-      if (isAdmin) {
+      bool isRaiser =
+          _localTicket?['raised_by_id'] == _supabase.auth.currentUser?.id;
+      bool currentAdminVerified = _localTicket?['admin_verified'] ?? false;
+      bool currentRaiserVerified = _localTicket?['raiser_verified'] ?? false;
+
+      bool canAdminVerify = isAdmin && !currentAdminVerified;
+      bool canRaiserVerify = isRaiser && !currentRaiserVerified;
+
+      if (canAdminVerify || canRaiserVerify || isAdmin || isAssignedWorker) {
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 54,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueGrey,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                if (isAdmin || isAssignedWorker)
+                  Expanded(
+                    child: SizedBox(
+                      height: 54,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueGrey,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 0,
                         ),
-                        elevation: 0,
-                      ),
-                      onPressed: _isLoading
-                          ? null
-                          : () => _updateTicketStatus(null, isAdmin),
-                      child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : Text(
-                              "UPDATE ONLY",
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                letterSpacing: 0.5,
+                        onPressed: _isLoading
+                            ? null
+                            : () => _updateTicketStatus(null, isAdmin),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
+                            : Text(
+                                "UPDATE ONLY",
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  letterSpacing: 0.5,
+                                ),
                               ),
-                            ),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: SizedBox(
-                    height: 54,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade600,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                if ((isAdmin || isAssignedWorker) &&
+                    (canAdminVerify || canRaiserVerify))
+                  const SizedBox(width: 12),
+                if (canAdminVerify || canRaiserVerify)
+                  Expanded(
+                    child: SizedBox(
+                      height: 54,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green.shade600,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 0,
                         ),
-                        elevation: 0,
-                      ),
-                      onPressed: _isLoading
-                          ? null
-                          : () => _updateTicketStatus('VERIFIED', isAdmin),
-                      child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : Text(
-                              "VERIFY & CLOSE",
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                letterSpacing: 0.5,
+                        onPressed: _isLoading
+                            ? null
+                            : () => _updateTicketStatus('VERIFIED', isAdmin),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
+                            : Text(
+                                "VERIFY TICKET",
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  letterSpacing: 0.5,
+                                ),
                               ),
-                            ),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
@@ -1862,7 +1968,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         _selectedWorker != null && _selectedWorker == currentUserId;
 
     final canEditWorkDetails =
-        (isAssignedWorker && currentStatus == 'IN_PROGRESS') ||
+        (isAssignedWorker &&
+            (currentStatus == 'IN_PROGRESS' || currentStatus == 'COMPLETED')) ||
         (isAdmin && !isTicketClosed);
 
     final bool readOnlyFields = isTicketClosed || (isEditing && !isAdmin);
@@ -1890,9 +1997,12 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     final List<Map<String, dynamic>> availableEquipments =
         _selectedAreaId == null
         ? []
-        : _allEquipment
-              .where((e) => e['area_id']?.toString() == _selectedAreaId)
-              .toList();
+        : [
+            ..._allEquipment
+                .where((e) => e['area_id']?.toString() == _selectedAreaId)
+                .toList(),
+            {'id': 'others', 'display_name': 'Others (Manual Entry)'},
+          ];
 
     return GestureDetector(
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
@@ -1921,64 +2031,68 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 final Widget statusAndTimelineSection = Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                if (isEditing) ...[
-                  TicketStatusBanner(currentStatus: currentStatus),
-                  const SizedBox(height: 12),
+                    if (isEditing) ...[
+                      TicketStatusBanner(currentStatus: currentStatus),
+                      const SizedBox(height: 12),
 
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.access_time_rounded,
-                          color: navy,
-                          size: 20,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          "Raised On: ",
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade600,
-                            fontSize: 13,
-                          ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
                         ),
-                        Expanded(
-                          child: Text(
-                            _localTicket?['ticket_raised_time'] != null
-                                ? _formatDisplayDate(
-                                    DateTime.tryParse(
-                                      _localTicket!['ticket_raised_time'],
-                                    )?.toLocal(),
-                                  )
-                                : 'Unknown',
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.bold,
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.access_time_rounded,
                               color: navy,
-                              fontSize: 13,
+                              size: 20,
                             ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                            const SizedBox(width: 8),
+                            Text(
+                              "Raised On: ",
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade600,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                _localTicket?['ticket_raised_time'] != null
+                                    ? _formatDisplayDate(
+                                        DateTime.tryParse(
+                                          _localTicket!['ticket_raised_time'],
+                                        )?.toLocal(),
+                                      )
+                                    : 'Unknown',
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.bold,
+                                  color: navy,
+                                  fontSize: 13,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
+                      ),
+                      const SizedBox(height: 12),
 
-                  TicketTimeline(ticket: _localTicket!),
-                  const SizedBox(height: 12),
-                ] else Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text("Status & Timeline available after creation.", style: GoogleFonts.inter(color: Colors.grey.shade500)),
-                ),
+                      TicketTimeline(ticket: _localTicket!),
+                      const SizedBox(height: 12),
+                    ] else
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          "Status & Timeline available after creation.",
+                          style: GoogleFonts.inter(color: Colors.grey.shade500),
+                        ),
+                      ),
                   ],
                 );
 
@@ -1995,16 +2109,15 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (authProv.assignedKitchens.length > 1) ...[
-                        TicketFormFields.buildTextField(
-                          ctrl: TextEditingController(text: activeKitchenName),
-                          label: "Target Kitchen",
-                          icon: Icons.kitchen,
-                          isReadOnly: true,
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-
+                      // if (authProv.assignedKitchens.length > 1) ...[
+                      //   TicketFormFields.buildTextField(
+                      //     ctrl: TextEditingController(text: activeKitchenName),
+                      //     label: "Target Kitchen",
+                      //     icon: Icons.kitchen,
+                      //     isReadOnly: true,
+                      //   ),
+                      //   const SizedBox(height: 12),
+                      // ],
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -2226,21 +2339,34 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                                       );
                                       setState(() {
                                         _selectedEquipments = [eq];
+                                        _isCustomEquipment = val == 'others';
+                                        if (!_isCustomEquipment) {
+                                          _customEquipmentController.clear();
+                                        }
                                       });
                                     }
                                   },
                           );
                         },
                       ),
+                      if (_isCustomEquipment) ...[
+                        const SizedBox(height: 12),
+                        TicketFormFields.buildTextField(
+                          ctrl: _customEquipmentController,
+                          label: "Equipment Name *",
+                          icon: Icons.precision_manufacturing,
+                          isReadOnly: readOnlyFields,
+                          isRequired: true,
+                          textCapitalization: TextCapitalization.words,
+                        ),
+                      ],
                       const SizedBox(height: 12),
-                      TicketFormFields.buildTextField(
+                      TicketFormFields.buildDescriptionField(
                         ctrl: _titleController,
                         label: "Description *",
                         icon: Icons.title,
                         isReadOnly: readOnlyFields,
                         isRequired: true,
-                        maxLines: 2,
-                        textCapitalization: TextCapitalization.words,
                       ),
                       const SizedBox(height: 12),
                       // DROPDOWN REPLACEMENT FOR PRIORITY
@@ -2277,438 +2403,454 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                     if (currentStatus == 'IN_PROGRESS' ||
                         currentStatus == 'COMPLETED' ||
                         currentStatus == 'VERIFIED') ...[
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Work Details",
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
-                            color: navy,
-                          ),
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 16,
                         ),
-                        const Divider(height: 24),
-
-                        TicketFormFields.buildTextField(
-                          ctrl: _causeController,
-                          label: "Cause of Issue *",
-                          icon: Icons.report_problem_outlined,
-                          maxLines: 3,
-                          isReadOnly: !canEditWorkDetails,
-                          isRequired: canEditWorkDetails,
-                          textCapitalization: TextCapitalization.sentences,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey.shade200),
                         ),
-                        const SizedBox(height: 16),
-
-                        TicketFormFields.buildTextField(
-                          ctrl: _actionTakenController,
-                          label: "Action Taken *",
-                          icon: Icons.handyman,
-                          maxLines: 3,
-                          isReadOnly: !canEditWorkDetails,
-                          isRequired: canEditWorkDetails,
-                          textCapitalization: TextCapitalization.sentences,
-                        ),
-                        const SizedBox(height: 24),
-
-                        Text(
-                          "Tools Checked Out",
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: Colors.grey.shade800,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        if (canEditWorkDetails) ...[
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: _buildAutocomplete(
-                                  hint: "Search Required Tool",
-                                  icon: Icons.plumbing,
-                                  controller: _toolSearchController,
-                                  focusNode: _toolFocusNode,
-                                  options: _availableTools,
-                                  isDisabled: false,
-                                  onSelected: (val) {
-                                    setState(
-                                      () => _currentlySelectedToolToAdd = val,
-                                    );
-                                  },
-                                  onCleared: () {
-                                    setState(
-                                      () => _currentlySelectedToolToAdd = null,
-                                    );
-                                  },
-                                ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Work Details",
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16,
+                                color: navy,
                               ),
-                              const SizedBox(width: 8),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: navy,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: IconButton(
-                                  icon: const Icon(
-                                    Icons.add,
-                                    color: Colors.white,
+                            ),
+                            const Divider(height: 24),
+
+                            TicketFormFields.buildTextField(
+                              ctrl: _causeController,
+                              label: "Cause of Issue *",
+                              icon: Icons.report_problem_outlined,
+                              maxLines: 3,
+                              isReadOnly: !canEditWorkDetails,
+                              isRequired: canEditWorkDetails,
+                              textCapitalization: TextCapitalization.sentences,
+                            ),
+                            const SizedBox(height: 16),
+
+                            TicketFormFields.buildTextField(
+                              ctrl: _actionTakenController,
+                              label: "Action Taken *",
+                              icon: Icons.handyman,
+                              maxLines: 3,
+                              isReadOnly: !canEditWorkDetails,
+                              isRequired: canEditWorkDetails,
+                              textCapitalization: TextCapitalization.sentences,
+                            ),
+                            const SizedBox(height: 24),
+
+                            Text(
+                              "Tools Checked Out",
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.grey.shade800,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+
+                            if (canEditWorkDetails) ...[
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: _buildAutocomplete(
+                                      hint: "Search Required Tool",
+                                      icon: Icons.plumbing,
+                                      controller: _toolSearchController,
+                                      focusNode: _toolFocusNode,
+                                      options: _availableTools,
+                                      isDisabled: false,
+                                      onSelected: (val) {
+                                        setState(
+                                          () =>
+                                              _currentlySelectedToolToAdd = val,
+                                        );
+                                      },
+                                      onCleared: () {
+                                        setState(
+                                          () => _currentlySelectedToolToAdd =
+                                              null,
+                                        );
+                                      },
+                                    ),
                                   ),
-                                  onPressed: _addToolToTicket,
-                                ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: navy,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: IconButton(
+                                      icon: const Icon(
+                                        Icons.add,
+                                        color: Colors.white,
+                                      ),
+                                      onPressed: _addToolToTicket,
+                                    ),
+                                  ),
+                                ],
                               ),
+                              const SizedBox(height: 12),
                             ],
-                          ),
-                          const SizedBox(height: 12),
-                        ],
 
-                        if (_usedTools.isEmpty)
-                          Text(
-                            "No tools logged.",
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              color: Colors.grey.shade500,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ..._usedTools.map((item) {
-                          final tool = item['tool'];
-                          final bool isReturned = item['return_time'] != null;
-
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isReturned
-                                  ? Colors.green.shade50
-                                  : Colors.blueGrey.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  isReturned
-                                      ? Icons.check_circle
-                                      : Icons.handyman_outlined,
-                                  size: 16,
-                                  color: isReturned ? Colors.green : navy,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        tool['tool_name'],
-                                        style: GoogleFonts.inter(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                          color: isReturned
-                                              ? Colors.green.shade800
-                                              : navy,
-                                        ),
-                                      ),
-                                      if (isReturned)
-                                        Text(
-                                          "Returned",
-                                          style: GoogleFonts.inter(
-                                            fontSize: 10,
-                                            color: Colors.green.shade700,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                                if (canEditWorkDetails)
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.delete,
-                                      color: Colors.redAccent,
-                                      size: 18,
-                                    ),
-                                    onPressed: () => _removeTool(item),
-                                  ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-
-                        const SizedBox(height: 24),
-
-                        Text(
-                          "Spares Used",
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: Colors.grey.shade800,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        if (canEditWorkDetails) ...[
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: _buildAutocomplete(
-                                  hint: "Search Spare",
-                                  icon: Icons.build_circle,
-                                  controller: _spareSearchController,
-                                  focusNode: _spareFocusNode,
-                                  options: _availableSpares,
-                                  isDisabled: false,
-                                  onSelected: (val) {
-                                    setState(
-                                      () => _currentlySelectedSpareToAdd = val,
-                                    );
-                                  },
-                                  onCleared: () {
-                                    setState(
-                                      () => _currentlySelectedSpareToAdd = null,
-                                    );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                flex: 1,
-                                child: TextFormField(
-                                  controller: _spareQtyController,
-                                  keyboardType: TextInputType.number,
-                                  style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.w600,
-                                    color: navy,
-                                  ),
-                                  decoration: InputDecoration(
-                                    labelText: "Qty",
-                                    filled: true,
-                                    fillColor: Colors.grey.shade50,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                      horizontal: 12,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: BorderSide(
-                                        color: Colors.grey.shade300,
-                                      ),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: BorderSide(
-                                        color: Colors.grey.shade300,
-                                      ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(
-                                        color: golden,
-                                        width: 2,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: golden,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: IconButton(
-                                  icon: const Icon(
-                                    Icons.add,
-                                    color: Colors.white,
-                                  ),
-                                  onPressed: _addSpareToTicket,
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (_currentlySelectedSpareToAdd != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 6.0, left: 4),
-                              child: Text(
-                                "Available in Stock: ${_getSpareCurrentQty(_currentlySelectedSpareToAdd!)}",
+                            if (_usedTools.isEmpty)
+                              Text(
+                                "No tools logged.",
                                 style: GoogleFonts.inter(
-                                  color: Colors.green.shade700,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: Colors.grey.shade500,
+                                  fontStyle: FontStyle.italic,
                                 ),
                               ),
-                            ),
-                          const SizedBox(height: 12),
-                        ],
+                            ..._usedTools.map((item) {
+                              final tool = item['tool'];
+                              final bool isReturned =
+                                  item['return_time'] != null;
 
-                        if (_usedSpares.isEmpty)
-                          Text(
-                            "No spares selected.",
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              color: Colors.grey.shade500,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ..._usedSpares.map((item) {
-                          final spare = item['spare'];
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.blueGrey.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.settings,
-                                  size: 16,
-                                  color: navy,
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        spare['spare_name'],
-                                        style: GoogleFonts.inter(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                          color: navy,
-                                        ),
+                                decoration: BoxDecoration(
+                                  color: isReturned
+                                      ? Colors.green.shade50
+                                      : Colors.blueGrey.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      isReturned
+                                          ? Icons.check_circle
+                                          : Icons.handyman_outlined,
+                                      size: 16,
+                                      color: isReturned ? Colors.green : navy,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            tool['tool_name'],
+                                            style: GoogleFonts.inter(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: isReturned
+                                                  ? Colors.green.shade800
+                                                  : navy,
+                                            ),
+                                          ),
+                                          if (isReturned)
+                                            Text(
+                                              "Returned",
+                                              style: GoogleFonts.inter(
+                                                fontSize: 10,
+                                                color: Colors.green.shade700,
+                                              ),
+                                            ),
+                                        ],
                                       ),
-                                      if (spare['m_vendor']?['name'] != null)
-                                        Text(
-                                          "Vendor: ${spare['m_vendor']['name']}",
-                                          style: GoogleFonts.inter(
-                                            fontSize: 10,
-                                            color: Colors.grey.shade600,
+                                    ),
+                                    if (canEditWorkDetails)
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete,
+                                          color: Colors.redAccent,
+                                          size: 18,
+                                        ),
+                                        onPressed: () => _removeTool(item),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+
+                            const SizedBox(height: 24),
+
+                            Text(
+                              "Spares Used",
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.grey.shade800,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+
+                            if (canEditWorkDetails) ...[
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    flex: 3,
+                                    child: _buildAutocomplete(
+                                      hint: "Search Spare",
+                                      icon: Icons.build_circle,
+                                      controller: _spareSearchController,
+                                      focusNode: _spareFocusNode,
+                                      options: _availableSpares,
+                                      isDisabled: false,
+                                      onSelected: (val) {
+                                        setState(
+                                          () => _currentlySelectedSpareToAdd =
+                                              val,
+                                        );
+                                      },
+                                      onCleared: () {
+                                        setState(
+                                          () => _currentlySelectedSpareToAdd =
+                                              null,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    flex: 1,
+                                    child: TextFormField(
+                                      controller: _spareQtyController,
+                                      keyboardType: TextInputType.number,
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w600,
+                                        color: navy,
+                                      ),
+                                      decoration: InputDecoration(
+                                        labelText: "Qty",
+                                        filled: true,
+                                        fillColor: Colors.grey.shade50,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              vertical: 14,
+                                              horizontal: 12,
+                                            ),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          borderSide: BorderSide(
+                                            color: Colors.grey.shade300,
                                           ),
                                         ),
-                                    ],
-                                  ),
-                                ),
-                                Text(
-                                  "Qty: ${item['qty']}",
-                                  style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.w900,
-                                    color: navy,
-                                  ),
-                                ),
-                                if (canEditWorkDetails)
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.delete,
-                                      color: Colors.redAccent,
-                                      size: 18,
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          borderSide: BorderSide(
+                                            color: Colors.grey.shade300,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: golden,
+                                            width: 2,
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                    onPressed: () => _removeSpare(item),
                                   ),
-                              ],
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: golden,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: IconButton(
+                                      icon: const Icon(
+                                        Icons.add,
+                                        color: Colors.white,
+                                      ),
+                                      onPressed: _addSpareToTicket,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (_currentlySelectedSpareToAdd != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: 6.0,
+                                    left: 4,
+                                  ),
+                                  child: Text(
+                                    "Available in Stock: ${_getSpareCurrentQty(_currentlySelectedSpareToAdd!)}",
+                                    style: GoogleFonts.inter(
+                                      color: Colors.green.shade700,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              const SizedBox(height: 12),
+                            ],
+
+                            if (_usedSpares.isEmpty)
+                              Text(
+                                "No spares selected.",
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade500,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ..._usedSpares.map((item) {
+                              final spare = item['spare'];
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.blueGrey.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.settings,
+                                      size: 16,
+                                      color: navy,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            spare['spare_name'],
+                                            style: GoogleFonts.inter(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: navy,
+                                            ),
+                                          ),
+                                          if (spare['m_vendor']?['name'] !=
+                                              null)
+                                            Text(
+                                              "Vendor: ${spare['m_vendor']['name']}",
+                                              style: GoogleFonts.inter(
+                                                fontSize: 10,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(
+                                      "Qty: ${item['qty']}",
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w900,
+                                        color: navy,
+                                      ),
+                                    ),
+                                    if (canEditWorkDetails)
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete,
+                                          color: Colors.redAccent,
+                                          size: 18,
+                                        ),
+                                        onPressed: () => _removeSpare(item),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ],
+                        ),
+                      ),
+
+                      if (currentStatus == 'IN_PROGRESS' &&
+                          isAssignedWorker &&
+                          _usedTools.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.orange.shade300),
+                          ),
+                          child: CheckboxListTile(
+                            title: Text(
+                              "I have returned all tools",
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w700,
+                                color: Colors.orange.shade800,
+                              ),
                             ),
-                          );
-                        }).toList(),
+                            subtitle: Text(
+                              "Please return all checked-out tools to the inventory before marking complete.",
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: Colors.orange.shade700,
+                              ),
+                            ),
+                            value: _workerToolsReturned,
+                            activeColor: Colors.orange.shade700,
+                            checkboxShape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            onChanged: (val) => setState(
+                              () => _workerToolsReturned = val ?? false,
+                            ),
+                          ),
+                        ),
                       ],
-                    ),
-                  ),
 
-                  if (currentStatus == 'IN_PROGRESS' &&
-                      isAssignedWorker &&
-                      _usedTools.isNotEmpty) ...[
-                    const SizedBox(height: 20),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.orange.shade300),
-                      ),
-                      child: CheckboxListTile(
-                        title: Text(
-                          "I have returned all tools",
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w700,
-                            color: Colors.orange.shade800,
+                      if (currentStatus == 'COMPLETED' &&
+                          isAdmin &&
+                          _usedTools.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.green.shade300),
+                          ),
+                          child: CheckboxListTile(
+                            title: Text(
+                              "All Tools Returned",
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w700,
+                                color: Colors.green.shade800,
+                              ),
+                            ),
+                            subtitle: Text(
+                              "Acknowledge that all checked-out tools have been safely returned.",
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: Colors.green.shade700,
+                              ),
+                            ),
+                            value: _toolsReturned,
+                            activeColor: Colors.green.shade700,
+                            checkboxShape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            onChanged: (val) =>
+                                setState(() => _toolsReturned = val ?? false),
                           ),
                         ),
-                        subtitle: Text(
-                          "Please return all checked-out tools to the inventory before marking complete.",
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: Colors.orange.shade700,
-                          ),
-                        ),
-                        value: _workerToolsReturned,
-                        activeColor: Colors.orange.shade700,
-                        checkboxShape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        onChanged: (val) =>
-                            setState(() => _workerToolsReturned = val ?? false),
-                      ),
-                    ),
-                  ],
-
-                  if (currentStatus == 'COMPLETED' &&
-                      isAdmin &&
-                      _usedTools.isNotEmpty) ...[
-                    const SizedBox(height: 20),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.green.shade300),
-                      ),
-                      child: CheckboxListTile(
-                        title: Text(
-                          "All Tools Returned",
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w700,
-                            color: Colors.green.shade800,
-                          ),
-                        ),
-                        subtitle: Text(
-                          "Acknowledge that all checked-out tools have been safely returned.",
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: Colors.green.shade700,
-                          ),
-                        ),
-                        value: _toolsReturned,
-                        activeColor: Colors.green.shade700,
-                        checkboxShape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        onChanged: (val) =>
-                            setState(() => _toolsReturned = val ?? false),
-                      ),
-                    ),
-                  ],
-                ],
-
+                      ],
+                    ],
                   ],
                 );
 
@@ -2720,103 +2862,106 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         isAdmin &&
                         (currentStatus == 'RAISED' ||
                             currentStatus == 'ASSIGNED')) ...[
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Builder(
-                      builder: (context) {
-                        final eligibleWorkers = _workers.where((w) {
-                          final assignedKitchensList =
-                              w['user_kitchens'] as List<dynamic>? ?? [];
-                          return assignedKitchensList.any(
-                            (uk) =>
-                                uk['kitchen_id'].toString() == activeKitchenId,
-                          );
-                        }).toList();
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Builder(
+                          builder: (context) {
+                            final eligibleWorkers = _workers.where((w) {
+                              final assignedKitchensList =
+                                  w['user_kitchens'] as List<dynamic>? ?? [];
+                              return assignedKitchensList.any(
+                                (uk) =>
+                                    uk['kitchen_id'].toString() ==
+                                    activeKitchenId,
+                              );
+                            }).toList();
 
-                        String? currentWorkerId = _selectedWorker;
-                        if (currentWorkerId != null &&
-                            !eligibleWorkers.any(
-                              (w) => w['id'].toString() == currentWorkerId,
-                            )) {
-                          currentWorkerId = null;
-                        }
+                            String? currentWorkerId = _selectedWorker;
+                            if (currentWorkerId != null &&
+                                !eligibleWorkers.any(
+                                  (w) => w['id'].toString() == currentWorkerId,
+                                )) {
+                              currentWorkerId = null;
+                            }
 
-                        return DropdownButtonFormField<String>(
-                          value: currentWorkerId,
-                          isExpanded: true,
-                          decoration: InputDecoration(
-                            labelText: "Assign Worker",
-                            labelStyle: GoogleFonts.inter(
-                              color: Colors.grey.shade500,
-                              fontSize: 13,
-                            ),
-                            prefixIcon: const Icon(
-                              Icons.engineering_outlined,
-                              color: Colors.grey,
-                            ),
-                            suffixIcon: const Icon(
-                              Icons.keyboard_arrow_down,
-                              color: navy,
-                              size: 20,
-                            ),
-                            filled: true,
-                            fillColor: isTicketClosed
-                                ? Colors.grey.shade100
-                                : Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(
-                                color: Colors.grey.shade200,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(
-                                color: Colors.grey.shade200,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(color: golden),
-                            ),
-                          ),
-                          items: eligibleWorkers
-                              .map(
-                                (w) => DropdownMenuItem<String>(
-                                  value: w['id'].toString(),
-                                  child: Text(
-                                    w['display_name'].toString(),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: navy,
-                                    ),
+                            return DropdownButtonFormField<String>(
+                              value: currentWorkerId,
+                              isExpanded: true,
+                              borderRadius: BorderRadius.circular(12),
+                              menuMaxHeight: 300,
+                              decoration: InputDecoration(
+                                labelText: "Assign Worker",
+                                labelStyle: GoogleFonts.inter(
+                                  color: Colors.grey.shade500,
+                                  fontSize: 13,
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.engineering_outlined,
+                                  color: Colors.grey,
+                                ),
+                                suffixIcon: const Icon(
+                                  Icons.keyboard_arrow_down,
+                                  color: navy,
+                                  size: 20,
+                                ),
+                                filled: true,
+                                fillColor: isTicketClosed
+                                    ? Colors.grey.shade100
+                                    : Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade200,
                                   ),
                                 ),
-                              )
-                              .toList(),
-                          onChanged: isTicketClosed
-                              ? null
-                              : (val) {
-                                  setState(() {
-                                    _selectedWorker = val;
-                                  });
-                                },
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade200,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(color: golden),
+                                ),
+                              ),
+                              items: eligibleWorkers
+                                  .map(
+                                    (w) => DropdownMenuItem<String>(
+                                      value: w['id'].toString(),
+                                      child: Text(
+                                        w['display_name'].toString(),
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: navy,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: isTicketClosed
+                                  ? null
+                                  : (val) {
+                                      setState(() {
+                                        _selectedWorker = val;
+                                      });
+                                    },
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                   ],
                 );
 
@@ -2853,56 +2998,70 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            buildSectionHeader("Ticket Information", Icons.description),
+                            buildSectionHeader(
+                              "Ticket Information",
+                              Icons.description,
+                            ),
                             ticketDetailsSection,
                             const SizedBox(height: 100),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 20),
-                      // Card 2: Work Details & Assigned Worker
-                      Expanded(
-                        flex: 3,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            buildSectionHeader("Work & Assignment", Icons.engineering),
-                            if (currentStatus == 'RAISED' && (!isEditing || !isAdmin))
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: Colors.grey.shade200),
-                                ),
-                                child: Text(
-                                  "No work has commenced on this ticket yet.",
-                                  style: GoogleFonts.inter(
-                                    color: Colors.grey.shade600,
-                                    fontStyle: FontStyle.italic,
+                      if (isEditing) ...[
+                        const SizedBox(width: 20),
+                        // Card 2: Work Details & Assigned Worker
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              buildSectionHeader(
+                                "Work & Assignment",
+                                Icons.engineering,
+                              ),
+                              if (currentStatus == 'RAISED' &&
+                                  (!isEditing || !isAdmin))
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: Colors.grey.shade200,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    "No work has commenced on this ticket yet.",
+                                    style: GoogleFonts.inter(
+                                      color: Colors.grey.shade600,
+                                      fontStyle: FontStyle.italic,
+                                    ),
                                   ),
                                 ),
+                              workDetails,
+                              adminActions,
+                              const SizedBox(height: 100),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        // Card 1: Status, Activity Timeline, Raised On
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              buildSectionHeader(
+                                "Status & Timeline",
+                                Icons.history,
                               ),
-                            workDetails,
-                            adminActions,
-                            const SizedBox(height: 100),
-                          ],
+                              statusAndTimelineSection,
+                              const SizedBox(height: 100),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 20),
-                      // Card 1: Status, Activity Timeline, Raised On
-                      Expanded(
-                        flex: 3,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            buildSectionHeader("Status & Timeline", Icons.history),
-                            statusAndTimelineSection,
-                            const SizedBox(height: 100),
-                          ],
-                        ),
-                      ),
+                      ],
                     ],
                   );
                 } else if (screenWidth >= 768) {
@@ -2915,28 +3074,39 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            buildSectionHeader("Ticket Information", Icons.description),
+                            buildSectionHeader(
+                              "Ticket Information",
+                              Icons.description,
+                            ),
                             ticketDetailsSection,
                             const SizedBox(height: 100),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        flex: 1,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            buildSectionHeader("Status & Timeline", Icons.history),
-                            statusAndTimelineSection,
-                            const SizedBox(height: 24),
-                            buildSectionHeader("Work & Assignment", Icons.engineering),
-                            workDetails,
-                            adminActions,
-                            const SizedBox(height: 100),
-                          ],
+                      if (isEditing) ...[
+                        const SizedBox(width: 20),
+                        Expanded(
+                          flex: 1,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              buildSectionHeader(
+                                "Status & Timeline",
+                                Icons.history,
+                              ),
+                              statusAndTimelineSection,
+                              const SizedBox(height: 24),
+                              buildSectionHeader(
+                                "Work & Assignment",
+                                Icons.engineering,
+                              ),
+                              workDetails,
+                              adminActions,
+                              const SizedBox(height: 100),
+                            ],
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   );
                 } else {
@@ -2944,15 +3114,25 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      buildSectionHeader("Status & Timeline", Icons.history),
-                      statusAndTimelineSection,
-                      const SizedBox(height: 20),
-                      buildSectionHeader("Ticket Information", Icons.description),
+                      if (isEditing) ...[
+                        buildSectionHeader("Status & Timeline", Icons.history),
+                        statusAndTimelineSection,
+                        const SizedBox(height: 20),
+                      ],
+                      buildSectionHeader(
+                        "Ticket Information",
+                        Icons.description,
+                      ),
                       ticketDetailsSection,
-                      const SizedBox(height: 20),
-                      buildSectionHeader("Work & Assignment", Icons.engineering),
-                      workDetails,
-                      adminActions,
+                      if (isEditing) ...[
+                        const SizedBox(height: 20),
+                        buildSectionHeader(
+                          "Work & Assignment",
+                          Icons.engineering,
+                        ),
+                        workDetails,
+                        adminActions,
+                      ],
                       const SizedBox(height: 100),
                     ],
                   );

@@ -32,14 +32,37 @@ class NotificationService {
         if (message.notification != null) {
           final context =  navigatorKey.currentContext;
           if (context != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text("${message.notification!.title}: ${message.notification!.body}"),
-                backgroundColor: const Color(0xFF26538D),
-                duration: const Duration(seconds: 4),
-                action: SnackBarAction(label: 'VIEW', textColor: Colors.white, onPressed: () => _handleNotificationClick(message)),
-              ),
-            );
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      Expanded(child: Text("${message.notification!.title}: ${message.notification!.body}")),
+                      TextButton(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          _handleNotificationClick(message);
+                        },
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text('VIEW', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                        onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  backgroundColor: const Color(0xFF26538D),
+                  duration: const Duration(seconds: 3),
+                ),
+              );
           }
         }
       });

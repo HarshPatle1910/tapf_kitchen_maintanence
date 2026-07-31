@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/ticket_provider.dart';
+
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
 
@@ -25,6 +26,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
+
+  String _sortCriteria = 'date';
+  bool _sortAscending = false;
+  String _roleFilter = 'all';
+  String? _lastKitchenFilter;
 
   // Standard static list of assignable reports
   final List<Map<String, String>> _availableReports = [
@@ -71,20 +77,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       final List<Map<String, dynamic>> allUsers =
           List<Map<String, dynamic>>.from(userRes);
 
-      final ticketProv = context.read<TicketProvider>();
-      final selectedKitchenFilter = ticketProv.kitchenFilter;
-
       final filteredUsers = allUsers.where((u) {
         final userKs = u['user_kitchens'] as List<dynamic>? ?? [];
 
-        // If a specific kitchen is selected, ONLY show users assigned to that kitchen.
-        if (selectedKitchenFilter != 'ALL') {
-          return userKs.any((uk) => uk['kitchen_id'].toString() == selectedKitchenFilter);
-        }
-
-        // If 'ALL' kitchens selected, fallback to admin active kitchens logic
-        if (u['status'] == false) return true; // Show all unapproved
-        if (userKs.isEmpty) return true; // Show users with no kitchens
+        // Baseline: Show users that have no kitchens, unapproved users, or users in admin's kitchens
+        if (u['status'] == false) return true;
+        if (userKs.isEmpty) return true;
         return userKs.any(
           (uk) => adminKitchenIds.contains(uk['kitchen_id'].toString()),
         );
@@ -107,6 +105,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         .map((k) => k['kitchen_id'].toString())
         .toList();
 
+    final adminKitchenIds = context.read<AuthProvider>().activeKitchenIds;
+    final adminKitchens = _allKitchens
+        .where((k) => adminKitchenIds.contains(k['id'].toString()))
+        .toList();
+
     bool isSaving = false;
 
     showModalBottomSheet(
@@ -119,14 +122,14 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
           return Container(
+            height: MediaQuery.of(ctx).size.height * 0.70,
             padding: EdgeInsets.only(
               left: 24,
               right: 24,
               top: 16,
-              bottom: MediaQuery.of(ctx).padding.bottom + 24,
+              bottom: MediaQuery.of(ctx).padding.bottom + 16,
             ),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Center(
@@ -149,158 +152,179 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: navy.withOpacity(0.1),
-                        child: Text(
-                          user['name'].toString().toUpperCase()[0],
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.bold,
-                            color: navy,
-                            fontSize: 20,
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundColor: navy.withOpacity(0.1),
+                                child: Text(
+                                  user['name'].toString().toUpperCase()[0],
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.bold,
+                                    color: navy,
+                                    fontSize: 20,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      user['name'],
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "AMP: ${user['amp_id']} | Mobile: ${user['mobile_no']}",
+                                      style: GoogleFonts.inter(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        const SizedBox(height: 24),
+                        Text(
+                          "Account Status",
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade500,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          activeColor: golden,
+                          title: Text(
+                            isApproved
+                                ? "Approved / Active"
+                                : "Pending Approval",
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              color: isApproved ? Colors.green : Colors.red,
+                            ),
+                          ),
+                          value: isApproved,
+                          onChanged: (val) =>
+                              setModalState(() => isApproved = val),
+                        ),
+                        const Divider(height: 32),
+                        Text(
+                          "Role Assignment",
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade500,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
                           children: [
-                            Text(
-                              user['name'],
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                            Expanded(
+                              child: RadioListTile<String>(
+                                contentPadding: EdgeInsets.zero,
+                                activeColor: navy,
+                                title: Text(
+                                  "Worker",
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                value: 'worker',
+                                groupValue: selectedRole,
+                                onChanged: (v) =>
+                                    setModalState(() => selectedRole = v!),
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "AMP: ${user['amp_id']} | Mobile: ${user['mobile_no']}",
-                              style: GoogleFonts.inter(
-                                color: Colors.grey.shade600,
-                                fontSize: 12,
+                            Expanded(
+                              child: RadioListTile<String>(
+                                contentPadding: EdgeInsets.zero,
+                                activeColor: navy,
+                                title: Text(
+                                  "Admin",
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                value: 'admin',
+                                groupValue: selectedRole,
+                                onChanged: (v) =>
+                                    setModalState(() => selectedRole = v!),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  "Account Status",
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade500,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  activeColor: golden,
-                  title: Text(
-                    isApproved ? "Approved / Active" : "Pending Approval",
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w600,
-                      color: isApproved ? Colors.green : Colors.red,
+                        const Divider(height: 32),
+                        Text(
+                          "Kitchen Assignment",
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade500,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          height: 200,
+                          child: ListView.builder(
+                            itemCount: adminKitchens.length,
+                            itemBuilder: (context, i) {
+                              final k = adminKitchens[i];
+                              final kId = k['id'].toString();
+                              final isSelected = assignedKitchenIds.contains(
+                                kId,
+                              );
+                              return CheckboxListTile(
+                                contentPadding: EdgeInsets.zero,
+                                activeColor: navy,
+                                title: Text(
+                                  k['name'],
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                value: isSelected,
+                                onChanged: (val) {
+                                  setModalState(() {
+                                    if (val == true) {
+                                      assignedKitchenIds.add(kId);
+                                    } else {
+                                      assignedKitchenIds.remove(kId);
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
                     ),
                   ),
-                  value: isApproved,
-                  onChanged: (val) => setModalState(() => isApproved = val),
                 ),
-                const Divider(height: 32),
-                Text(
-                  "Role Assignment",
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade500,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: RadioListTile<String>(
-                        contentPadding: EdgeInsets.zero,
-                        activeColor: navy,
-                        title: Text(
-                          "Worker",
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                        ),
-                        value: 'worker',
-                        groupValue: selectedRole,
-                        onChanged: (v) =>
-                            setModalState(() => selectedRole = v!),
-                      ),
-                    ),
-                    Expanded(
-                      child: RadioListTile<String>(
-                        contentPadding: EdgeInsets.zero,
-                        activeColor: navy,
-                        title: Text(
-                          "Admin",
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                        ),
-                        value: 'admin',
-                        groupValue: selectedRole,
-                        onChanged: (v) =>
-                            setModalState(() => selectedRole = v!),
-                      ),
-                    ),
-                  ],
-                ),
-                const Divider(height: 32),
-                Text(
-                  "Kitchen Assignment",
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade500,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 200,
-                  child: ListView.builder(
-                    itemCount: _allKitchens.length,
-                    itemBuilder: (context, i) {
-                      final k = _allKitchens[i];
-                      final kId = k['id'].toString();
-                      final isSelected = assignedKitchenIds.contains(kId);
-                      return CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        activeColor: navy,
-                        title: Text(
-                          k['name'],
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-                        ),
-                        value: isSelected,
-                        onChanged: (val) {
-                          setModalState(() {
-                            if (val == true) {
-                              assignedKitchenIds.add(kId);
-                            } else {
-                              assignedKitchenIds.remove(kId);
-                            }
-                          });
-                        },
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
                   height: 54,
@@ -775,8 +799,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
-
-  Widget _buildUserCard(Map<String, dynamic> user, List<Map<String, dynamic>> allKitchens) {
+  Widget _buildUserCard(
+    Map<String, dynamic> user,
+    List<Map<String, dynamic>> allKitchens,
+  ) {
     final isApproved = user['status'] ?? false;
     final userKitchens = user['user_kitchens'] as List<dynamic>? ?? [];
     final kNames = userKitchens
@@ -834,10 +860,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             ),
             if (!isApproved)
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 2,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: Colors.orange,
                   borderRadius: BorderRadius.circular(4),
@@ -882,10 +905,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              icon: const Icon(
-                Icons.edit_square,
-                color: golden,
-              ),
+              icon: const Icon(Icons.edit_square, color: golden),
               tooltip: "Edit User",
               onPressed: () {
                 _searchFocusNode.unfocus();
@@ -922,7 +942,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
-  Widget _buildWebLayout(List<Map<String, dynamic>> verifiedUsers, List<Map<String, dynamic>> pendingUsers) {
+  Widget _buildWebLayout(
+    List<Map<String, dynamic>> verifiedUsers,
+    List<Map<String, dynamic>> pendingUsers,
+  ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -930,7 +953,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
                 child: Row(
                   children: [
                     const Icon(Icons.pending_actions, color: Colors.orange),
@@ -955,7 +981,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
                 child: Row(
                   children: [
                     const Icon(Icons.verified, color: Colors.green),
@@ -979,18 +1008,273 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
+  void _showFilterSortDialog() {
+    String tempSortCriteria = _sortCriteria;
+    bool tempSortAscending = _sortAscending;
+    String tempRoleFilter = _roleFilter;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 20.0,
+                  right: 20.0,
+                  top: 20.0,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 20.0,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Filter & Sort",
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: navy,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              setModalState(() {
+                                tempSortCriteria = 'date';
+                                tempSortAscending = false;
+                                tempRoleFilter = 'all';
+                              });
+                            },
+                            child: Text(
+                              "Reset",
+                              style: GoogleFonts.inter(
+                                color: Colors.red,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(),
+                      Text(
+                        "Sort By",
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: const Text("Date"),
+                            selected: tempSortCriteria == 'date',
+                            onSelected: (v) {
+                              if (v) {
+                                setModalState(() => tempSortCriteria = 'date');
+                              }
+                            },
+                          ),
+                          ChoiceChip(
+                            label: const Text("Name"),
+                            selected: tempSortCriteria == 'name',
+                            onSelected: (v) {
+                              if (v) {
+                                setModalState(() => tempSortCriteria = 'name');
+                              }
+                            },
+                          ),
+                          ChoiceChip(
+                            label: const Text("APM ID"),
+                            selected: tempSortCriteria == 'apm_id',
+                            onSelected: (v) {
+                              if (v) {
+                                setModalState(
+                                  () => tempSortCriteria = 'apm_id',
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Text(
+                            "Order: ",
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ChoiceChip(
+                            label: const Text("Ascending"),
+                            selected: tempSortAscending,
+                            onSelected: (v) {
+                              setModalState(() => tempSortAscending = true);
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          ChoiceChip(
+                            label: const Text("Descending"),
+                            selected: !tempSortAscending,
+                            onSelected: (v) {
+                              setModalState(() => tempSortAscending = false);
+                            },
+                          ),
+                        ],
+                      ),
+                      const Divider(),
+                      Text(
+                        "Filter Role",
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: const Text("All"),
+                            selected: tempRoleFilter == 'all',
+                            onSelected: (v) {
+                              if (v) {
+                                setModalState(() => tempRoleFilter = 'all');
+                              }
+                            },
+                          ),
+                          ChoiceChip(
+                            label: const Text("Admin"),
+                            selected: tempRoleFilter == 'admin',
+                            onSelected: (v) {
+                              if (v) {
+                                setModalState(() => tempRoleFilter = 'admin');
+                              }
+                            },
+                          ),
+                          ChoiceChip(
+                            label: const Text("Users"),
+                            selected: tempRoleFilter == 'worker',
+                            onSelected: (v) {
+                              if (v) {
+                                setModalState(() => tempRoleFilter = 'worker');
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: navy,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _sortCriteria = tempSortCriteria;
+                              _sortAscending = tempSortAscending;
+                              _roleFilter = tempRoleFilter;
+                            });
+                            Navigator.pop(context);
+                          },
+                          child: Text(
+                            "APPLY FILTERS",
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final ticketProv = context.watch<TicketProvider>();
+    final selectedKitchenFilter = ticketProv.kitchenFilter;
+
+    if (_lastKitchenFilter != null &&
+        _lastKitchenFilter != selectedKitchenFilter) {
+      _sortCriteria = 'date';
+      _sortAscending = false;
+      _roleFilter = 'all';
+      _searchQuery = '';
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _searchController.clear();
+      });
+    }
+    _lastKitchenFilter = selectedKitchenFilter;
+
     final filteredUsers = _users.where((u) {
-      if (_searchQuery.isEmpty) return true;
-      final query = _searchQuery.toLowerCase();
-      final n = u['name'].toString().toLowerCase();
-      final p = u['mobile_no'].toString().toLowerCase();
-      return n.contains(query) || p.contains(query);
+      if (_searchQuery.isNotEmpty) {
+        final query = _searchQuery.toLowerCase();
+        final n = u['name'].toString().toLowerCase();
+        final p = u['mobile_no'].toString().toLowerCase();
+        if (!n.contains(query) && !p.contains(query)) return false;
+      }
+
+      if (_roleFilter != 'all') {
+        final role = u['role']?.toString().toLowerCase() ?? 'worker';
+        if (role != _roleFilter) return false;
+      }
+
+      if (selectedKitchenFilter != 'ALL') {
+        final userKs = u['user_kitchens'] as List<dynamic>? ?? [];
+        if (!userKs.any(
+          (uk) => uk['kitchen_id'].toString() == selectedKitchenFilter,
+        )) {
+          return false;
+        }
+      }
+
+      return true;
     }).toList();
 
-    final verifiedUsers = filteredUsers.where((u) => u['status'] == true).toList();
-    final pendingUsers = filteredUsers.where((u) => (u['status'] ?? false) == false).toList();
+    filteredUsers.sort((a, b) {
+      int cmp = 0;
+      if (_sortCriteria == 'name') {
+        final nameA = a['name']?.toString().toLowerCase() ?? '';
+        final nameB = b['name']?.toString().toLowerCase() ?? '';
+        cmp = nameA.compareTo(nameB);
+      } else if (_sortCriteria == 'apm_id') {
+        final apmA = a['amp_id']?.toString().toLowerCase() ?? '';
+        final apmB = b['amp_id']?.toString().toLowerCase() ?? '';
+        cmp = apmA.compareTo(apmB);
+      } else {
+        final dateA = a['created_at']?.toString() ?? '';
+        final dateB = b['created_at']?.toString() ?? '';
+        cmp = dateA.compareTo(dateB);
+      }
+      return _sortAscending ? cmp : -cmp;
+    });
+
+    final verifiedUsers = filteredUsers
+        .where((u) => u['status'] == true)
+        .toList();
+    final pendingUsers = filteredUsers
+        .where((u) => (u['status'] ?? false) == false)
+        .toList();
 
     final isWeb = MediaQuery.of(context).size.width > 800;
 
@@ -1004,10 +1288,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           automaticallyImplyLeading: false,
           title: Text(
             "User Management",
-            style: GoogleFonts.inter(
-              color: navy,
-              fontWeight: FontWeight.bold,
-            ),
+            style: GoogleFonts.inter(color: navy, fontWeight: FontWeight.bold),
           ),
           bottom: !isWeb
               ? TabBar(
@@ -1025,60 +1306,87 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  focusNode: _searchFocusNode,
-                  onChanged: (value) => setState(() => _searchQuery = value),
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w600,
-                    color: navy,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: "Search name or phone...",
-                    hintStyle: GoogleFonts.inter(
-                      color: Colors.grey.shade400,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(
-                              Icons.clear,
-                              color: Colors.grey,
-                              size: 20,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        onChanged: (value) =>
+                            setState(() => _searchQuery = value),
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          color: navy,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: "Search name or phone...",
+                          hintStyle: GoogleFonts.inter(
+                            color: Colors.grey.shade400,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: Colors.grey,
+                          ),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(
+                                    Icons.clear,
+                                    color: Colors.grey,
+                                    size: 20,
+                                  ),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _searchQuery = '');
+                                    _searchFocusNode.unfocus();
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(
+                              color: golden,
+                              width: 2,
                             ),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                              _searchFocusNode.unfocus();
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(color: golden, width: 2),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: navy,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.filter_list, color: Colors.white),
+                      onPressed: _showFilterSortDialog,
+                      tooltip: "Filter & Sort",
+                    ),
+                  ),
+                ],
               ),
             ),
             Expanded(
@@ -1087,13 +1395,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       child: CircularProgressIndicator(color: golden),
                     )
                   : isWeb
-                      ? _buildWebLayout(verifiedUsers, pendingUsers)
-                      : TabBarView(
-                          children: [
-                            _buildUserList(verifiedUsers),
-                            _buildUserList(pendingUsers),
-                          ],
-                        ),
+                  ? _buildWebLayout(verifiedUsers, pendingUsers)
+                  : TabBarView(
+                      children: [
+                        _buildUserList(verifiedUsers),
+                        _buildUserList(pendingUsers),
+                      ],
+                    ),
             ),
           ],
         ),

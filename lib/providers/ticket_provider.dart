@@ -14,7 +14,7 @@ class TicketProvider with ChangeNotifier {
   final List<Map<String, dynamic>> _tickets = [];
   bool _isLoading = false;
   int _offset = 0;
-  final int _itemsPerPage = 15;
+  final int _itemsPerPage = 500;
   int _currentPage = 1;
 
   // --- Filter & Sort States ---
@@ -22,6 +22,7 @@ class TicketProvider with ChangeNotifier {
   String _statusFilter = 'ALL';
   String _priorityFilter = 'ALL';
   String _kitchenFilter = 'ALL';
+  String _areaFilter = 'ALL';
 
   String _zoneFilter = 'ALL';
   bool _assignedToMeFilter = false;
@@ -47,6 +48,7 @@ class TicketProvider with ChangeNotifier {
   String get statusFilter => _statusFilter;
   String get priorityFilter => _priorityFilter;
   String get kitchenFilter => _kitchenFilter;
+  String get areaFilter => _areaFilter;
 
   String get zoneFilter => _zoneFilter;
   bool get assignedToMeFilter => _assignedToMeFilter;
@@ -84,6 +86,7 @@ class TicketProvider with ChangeNotifier {
     required String kitchenId,
     String? assignedToId,
     String? raisedById,
+    String? telegramMessageId,
   }) async {
     try {
       final url = Uri.parse('${ApiConstants.pythonApiBaseUrl}/notifications/trigger');
@@ -102,6 +105,7 @@ class TicketProvider with ChangeNotifier {
           "kitchen_id": kitchenId,
           "assigned_to_id": assignedToId,
           "raised_by_id": raisedById ?? _supabase.auth.currentUser?.id,
+          if (telegramMessageId != null) "telegram_message_id": telegramMessageId,
         }),
       );
       debugPrint('Notification Trigger [$action]: ${response.statusCode} - ${response.body}');
@@ -151,6 +155,7 @@ class TicketProvider with ChangeNotifier {
     String? priority,
     String? kitchenId,
     String? zoneId,
+    String? areaId,
     bool? assignedToMe,
     bool? raisedByMe,
     DateTime? start,
@@ -162,6 +167,7 @@ class TicketProvider with ChangeNotifier {
     if (priority != null) _priorityFilter = priority;
     if (kitchenId != null) _kitchenFilter = kitchenId;
     if (zoneId != null) _zoneFilter = zoneId;
+    if (areaId != null) _areaFilter = areaId;
     if (assignedToMe != null) _assignedToMeFilter = assignedToMe;
     if (raisedByMe != null) _raisedByMeFilter = raisedByMe;
     if (sort != null) _sortBy = sort;
@@ -215,8 +221,10 @@ class TicketProvider with ChangeNotifier {
         query = query.eq('kitchen_id', _kitchenFilter);
       }
 
-      // 2. Zone Filter
-      if (_zoneFilter != 'ALL') {
+      // 2. Zone and Area Filters
+      if (_areaFilter != 'ALL') {
+        query = query.eq('area_id', _areaFilter);
+      } else if (_zoneFilter != 'ALL') {
         final areas = await _supabase.from('m_area').select('id').eq('zone_id', _zoneFilter);
         final List<String> areaIds = areas.map((a) => a['id'].toString()).toList();
 
@@ -339,7 +347,9 @@ class TicketProvider with ChangeNotifier {
         query = query.eq('kitchen_id', _kitchenFilter);
       }
 
-      if (_zoneFilter != 'ALL') {
+      if (_areaFilter != 'ALL') {
+        query = query.eq('area_id', _areaFilter);
+      } else if (_zoneFilter != 'ALL') {
         final areas = await _supabase.from('m_area').select('id').eq('zone_id', _zoneFilter);
         final List<String> areaIds = areas.map((a) => a['id'].toString()).toList();
 
