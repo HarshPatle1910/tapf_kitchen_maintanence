@@ -1,2 +1,0 @@
-The parsing for `telegram_message_id` was updated to include Telegram's native JSON structure `data['result']['message_id']`.
-The delay before triggering notifications was increased from 1.5s to 3.0s to ensure Firebase image uploads are registered in Supabase before the Python backend fires.
