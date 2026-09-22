@@ -119,67 +119,78 @@ class ForceUpdateScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF26538D).withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF26538D).withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.system_update_rounded, size: 80, color: Color(0xFF26538D)),
+                        ),
+                        const SizedBox(height: 32),
+                        Text(
+                          "Update Required",
+                          style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF26538D)),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          "Version $versionName is now available.",
+                          style: GoogleFonts.inter(fontSize: 16, color: Colors.grey[700], fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("What's New:", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.black87)),
+                              const SizedBox(height: 8),
+                              Text(releaseNotes, style: GoogleFonts.inter(height: 1.5, color: Colors.black54)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                        ElevatedButton(
+                          onPressed: () => _launchDownloadUrl(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF26538D),
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(double.infinity, 54),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                          child: Text("Download & Install", style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          "After downloading, tap the APK file in your notifications to install.",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500]),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                child: const Icon(Icons.system_update_rounded, size: 80, color: Color(0xFF26538D)),
               ),
-              const SizedBox(height: 32),
-              Text(
-                "Update Required",
-                style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF26538D)),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                "Version $versionName is now available.",
-                style: GoogleFonts.inter(fontSize: 16, color: Colors.grey[700], fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(16),
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[300]!),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("What's New:", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.black87)),
-                    const SizedBox(height: 8),
-                    Text(releaseNotes, style: GoogleFonts.inter(height: 1.5, color: Colors.black54)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: () => _launchDownloadUrl(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF26538D),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 54),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: Text("Download & Install", style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                "After downloading, tap the APK file in your notifications to install.",
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500]),
-              )
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
