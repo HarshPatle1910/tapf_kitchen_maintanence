@@ -779,24 +779,6 @@ class _MoreScreenState extends State<MoreScreen> {
               ),
               const SizedBox(height: 24),
 
-              // --- Section: Ticket Actions (Available for all users) ---
-              _buildSectionTitle("Ticket Verification"),
-              _buildMenuCard([
-                _MenuItem(
-                  Icons.verified_outlined,
-                  isAdmin
-                      ? "Ticket Verification Center"
-                      : "Verify Completed Tickets",
-                  const TicketVerificationScreen(),
-                  context,
-                  badgeText: _pendingVerificationCount > 0
-                      ? "$_pendingVerificationCount Pending"
-                      : null,
-                  badgeColor: const Color(0xFF16A34A),
-                ),
-              ]),
-              const SizedBox(height: 24),
-
               if (isAdmin) ...[
                 // --- Section: Configuration ---
                 _buildSectionTitle("Facility Configuration"),

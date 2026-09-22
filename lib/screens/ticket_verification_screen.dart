@@ -17,7 +17,7 @@ class TicketVerificationScreen extends StatefulWidget {
 }
 
 class _TicketVerificationScreenState extends State<TicketVerificationScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   static const Color navy = Color(0xFF26538D);
   static const Color raiserColor = Color(0xFF6366F1); // Indigo / Purple
   static const Color adminColor = Color(0xFFD97706); // Amber / Gold
@@ -31,11 +31,15 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
   final TextEditingController _searchController = TextEditingController();
 
   List<Map<String, dynamic>> _raiserPendingTickets = [];
-  List<Map<String, dynamic>> _adminPendingTickets = [];
+  List<Map<String, dynamic>> _zonePendingTickets = [];
+  List<Map<String, dynamic>> _allocatedZones = [];
+  String _selectedZoneFilter = 'ALL';
 
   bool _isAdmin = false;
   String? _currentUserId;
   String? _selectedKitchenId;
+
+  bool get _canAccessZoneSignOff => _allocatedZones.isNotEmpty || _isAdmin;
 
   @override
   void initState() {
@@ -58,11 +62,19 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
       _selectedKitchenId = currentKitchenId;
     }
 
-    if (_isAdmin) {
-      _tabController = TabController(length: 2, vsync: this);
-    }
-
     _fetchAllTickets();
+  }
+
+  void _updateTabController() {
+    if (_canAccessZoneSignOff) {
+      if (_tabController == null || _tabController!.length != 2) {
+        _tabController?.dispose();
+        _tabController = TabController(length: 2, vsync: this);
+      }
+    } else {
+      _tabController?.dispose();
+      _tabController = null;
+    }
   }
 
   @override
@@ -100,19 +112,41 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
         if (mounted) {
           setState(() {
             _raiserPendingTickets = [];
-            _adminPendingTickets = [];
+            _zonePendingTickets = [];
+            _allocatedZones = [];
             _isLoading = false;
           });
+          _updateTabController();
         }
         return;
       }
 
-      // Query 1: Tickets raised by current user with status COMPLETED for SELECTED KITCHEN only
+      // Step 1: Fetch active zones for this kitchen and determine allocated zones
+      final zonesRes = await _supabase
+          .from('m_zone')
+          .select('id, name, zone_leader')
+          .eq('kitchen_id', _selectedKitchenId!)
+          .eq('status', true)
+          .order('name');
+      final allKitchenZones = List<Map<String, dynamic>>.from(zonesRes);
+
+      List<Map<String, dynamic>> userZones = allKitchenZones
+          .where((z) => z['zone_leader']?.toString() == userId)
+          .toList();
+
+      // If user is an Admin and has no specific zone leader assignment,
+      // fallback to all active zones in the kitchen so admin can sign off for any zone
+      if (_isAdmin && userZones.isEmpty) {
+        userZones = allKitchenZones;
+      }
+
+      // Step 2: Query tickets raised by current user with status COMPLETED for SELECTED KITCHEN only
       final raiserRes = await _supabase
           .from('tickets')
           .select('''
             *,
             m_kitchen(name),
+            m_area(id, area_name, zone_id, m_zone(id, name)),
             raised_by:m_user!raised_by_id(name),
             assigned_to:m_user!assigned_to_id(name)
           ''')
@@ -129,36 +163,52 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
         return t['raiser_verified'] != true;
       }).toList();
 
-      // Query 2: If admin, fetch completed tickets for SELECTED KITCHEN only
-      List<Map<String, dynamic>> pendingAdmin = [];
-      if (_isAdmin) {
-        final adminRes = await _supabase
-            .from('tickets')
-            .select('''
-              *,
-              m_kitchen(name),
-              raised_by:m_user!raised_by_id(name),
-              assigned_to:m_user!assigned_to_id(name)
-            ''')
-            .eq('kitchen_id', _selectedKitchenId!)
-            .eq('status', 'COMPLETED')
-            .order('ticket_completion_time', ascending: false);
+      // Step 3: Fetch completed tickets for allocated zones
+      List<Map<String, dynamic>> pendingZone = [];
+      if (userZones.isNotEmpty) {
+        final zoneIds = userZones.map((z) => z['id'].toString()).toList();
+        final areasRes = await _supabase
+            .from('m_area')
+            .select('id, area_name, zone_id')
+            .inFilter('zone_id', zoneIds)
+            .eq('status', true);
+        final areaIds = List<Map<String, dynamic>>.from(areasRes)
+            .map((a) => a['id'].toString())
+            .toList();
 
-        final allAdminCompleted =
-            List<Map<String, dynamic>>.from(adminRes);
+        if (areaIds.isNotEmpty) {
+          final zoneTicketsRes = await _supabase
+              .from('tickets')
+              .select('''
+                *,
+                m_kitchen(name),
+                m_area(id, area_name, zone_id, m_zone(id, name)),
+                raised_by:m_user!raised_by_id(name),
+                assigned_to:m_user!assigned_to_id(name)
+              ''')
+              .eq('kitchen_id', _selectedKitchenId!)
+              .eq('status', 'COMPLETED')
+              .inFilter('area_id', areaIds)
+              .order('ticket_completion_time', ascending: false);
 
-        // Pending Admin verification: admin_verified is false or null
-        pendingAdmin = allAdminCompleted.where((t) {
-          return t['admin_verified'] != true;
-        }).toList();
+          final allZoneCompleted =
+              List<Map<String, dynamic>>.from(zoneTicketsRes);
+
+          // Pending Zone Sign-Off: admin_verified is false or null
+          pendingZone = allZoneCompleted.where((t) {
+            return t['admin_verified'] != true;
+          }).toList();
+        }
       }
 
       if (mounted) {
         setState(() {
+          _allocatedZones = userZones;
           _raiserPendingTickets = pendingRaiser;
-          _adminPendingTickets = pendingAdmin;
+          _zonePendingTickets = pendingZone;
           _isLoading = false;
         });
+        _updateTabController();
       }
     } catch (e) {
       debugPrint("Error loading verification tickets: $e");
@@ -177,7 +227,7 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
   // --- Perform Verification ---
   Future<void> _verifyTicket({
     required Map<String, dynamic> ticket,
-    required bool isVerifyingAsAdmin,
+    required bool isVerifyingAsZoneLeader,
   }) async {
     final ticketId = ticket['id'];
     final nowISO = _getCurrentIST();
@@ -186,7 +236,7 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
     bool currentAdminVerified = ticket['admin_verified'] ?? false;
     bool currentRaiserVerified = ticket['raiser_verified'] ?? false;
 
-    if (isVerifyingAsAdmin) {
+    if (isVerifyingAsZoneLeader) {
       updates['admin_verified'] = true;
       updates['admin_verified_at'] = nowISO;
       currentAdminVerified = true;
@@ -235,8 +285,8 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
             content: Text(
               fullyVerified
                   ? "Ticket #${ticket['ticket_no']} is now FULLY VERIFIED and closed!"
-                  : isVerifyingAsAdmin
-                      ? "Admin sign-off recorded for #${ticket['ticket_no']}!"
+                  : isVerifyingAsZoneLeader
+                      ? "Zone sign-off recorded for #${ticket['ticket_no']}!"
                       : "Raiser verification recorded for #${ticket['ticket_no']}!",
               style: GoogleFonts.inter(fontWeight: FontWeight.w600),
             ),
@@ -262,12 +312,13 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
   // --- Show Confirmation Bottom Sheet ---
   void _confirmVerificationDialog({
     required Map<String, dynamic> ticket,
-    required bool isVerifyingAsAdmin,
+    required bool isVerifyingAsZoneLeader,
   }) {
-    final otherVerified = isVerifyingAsAdmin
+    final otherVerified = isVerifyingAsZoneLeader
         ? (ticket['raiser_verified'] ?? false)
         : (ticket['admin_verified'] ?? false);
-    final otherRoleLabel = isVerifyingAsAdmin ? "Ticket Raiser" : "Facility Admin";
+    final otherRoleLabel =
+        isVerifyingAsZoneLeader ? "Ticket Raiser" : "Zone In-Charge";
 
     showModalBottomSheet(
       context: context,
@@ -305,15 +356,15 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: (isVerifyingAsAdmin ? adminColor : raiserColor)
+                      color: (isVerifyingAsZoneLeader ? adminColor : raiserColor)
                           .withOpacity(0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
-                      isVerifyingAsAdmin
-                          ? Icons.admin_panel_settings_rounded
+                      isVerifyingAsZoneLeader
+                          ? Icons.layers_outlined
                           : Icons.verified_user_rounded,
-                      color: isVerifyingAsAdmin ? adminColor : raiserColor,
+                      color: isVerifyingAsZoneLeader ? adminColor : raiserColor,
                       size: 26,
                     ),
                   ),
@@ -323,8 +374,8 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isVerifyingAsAdmin
-                              ? "Admin Verification Sign-Off"
+                          isVerifyingAsZoneLeader
+                              ? "Zone Verification Sign-Off"
                               : "Raiser Work Confirmation",
                           style: GoogleFonts.inter(
                             fontSize: 18,
@@ -463,8 +514,9 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                     flex: 2,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            isVerifyingAsAdmin ? adminColor : const Color(0xFF16A34A),
+                        backgroundColor: isVerifyingAsZoneLeader
+                            ? adminColor
+                            : const Color(0xFF16A34A),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         elevation: 0,
@@ -474,8 +526,8 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                       ),
                       icon: const Icon(Icons.check_circle_rounded, size: 20),
                       label: Text(
-                        isVerifyingAsAdmin
-                            ? "Confirm Admin Sign-Off"
+                        isVerifyingAsZoneLeader
+                            ? "Confirm Zone Sign-Off"
                             : "Confirm & Verify",
                         style: GoogleFonts.inter(
                           fontWeight: FontWeight.bold,
@@ -486,7 +538,7 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                         Navigator.pop(ctx);
                         _verifyTicket(
                           ticket: ticket,
-                          isVerifyingAsAdmin: isVerifyingAsAdmin,
+                          isVerifyingAsZoneLeader: isVerifyingAsZoneLeader,
                         );
                       },
                     ),
@@ -509,11 +561,27 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
       final ticketNo = (t['ticket_no'] ?? '').toString().toLowerCase();
       final kitchen = (t['m_kitchen']?['name'] ?? '').toString().toLowerCase();
       final assigned = (t['assigned_to']?['name'] ?? '').toString().toLowerCase();
+      final zone = (t['m_area']?['m_zone']?['name'] ?? '').toString().toLowerCase();
+      final area = (t['m_area']?['area_name'] ?? '').toString().toLowerCase();
       return title.contains(q) ||
           ticketNo.contains(q) ||
           kitchen.contains(q) ||
-          assigned.contains(q);
+          assigned.contains(q) ||
+          zone.contains(q) ||
+          area.contains(q);
     }).toList();
+  }
+
+  List<Map<String, dynamic>> _filterZoneList(List<Map<String, dynamic>> list) {
+    var filtered = _filterList(list);
+    if (_selectedZoneFilter != 'ALL') {
+      filtered = filtered.where((t) {
+        final zoneId = t['m_area']?['m_zone']?['id']?.toString() ??
+            t['m_area']?['zone_id']?.toString();
+        return zoneId == _selectedZoneFilter;
+      }).toList();
+    }
+    return filtered;
   }
 
   @override
@@ -552,8 +620,8 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
               ),
             ),
             Text(
-              _isAdmin
-                  ? "Raiser & Admin Sign-Off Center"
+              _canAccessZoneSignOff
+                  ? "Raiser & Zone Sign-Off Center"
                   : "Confirm resolution of your raised tickets",
               style: GoogleFonts.inter(
                 fontSize: 12,
@@ -570,7 +638,7 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
             onPressed: _fetchAllTickets,
           ),
         ],
-        bottom: _isAdmin && _tabController != null
+        bottom: _canAccessZoneSignOff && _tabController != null
             ? PreferredSize(
                 preferredSize: const Size.fromHeight(48),
                 child: Container(
@@ -613,11 +681,11 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text("Admin Sign-Off"),
-                            if (_adminPendingTickets.isNotEmpty) ...[
+                            const Text("Zone Sign-Off"),
+                            if (_zonePendingTickets.isNotEmpty) ...[
                               const SizedBox(width: 6),
                               _buildCountBadge(
-                                _adminPendingTickets.length,
+                                _zonePendingTickets.length,
                                 adminColor,
                               ),
                             ],
@@ -736,7 +804,7 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                 onChanged: (val) => setState(() => _searchQuery = val.trim()),
                 style: GoogleFonts.inter(fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: "Search by title, #ID, or technician...",
+                  hintText: "Search by title, #ID, area, or technician...",
                   hintStyle: GoogleFonts.inter(
                     fontSize: 13,
                     color: Colors.grey.shade400,
@@ -762,7 +830,7 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator(color: navy))
-                : _isAdmin && _tabController != null
+                : _canAccessZoneSignOff && _tabController != null
                     ? TabBarView(
                         controller: _tabController,
                         children: [
@@ -775,13 +843,22 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                                 "None of your raised tickets in this kitchen require verification.",
                           ),
 
-                          // TAB 2 (Admin Only): Admin Sign-Off
-                          _buildTicketList(
-                            tickets: _filterList(_adminPendingTickets),
-                            isRaiserContext: false,
-                            emptyTitle: "No Pending Admin Sign-Offs",
-                            emptyMessage:
-                                "All completed tickets in this kitchen have been verified by an admin.",
+                          // TAB 2 (Zone Leader / Admin): Zone Sign-Off
+                          Column(
+                            children: [
+                              if (_allocatedZones.length > 1)
+                                _buildZoneFilterChips(),
+                              Expanded(
+                                child: _buildTicketList(
+                                  tickets: _filterZoneList(_zonePendingTickets),
+                                  isRaiserContext: false,
+                                  emptyTitle: "No Pending Zone Sign-Offs",
+                                  emptyMessage: _selectedZoneFilter == 'ALL'
+                                      ? "All completed tickets in your allocated zones have received zone sign-off."
+                                      : "No pending sign-offs in the selected zone.",
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       )
@@ -793,6 +870,92 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                             "None of your raised tickets in this kitchen require verification.",
                       ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // --- Zone Filter Chips for Zone Sign-Off Tab ---
+  Widget _buildZoneFilterChips() {
+    return Container(
+      height: 38,
+      margin: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: FilterChip(
+              selected: _selectedZoneFilter == 'ALL',
+              label: Text(
+                "All Allocated Zones (${_zonePendingTickets.length})",
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: _selectedZoneFilter == 'ALL'
+                      ? FontWeight.w700
+                      : FontWeight.w500,
+                  color: _selectedZoneFilter == 'ALL'
+                      ? Colors.white
+                      : Colors.grey.shade700,
+                ),
+              ),
+              backgroundColor: Colors.white,
+              selectedColor: adminColor,
+              checkmarkColor: Colors.white,
+              showCheckmark: false,
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: _selectedZoneFilter == 'ALL'
+                      ? adminColor
+                      : Colors.grey.shade300,
+                ),
+              ),
+              onSelected: (_) {
+                setState(() => _selectedZoneFilter = 'ALL');
+              },
+            ),
+          ),
+          ..._allocatedZones.map((z) {
+            final zoneId = z['id'].toString();
+            final zoneName = z['name'] ?? 'Zone';
+            final count = _zonePendingTickets.where((t) {
+              final tZoneId = t['m_area']?['m_zone']?['id']?.toString() ??
+                  t['m_area']?['zone_id']?.toString();
+              return tZoneId == zoneId;
+            }).length;
+            final isSelected = _selectedZoneFilter == zoneId;
+
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilterChip(
+                selected: isSelected,
+                label: Text(
+                  "$zoneName ($count)",
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected ? Colors.white : Colors.grey.shade700,
+                  ),
+                ),
+                backgroundColor: Colors.white,
+                selectedColor: adminColor,
+                checkmarkColor: Colors.white,
+                showCheckmark: false,
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(
+                    color: isSelected ? adminColor : Colors.grey.shade300,
+                  ),
+                ),
+                onSelected: (_) {
+                  setState(() => _selectedZoneFilter = zoneId);
+                },
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -891,7 +1054,7 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
           final ticket = tickets[index];
           return isRaiserContext
               ? _buildRaiserCard(ticket)
-              : _buildAdminCard(ticket);
+              : _buildZoneCard(ticket);
         },
       ),
     );
@@ -901,6 +1064,8 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
   Widget _buildRaiserCard(Map<String, dynamic> ticket) {
     final priorityColor = _getPriorityColor(ticket['priority']);
     final adminVerified = ticket['admin_verified'] == true;
+    final areaName = ticket['m_area']?['area_name'];
+    final zoneName = ticket['m_area']?['m_zone']?['name'];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -994,7 +1159,7 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
               ),
               const SizedBox(height: 6),
 
-              // Meta details
+              // Meta details (Kitchen & Zone/Area)
               Row(
                 children: [
                   Icon(Icons.kitchen_outlined, size: 14, color: Colors.grey.shade500),
@@ -1011,7 +1176,28 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  if (zoneName != null || areaName != null) ...[
+                    const SizedBox(width: 10),
+                    Icon(Icons.layers_outlined, size: 14, color: Colors.grey.shade500),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        [?zoneName, ?areaName].join(" • "),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
                   Icon(Icons.handyman_outlined, size: 14, color: Colors.grey.shade500),
                   const SizedBox(width: 4),
                   Expanded(
@@ -1026,24 +1212,18 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
+                  const SizedBox(width: 8),
                   Icon(Icons.schedule_rounded, size: 14, color: Colors.grey.shade500),
                   const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      "Completed: ${_formatDate(ticket['ticket_completion_time'])}",
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: Colors.grey.shade500,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  Text(
+                    "Completed: ${_formatDate(ticket['ticket_completion_time'])}",
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w500,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -1088,7 +1268,7 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                 const SizedBox(height: 12),
               ],
 
-              // Admin verification status indicator
+              // Zone verification status indicator
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
@@ -1112,8 +1292,8 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                     const SizedBox(width: 6),
                     Text(
                       adminVerified
-                          ? "Admin has verified this ticket"
-                          : "Pending Admin verification",
+                          ? "Zone In-Charge has verified this ticket"
+                          : "Pending Zone In-Charge verification",
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -1151,7 +1331,7 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                   ),
                   onPressed: () => _confirmVerificationDialog(
                     ticket: ticket,
-                    isVerifyingAsAdmin: false,
+                    isVerifyingAsZoneLeader: false,
                   ),
                 ),
               ),
@@ -1162,10 +1342,12 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
     );
   }
 
-  // --- 2. ADMIN CARD: Distinct Amber / Gold Theme ---
-  Widget _buildAdminCard(Map<String, dynamic> ticket) {
+  // --- 2. ZONE CARD: Distinct Amber / Gold Theme with Zone Prominence ---
+  Widget _buildZoneCard(Map<String, dynamic> ticket) {
     final priorityColor = _getPriorityColor(ticket['priority']);
     final raiserVerified = ticket['raiser_verified'] == true;
+    final areaName = ticket['m_area']?['area_name'];
+    final zoneName = ticket['m_area']?['m_zone']?['name'];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -1196,37 +1378,59 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top Header: Ticket Number & Priority Badge
+              // Top Header: Ticket Number, Zone Badge & Priority Badge
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: adminColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            ticket['ticket_no'] ?? '#---',
-                            style: GoogleFonts.inter(
-                              color: adminColor,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 12,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ),
-                      ],
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: adminColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      ticket['ticket_no'] ?? '#---',
+                      style: GoogleFonts.inter(
+                        color: adminColor,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                        letterSpacing: 0.2,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  if (zoneName != null) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.layers_outlined,
+                              size: 12, color: Colors.orange.shade800),
+                          const SizedBox(width: 4),
+                          Text(
+                            zoneName,
+                            style: GoogleFonts.inter(
+                              color: Colors.orange.shade900,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const Spacer(),
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1259,31 +1463,32 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
               ),
               const SizedBox(height: 8),
 
-              // Info Row: Kitchen, Raiser, Technician
+              // Info Row: Area, Raiser, Technician
               Wrap(
                 spacing: 12,
                 runSpacing: 6,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.kitchen_outlined, size: 14, color: Colors.grey.shade500),
-                      const SizedBox(width: 4),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 140),
-                        child: Text(
-                          ticket['m_kitchen']?['name'] ?? 'Facility',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                            fontWeight: FontWeight.w600,
+                  if (areaName != null)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.place_outlined, size: 14, color: Colors.grey.shade500),
+                        const SizedBox(width: 4),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 140),
+                          child: Text(
+                            areaName,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -1446,7 +1651,7 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                   ),
                   icon: const Icon(Icons.verified_outlined, size: 18),
                   label: Text(
-                    "Approve & Admin Sign-Off",
+                    "Approve & Zone Sign-Off",
                     style: GoogleFonts.inter(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
@@ -1455,7 +1660,7 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                   ),
                   onPressed: () => _confirmVerificationDialog(
                     ticket: ticket,
-                    isVerifyingAsAdmin: true,
+                    isVerifyingAsZoneLeader: true,
                   ),
                 ),
               ),
