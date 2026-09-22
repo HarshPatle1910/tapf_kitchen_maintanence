@@ -14,6 +14,8 @@ class AuthProvider with ChangeNotifier {
 
   String? _activeRole;
   String? _userName;
+  String? _department;
+  String? _address;
 
   // FIX: Store the full kitchen map (id + name) so we can use it in dropdowns
   List<Map<String, dynamic>> _assignedKitchens = [];
@@ -27,6 +29,8 @@ class AuthProvider with ChangeNotifier {
   String? get activeRole => _activeRole;
   bool get isAdmin => _activeRole == 'admin';
   String? get userName => _userName;
+  String? get department => _department;
+  String? get address => _address;
 
   // Helper getters for kitchens
   List<Map<String, dynamic>> get assignedKitchens => _assignedKitchens;
@@ -125,6 +129,36 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> updateProfile({
+    required String name,
+    required String department,
+    required String address,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return false;
+
+    _setLoading(true);
+    _errorMessage = null;
+    try {
+      await _supabase.from('m_user').update({
+        'name': name,
+        'department': department,
+        'address': address,
+      }).eq('id', user.id);
+
+      await refreshUserStatus();
+      return true;
+    } on PostgrestException catch (e) {
+      _errorMessage = e.message;
+      _setLoading(false);
+      return false;
+    } catch (e) {
+      _errorMessage = "Failed to update profile. Please try again.";
+      _setLoading(false);
+      return false;
+    }
+  }
+
   Future<void> refreshUserStatus() async {
     final user = _supabase.auth.currentUser;
     if (user == null) return;
@@ -141,10 +175,14 @@ class AuthProvider with ChangeNotifier {
         _authState = AuthState.profileIncomplete;
       } else if (data['status'] == false) {
         _userName = data['name'];
+        _department = data['department'];
+        _address = data['address'];
         _authState = AuthState.pendingApproval;
       } else {
         _activeRole = data['role'];
         _userName = data['name'];
+        _department = data['department'];
+        _address = data['address'];
 
         // Map the result into a clean list of maps
         _assignedKitchens = (data['user_kitchens'] as List<dynamic>?)?.map((k) => <String, dynamic>{
@@ -167,6 +205,8 @@ class AuthProvider with ChangeNotifier {
     _activeRole = null;
     _assignedKitchens = [];
     _userName = null;
+    _department = null;
+    _address = null;
     _authState = AuthState.unauthenticated;
     _setLoading(false);
   }
