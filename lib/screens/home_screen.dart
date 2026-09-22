@@ -20,6 +20,7 @@ import '../widgets/responsive_sidebar.dart';
 // import 'reports/reports_screen.dart';
 import 'master/user_management.dart';
 import 'more_screen.dart';
+import 'ticket_verification_screen.dart';
 
 // ============================================================================
 // ROOT WRAPPER WITH BOTTOM NAVIGATION BAR
@@ -501,7 +502,48 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
               ]
             ],
           ),
-          actions: isWeb ? const [SizedBox(width: 16)] : null,
+          actions: [
+            IconButton(
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.verified_outlined, color: navy, size: 24),
+                  if (ticketProvider.completed > 0)
+                    Positioned(
+                      top: -2,
+                      right: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF16A34A),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          ticketProvider.completed > 9
+                              ? "9+"
+                              : ticketProvider.completed.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              tooltip: "Ticket Verification",
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const TicketVerificationScreen(),
+                  ),
+                ).then((_) => ticketProvider.refreshTickets());
+              },
+            ),
+            const SizedBox(width: 8),
+          ],
         ),
         body: Center(
           child: ConstrainedBox(

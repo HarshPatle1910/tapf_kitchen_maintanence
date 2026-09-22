@@ -5,12 +5,14 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/ticket_provider.dart';
 import 'master/area_screen.dart';
 import 'master/equipment_master_screen.dart';
 import 'master/spares/spare_screen.dart';
 import 'master/tools_screen.dart';
 import 'master/vendor_screen.dart';
 import 'master/zone_screen.dart';
+import 'ticket_verification_screen.dart';
 
 // // --- Master Screen Imports ---
 // import 'master/area_screen.dart';
@@ -34,6 +36,64 @@ class _MoreScreenState extends State<MoreScreen> {
   static const Color surface = Colors.white;
 
   final _supabase = Supabase.instance.client;
+  int _pendingVerificationCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchPendingVerificationCount();
+    });
+  }
+
+  Future<void> _fetchPendingVerificationCount() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+    try {
+      final authProv = context.read<AuthProvider>();
+      final ticketProv = context.read<TicketProvider>();
+      final bool isAdmin = authProv.isAdmin;
+
+      String? targetKitchenId = ticketProv.kitchenFilter;
+      if (targetKitchenId == 'ALL' ||
+          !authProv.assignedKitchens.any(
+            (k) => k['id'].toString() == targetKitchenId,
+          )) {
+        targetKitchenId = authProv.assignedKitchens.isNotEmpty
+            ? authProv.assignedKitchens.first['id'].toString()
+            : null;
+      }
+
+      if (targetKitchenId == null) {
+        if (mounted) setState(() => _pendingVerificationCount = 0);
+        return;
+      }
+
+      int count = 0;
+      final raiserRes = await _supabase
+          .from('tickets')
+          .select('id')
+          .eq('kitchen_id', targetKitchenId)
+          .eq('raised_by_id', userId)
+          .eq('status', 'COMPLETED')
+          .neq('raiser_verified', true);
+      count += (raiserRes as List).length;
+
+      if (isAdmin) {
+        final adminRes = await _supabase
+            .from('tickets')
+            .select('id')
+            .eq('kitchen_id', targetKitchenId)
+            .eq('status', 'COMPLETED')
+            .neq('admin_verified', true);
+        count += (adminRes as List).length;
+      }
+
+      if (mounted) {
+        setState(() => _pendingVerificationCount = count);
+      }
+    } catch (_) {}
+  }
 
   Future<void> _showUserDetails(
     BuildContext context,
@@ -717,7 +777,25 @@ class _MoreScreenState extends State<MoreScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
+
+              // --- Section: Ticket Actions (Available for all users) ---
+              _buildSectionTitle("Ticket Verification"),
+              _buildMenuCard([
+                _MenuItem(
+                  Icons.verified_outlined,
+                  isAdmin
+                      ? "Ticket Verification Center"
+                      : "Verify Completed Tickets",
+                  const TicketVerificationScreen(),
+                  context,
+                  badgeText: _pendingVerificationCount > 0
+                      ? "$_pendingVerificationCount Pending"
+                      : null,
+                  badgeColor: const Color(0xFF16A34A),
+                ),
+              ]),
+              const SizedBox(height: 24),
 
               if (isAdmin) ...[
                 // --- Section: Configuration ---
@@ -860,15 +938,43 @@ class _MoreScreenState extends State<MoreScreen> {
                     color: const Color(0xFF0F172A),
                   ),
                 ),
-                trailing: Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  color: Colors.grey.shade300,
-                  size: 16,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (item.badgeText != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: (item.badgeColor ?? primary).withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          item.badgeText!,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: item.badgeColor ?? primary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: Colors.grey.shade300,
+                      size: 16,
+                    ),
+                  ],
                 ),
                 onTap: () => Navigator.push(
                   item.context,
                   MaterialPageRoute(builder: (_) => item.screen),
-                ),
+                ).then((_) {
+                  if (mounted) _fetchPendingVerificationCount();
+                }),
               ),
               if (!isLast)
                 Divider(height: 1, indent: 64, color: Colors.grey.shade100),
@@ -885,6 +991,15 @@ class _MenuItem {
   final String title;
   final Widget screen;
   final BuildContext context;
+  final String? badgeText;
+  final Color? badgeColor;
 
-  _MenuItem(this.icon, this.title, this.screen, this.context);
+  _MenuItem(
+    this.icon,
+    this.title,
+    this.screen,
+    this.context, {
+    this.badgeText,
+    this.badgeColor,
+  });
 }
