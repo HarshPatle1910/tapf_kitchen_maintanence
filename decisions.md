@@ -14,6 +14,8 @@ This document tracks key architectural, technical, and structural decisions made
 - [ADR-006: Responsive Hybrid Architecture for Desktop/Web and Mobile](#adr-006-responsive-hybrid-architecture-for-desktopweb-and-mobile)
 - [ADR-007: App Update Enforcement & Versioning Mechanism](#adr-007-app-update-enforcement--versioning-mechanism)
 - [ADR-008: Official TAPF Brand Identity & Header Standardization](#adr-008-official-tapf-brand-identity--header-standardization)
+- [ADR-009: Dynamic Ticket Swapping & Staggered Transition Animations](#adr-009-dynamic-ticket-swapping--staggered-transition-animations)
+- [ADR-010: Asynchronous Query Concurrency Guards & Atomic State Resets](#adr-010-asynchronous-query-concurrency-guards--atomic-state-resets)
 
 ---
 
@@ -213,3 +215,48 @@ Standardize the Home screen AppBar header with the official Akshaya Patra Founda
 - **Positive:**
   - Professional, organization-aligned branding.
   - Responsive alignment with kitchen selector on mobile and web viewports.
+
+---
+
+## ADR-009: Dynamic Ticket Swapping & Staggered Transition Animations
+
+### Status
+**Accepted**
+
+### Context
+When technicians or supervisors applied search queries, sort orders (e.g., Newest vs. Oldest or Priority), or filtered by status, zone, and area, the ticket cards would abruptly snap or reorder instantaneously. This lacked visual hierarchy, made it difficult to see what moved or changed, and resulted in a rigid user experience.
+
+### Decision
+Implement physical position-swapping and staggered entrance animations via `_AnimatedTicketCard` (mobile cards) and `_AnimatedTableRow` (web/desktop table rows):
+1. **Index Delta Tracking:** Maintain a mapping of previous item indices (`_previousTicketIndices`) against newly loaded ticket positions and pass `deltaIndices` and `animationGeneration` to table components.
+2. **Smooth Gliding Swaps:** When an existing ticket shifts position (`deltaIndex != 0`), translate it from its previous relative vertical offset (`deltaIndex * 122.0` on mobile cards, `deltaIndex * 48.0` on web rows) to its new slot using `Curves.easeOutCubic`.
+3. **Tactile Elevation Lift:** Apply a subtle `scale` elevation curve (`+2.5%` mobile, `+1.5%` web) during the swap glide so moving items feel physically lifted over or under adjacent items.
+4. **Immediate Responsive Entrance:** Incoming tickets that were not previously in the viewport smoothly slide up from `+20px` (or `+16px` on web) with an immediate opacity ramp (`0.2 -> 1.0`).
+
+### Consequences
+- **Positive:**
+  - Highly tactile, premium visual feedback demonstrating how tickets are rearranged across both mobile and web views.
+  - Users can clearly see items shifting or entering the filtered scope regardless of device form factor.
+- **Negative:**
+  - Requires maintaining generation counters and animation controllers keyed per ticket ID.
+
+---
+
+## ADR-010: Asynchronous Query Concurrency Guards & Atomic State Resets
+
+### Status
+**Accepted**
+
+### Context
+Calling multiple async state mutators in succession (e.g. `setSearchQuery('')` followed immediately by `setFilters(...)`) triggered two un-awaited `refreshTickets()` calls. The second request would be dropped because `_isLoading` was already `true`, or a slower stale query would complete second and overwrite fresher data with empty lists, leaving the screen stuck on "No Tickets Found" until a manual pull-to-refresh.
+
+### Decision
+1. **Atomic Reset:** Introduce `resetAllFilters()` in `TicketProvider` to update search query, status, priority, zone, area, dates, and ownership flags in a single synchronous pass before triggering one authoritative refresh.
+2. **Request Counter Concurrency Guard:** Introduce an incrementing `_fetchRequestId` in `fetchTickets()`. If a new query starts while an older request is in-flight, the older query's asynchronous response is safely discarded upon completion.
+3. **Force Refresh Support:** Allow programmatic filter changes to bypass non-loading locks (`forceRefresh: true`).
+
+### Consequences
+- **Positive:**
+  - Completely eliminates race conditions and phantom "No Tickets Found" screens.
+  - Guarantees predictable state synchronization across mobile and web interfaces.
+

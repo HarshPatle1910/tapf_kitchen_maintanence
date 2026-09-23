@@ -4,19 +4,6 @@
   "graph": {},
   "nodes": [
     {
-      "id": "windows_runner_win32_window_size",
-      "label": "Size",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 108,
-      "community_name": "Size",
-      "file_type": "code",
-      "norm_label": "size",
-      "source_file": "windows/runner/win32_window.h",
-      "source_location": "L21"
-    },
-    {
       "id": "linux_runner_my_application_myapplication",
       "label": "_MyApplication",
       "_callable": true,
@@ -43,6 +30,19 @@
       "source_location": "L59"
     },
     {
+      "id": "windows_runner_flutter_window_flutterwindow",
+      "label": "FlutterWindow",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "Win32Window",
+      "file_type": "code",
+      "norm_label": "flutterwindow",
+      "source_file": "windows/runner/flutter_window.h",
+      "source_location": "L12"
+    },
+    {
       "id": "windows_runner_win32_window_win32window",
       "label": "Win32Window",
       "_callable": true,
@@ -54,19 +54,6 @@
       "norm_label": "win32window",
       "source_file": "windows/runner/win32_window.h",
       "source_location": "L13"
-    },
-    {
-      "id": "windows_runner_flutter_window_flutterwindow",
-      "label": "FlutterWindow",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 50,
-      "community_name": "FlutterWindow",
-      "file_type": "code",
-      "norm_label": "flutterwindow",
-      "source_file": "windows/runner/flutter_window.h",
-      "source_location": "L12"
     },
     {
       "id": "supabase_types_compositetypes",
@@ -225,6 +212,19 @@
       "source_location": "L15"
     },
     {
+      "id": "windows_runner_win32_window_size",
+      "label": "Size",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 62,
+      "community_name": "Point",
+      "file_type": "code",
+      "norm_label": "size",
+      "source_file": "windows/runner/win32_window.h",
+      "source_location": "L21"
+    },
+    {
       "id": "macos_runnertests_runnertests_runnertests",
       "label": "RunnerTests",
       "_callable": true,
@@ -288,18 +288,6 @@
       "norm_label": "runnertests",
       "source_file": "ios/RunnerTests/RunnerTests.swift",
       "source_location": "L5"
-    },
-    {
-      "id": "windows_runner_win32_window_size_size",
-      "label": ".Size()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 108,
-      "community_name": "Size",
-      "file_type": "code",
-      "norm_label": ".size()",
-      "source_file": "windows/runner/win32_window.h",
-      "source_location": "L24"
     },
     {
       "id": "linux_flutter_generated_plugin_registrant_fl_register_plugins",
@@ -581,7 +569,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 50,
-      "community_name": "FlutterWindow",
+      "community_name": "MessageHandler",
       "file_type": "code",
       "norm_label": "flutterwindow::flutterwindow()",
       "source_file": "windows/runner/flutter_window.cpp",
@@ -644,6 +632,18 @@
       "norm_label": ".point()",
       "source_file": "windows/runner/win32_window.h",
       "source_location": "L18"
+    },
+    {
+      "id": "windows_runner_win32_window_size_size",
+      "label": ".Size()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 62,
+      "community_name": "Point",
+      "file_type": "code",
+      "norm_label": ".size()",
+      "source_file": "windows/runner/win32_window.h",
+      "source_location": "L24"
     },
     {
       "id": "macos_runnertests_runnertests_runnertests_testexample",
@@ -2397,6 +2397,17 @@
       "source_location": null
     },
     {
+      "id": "bool_get",
+      "label": "bool get",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "auth_provider.dart",
+      "file_type": "code",
+      "norm_label": "bool get",
+      "source_file": null,
+      "source_location": null
+    },
+    {
       "id": "lib_providers_auth_provider",
       "label": "auth_provider.dart",
       "_origin": "ast",
@@ -2650,6 +2661,17 @@
       "source_location": "L71"
     },
     {
+      "id": "string_get",
+      "label": "String? get",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "auth_provider.dart",
+      "file_type": "code",
+      "norm_label": "string? get",
+      "source_file": null,
+      "source_location": null
+    },
+    {
       "id": "decisions_adr_007_app_update_enforcement_versioning_mechanism",
       "label": "ADR-007: App Update Enforcement & Versioning Mechanism",
       "_origin": "ast",
@@ -2659,10 +2681,10 @@
       "node_kind": "heading",
       "norm_label": "adr-007: app update enforcement & versioning mechanism",
       "source_file": "decisions.md",
-      "source_location": "L180"
+      "source_location": "L179"
     },
     {
-      "id": "decisions_consequences_193",
+      "id": "decisions_consequences_192",
       "label": "Consequences",
       "_origin": "ast",
       "community": 100,
@@ -2671,10 +2693,10 @@
       "node_kind": "heading",
       "norm_label": "consequences",
       "source_file": "decisions.md",
-      "source_location": "L193"
+      "source_location": "L192"
     },
     {
-      "id": "decisions_context_185",
+      "id": "decisions_context_184",
       "label": "Context",
       "_origin": "ast",
       "community": 100,
@@ -2683,10 +2705,10 @@
       "node_kind": "heading",
       "norm_label": "context",
       "source_file": "decisions.md",
-      "source_location": "L185"
+      "source_location": "L184"
     },
     {
-      "id": "decisions_decision_188",
+      "id": "decisions_decision_187",
       "label": "Decision",
       "_origin": "ast",
       "community": 100,
@@ -2695,10 +2717,10 @@
       "node_kind": "heading",
       "norm_label": "decision",
       "source_file": "decisions.md",
-      "source_location": "L188"
+      "source_location": "L187"
     },
     {
-      "id": "decisions_status_182",
+      "id": "decisions_status_181",
       "label": "Status",
       "_origin": "ast",
       "community": 100,
@@ -2707,7 +2729,7 @@
       "node_kind": "heading",
       "norm_label": "status",
       "source_file": "decisions.md",
-      "source_location": "L182"
+      "source_location": "L181"
     },
     {
       "id": "decisions_adr_008_official_tapf_brand_identity_header_standardization",
@@ -2719,10 +2741,10 @@
       "node_kind": "heading",
       "norm_label": "adr-008: official tapf brand identity & header standardization",
       "source_file": "decisions.md",
-      "source_location": "L202"
+      "source_location": "L201"
     },
     {
-      "id": "decisions_consequences_215",
+      "id": "decisions_consequences_214",
       "label": "Consequences",
       "_origin": "ast",
       "community": 101,
@@ -2731,10 +2753,10 @@
       "node_kind": "heading",
       "norm_label": "consequences",
       "source_file": "decisions.md",
-      "source_location": "L215"
+      "source_location": "L214"
     },
     {
-      "id": "decisions_context_207",
+      "id": "decisions_context_206",
       "label": "Context",
       "_origin": "ast",
       "community": 101,
@@ -2743,10 +2765,10 @@
       "node_kind": "heading",
       "norm_label": "context",
       "source_file": "decisions.md",
-      "source_location": "L207"
+      "source_location": "L206"
     },
     {
-      "id": "decisions_decision_210",
+      "id": "decisions_decision_209",
       "label": "Decision",
       "_origin": "ast",
       "community": 101,
@@ -2755,10 +2777,10 @@
       "node_kind": "heading",
       "norm_label": "decision",
       "source_file": "decisions.md",
-      "source_location": "L210"
+      "source_location": "L209"
     },
     {
-      "id": "decisions_status_204",
+      "id": "decisions_status_203",
       "label": "Status",
       "_origin": "ast",
       "community": 101,
@@ -2767,7 +2789,7 @@
       "node_kind": "heading",
       "norm_label": "status",
       "source_file": "decisions.md",
-      "source_location": "L204"
+      "source_location": "L203"
     },
     {
       "id": "decisions_adr_009_dynamic_ticket_swapping_staggered_transition_animations",
@@ -2779,10 +2801,10 @@
       "node_kind": "heading",
       "norm_label": "adr-009: dynamic ticket swapping & staggered transition animations",
       "source_file": "decisions.md",
-      "source_location": "L222"
+      "source_location": "L221"
     },
     {
-      "id": "decisions_consequences_237",
+      "id": "decisions_consequences_236",
       "label": "Consequences",
       "_origin": "ast",
       "community": 102,
@@ -2791,10 +2813,10 @@
       "node_kind": "heading",
       "norm_label": "consequences",
       "source_file": "decisions.md",
-      "source_location": "L237"
+      "source_location": "L236"
     },
     {
-      "id": "decisions_context_227",
+      "id": "decisions_context_226",
       "label": "Context",
       "_origin": "ast",
       "community": 102,
@@ -2803,10 +2825,10 @@
       "node_kind": "heading",
       "norm_label": "context",
       "source_file": "decisions.md",
-      "source_location": "L227"
+      "source_location": "L226"
     },
     {
-      "id": "decisions_decision_230",
+      "id": "decisions_decision_229",
       "label": "Decision",
       "_origin": "ast",
       "community": 102,
@@ -2815,10 +2837,10 @@
       "node_kind": "heading",
       "norm_label": "decision",
       "source_file": "decisions.md",
-      "source_location": "L230"
+      "source_location": "L229"
     },
     {
-      "id": "decisions_status_224",
+      "id": "decisions_status_223",
       "label": "Status",
       "_origin": "ast",
       "community": 102,
@@ -2827,7 +2849,7 @@
       "node_kind": "heading",
       "norm_label": "status",
       "source_file": "decisions.md",
-      "source_location": "L224"
+      "source_location": "L223"
     },
     {
       "id": "decisions_adr_010_asynchronous_query_concurrency_guards_atomic_state_resets",
@@ -2839,10 +2861,10 @@
       "node_kind": "heading",
       "norm_label": "adr-010: asynchronous query concurrency guards & atomic state resets",
       "source_file": "decisions.md",
-      "source_location": "L246"
+      "source_location": "L245"
     },
     {
-      "id": "decisions_consequences_259",
+      "id": "decisions_consequences_258",
       "label": "Consequences",
       "_origin": "ast",
       "community": 103,
@@ -2851,10 +2873,10 @@
       "node_kind": "heading",
       "norm_label": "consequences",
       "source_file": "decisions.md",
-      "source_location": "L259"
+      "source_location": "L258"
     },
     {
-      "id": "decisions_context_251",
+      "id": "decisions_context_250",
       "label": "Context",
       "_origin": "ast",
       "community": 103,
@@ -2863,10 +2885,10 @@
       "node_kind": "heading",
       "norm_label": "context",
       "source_file": "decisions.md",
-      "source_location": "L251"
+      "source_location": "L250"
     },
     {
-      "id": "decisions_decision_254",
+      "id": "decisions_decision_253",
       "label": "Decision",
       "_origin": "ast",
       "community": 103,
@@ -2875,10 +2897,10 @@
       "node_kind": "heading",
       "norm_label": "decision",
       "source_file": "decisions.md",
-      "source_location": "L254"
+      "source_location": "L253"
     },
     {
-      "id": "decisions_status_248",
+      "id": "decisions_status_247",
       "label": "Status",
       "_origin": "ast",
       "community": 103,
@@ -2887,7 +2909,7 @@
       "node_kind": "heading",
       "norm_label": "status",
       "source_file": "decisions.md",
-      "source_location": "L248"
+      "source_location": "L247"
     },
     {
       "id": "decisions",
@@ -2926,130 +2948,312 @@
       "source_location": "L7"
     },
     {
-      "id": "decisions_adr_011_web_tablet_view_toolbar_decoupling_from_global_appbar",
-      "label": "ADR-011: Web & Tablet View Toolbar Decoupling from Global AppBar",
+      "id": "package_flutter_test_flutter_test_dart",
+      "label": "package:flutter_test/flutter_test.dart",
       "_origin": "ast",
       "community": 105,
-      "community_name": "ADR-011: Web & Tablet View Toolbar Decoupling from Global AppBar",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "adr-011: web & tablet view toolbar decoupling from global appbar",
-      "source_file": "decisions.md",
-      "source_location": "L266"
-    },
-    {
-      "id": "decisions_consequences_284",
-      "label": "Consequences",
-      "_origin": "ast",
-      "community": 105,
-      "community_name": "ADR-011: Web & Tablet View Toolbar Decoupling from Global AppBar",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "consequences",
-      "source_file": "decisions.md",
-      "source_location": "L284"
-    },
-    {
-      "id": "decisions_context_271",
-      "label": "Context",
-      "_origin": "ast",
-      "community": 105,
-      "community_name": "ADR-011: Web & Tablet View Toolbar Decoupling from Global AppBar",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "context",
-      "source_file": "decisions.md",
-      "source_location": "L271"
-    },
-    {
-      "id": "decisions_decision_274",
-      "label": "Decision",
-      "_origin": "ast",
-      "community": 105,
-      "community_name": "ADR-011: Web & Tablet View Toolbar Decoupling from Global AppBar",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "decision",
-      "source_file": "decisions.md",
-      "source_location": "L274"
-    },
-    {
-      "id": "decisions_status_268",
-      "label": "Status",
-      "_origin": "ast",
-      "community": 105,
-      "community_name": "ADR-011: Web & Tablet View Toolbar Decoupling from Global AppBar",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "status",
-      "source_file": "decisions.md",
-      "source_location": "L268"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_status_banner",
-      "label": "ticket_status_banner.dart",
-      "_origin": "ast",
-      "community": 106,
-      "community_name": "package:google_fonts/google_fonts.dart",
+      "community_name": "widget_test.dart",
       "file_type": "code",
-      "norm_label": "ticket_status_banner.dart",
-      "source_file": "lib/widgets/ticket/ticket_status_banner.dart",
+      "norm_label": "package:flutter_test/flutter_test.dart",
+      "source_file": null,
       "source_location": null
     },
     {
-      "id": "lib_widgets_ticket_ticket_status_banner_build",
+      "id": "package_kitchen_maintanence_main_dart",
+      "label": "package:kitchen_maintanence/main.dart",
+      "_origin": "ast",
+      "community": 105,
+      "community_name": "widget_test.dart",
+      "file_type": "code",
+      "norm_label": "package:kitchen_maintanence/main.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "test_widget_test",
+      "label": "widget_test.dart",
+      "_origin": "ast",
+      "community": 105,
+      "community_name": "widget_test.dart",
+      "file_type": "code",
+      "norm_label": "widget_test.dart",
+      "source_file": "test/widget_test.dart",
+      "source_location": null
+    },
+    {
+      "id": "test_widget_test_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 105,
+      "community_name": "widget_test.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "test/widget_test.dart",
+      "source_location": "L13"
+    },
+    {
+      "id": "formstate",
+      "label": "FormState",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "formstate",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen",
+      "label": "spare_inventory_screen.dart",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "spare_inventory_screen.dart",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen_addqtycontroller",
+      "label": "_addQtyController",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "_addqtycontroller",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L27"
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen_background",
+      "label": "background",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "background",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L17"
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen_build",
       "label": "build",
       "_origin": "ast",
       "community": 106,
-      "community_name": "package:google_fonts/google_fonts.dart",
+      "community_name": "spare_inventory_screen.dart",
       "file_type": "code",
       "norm_label": "build",
-      "source_file": "lib/widgets/ticket/ticket_status_banner.dart",
-      "source_location": "L10"
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L124"
     },
     {
-      "id": "lib_widgets_ticket_ticket_status_banner_currentstatus",
-      "label": "currentStatus",
+      "id": "lib_screens_master_spares_spare_inventory_screen_createstate",
+      "label": "createState",
       "_origin": "ast",
       "community": 106,
-      "community_name": "package:google_fonts/google_fonts.dart",
+      "community_name": "spare_inventory_screen.dart",
       "file_type": "code",
-      "norm_label": "currentstatus",
-      "source_file": "lib/widgets/ticket/ticket_status_banner.dart",
+      "norm_label": "createstate",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L11"
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen_currentqty",
+      "label": "_currentQty",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "_currentqty",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L23"
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen_dispose",
+      "label": "dispose",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "dispose",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L38"
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen_fetchinventorydata",
+      "label": "_fetchInventoryData",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "_fetchinventorydata",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L44"
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen_formkey",
+      "label": "_formKey",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "_formkey",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L29"
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen_getstatuscolor",
+      "label": "_getStatusColor",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "_getstatuscolor",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L117"
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen_golden",
+      "label": "golden",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "golden",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L16"
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen_initstate",
+      "label": "initState",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "initstate",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L32"
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen_isloading",
+      "label": "_isLoading",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "_isloading",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L20"
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen_issaving",
+      "label": "_isSaving",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "_issaving",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L21"
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen_minalert",
+      "label": "_minAlert",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "_minalert",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L25"
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen_minalertcontroller",
+      "label": "_minAlertController",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "_minalertcontroller",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L28"
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen_navy",
+      "label": "navy",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "navy",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L15"
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen_spare",
+      "label": "spare",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "spare",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L6"
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen_spareinventoryscreen",
+      "label": "SpareInventoryScreen",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "spareinventoryscreen",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
       "source_location": "L5"
     },
     {
-      "id": "lib_widgets_ticket_ticket_status_banner_ticketstatusbanner",
-      "label": "TicketStatusBanner",
+      "id": "lib_screens_master_spares_spare_inventory_screen_spareinventoryscreenstate",
+      "label": "_SpareInventoryScreenState",
       "_origin": "ast",
       "community": 106,
-      "community_name": "package:google_fonts/google_fonts.dart",
+      "community_name": "spare_inventory_screen.dart",
       "file_type": "code",
-      "norm_label": "ticketstatusbanner",
-      "source_file": "lib/widgets/ticket/ticket_status_banner.dart",
-      "source_location": "L4"
+      "norm_label": "_spareinventoryscreenstate",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L14"
     },
     {
-      "id": "package_google_fonts_google_fonts_dart",
-      "label": "package:google_fonts/google_fonts.dart",
+      "id": "lib_screens_master_spares_spare_inventory_screen_supabase",
+      "label": "_supabase",
       "_origin": "ast",
       "community": 106,
-      "community_name": "package:google_fonts/google_fonts.dart",
+      "community_name": "spare_inventory_screen.dart",
       "file_type": "code",
-      "norm_label": "package:google_fonts/google_fonts.dart",
-      "source_file": null,
-      "source_location": null
+      "norm_label": "_supabase",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L19"
     },
     {
-      "id": "icondata",
-      "label": "IconData",
+      "id": "lib_screens_master_spares_spare_inventory_screen_totalqty",
+      "label": "_totalQty",
       "_origin": "ast",
-      "community": 107,
-      "community_name": "ticket_form_fields.dart",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
       "file_type": "code",
-      "norm_label": "icondata",
-      "source_file": null,
-      "source_location": null
+      "norm_label": "_totalqty",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L24"
+    },
+    {
+      "id": "lib_screens_master_spares_spare_inventory_screen_updateinventory",
+      "label": "_updateInventory",
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "_updateinventory",
+      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
+      "source_location": "L72"
     },
     {
       "id": "lib_widgets_ticket_ticket_form_fields",
@@ -3305,26 +3509,15 @@
       "source_location": null
     },
     {
-      "id": "windows_runner_win32_window_size_height",
-      "label": "height",
+      "id": "texteditingcontroller",
+      "label": "TextEditingController",
       "_origin": "ast",
-      "community": 108,
-      "community_name": "Size",
+      "community": 107,
+      "community_name": "ticket_form_fields.dart",
       "file_type": "code",
-      "norm_label": "height",
-      "source_file": "windows/runner/win32_window.h",
-      "source_location": "L23"
-    },
-    {
-      "id": "windows_runner_win32_window_size_width",
-      "label": "width",
-      "_origin": "ast",
-      "community": 108,
-      "community_name": "Size",
-      "file_type": "code",
-      "norm_label": "width",
-      "source_file": "windows/runner/win32_window.h",
-      "source_location": "L22"
+      "norm_label": "texteditingcontroller",
+      "source_file": null,
+      "source_location": null
     },
     {
       "id": "lib_screens_master_zone_screen",
@@ -4161,17 +4354,6 @@
       "norm_label": "surface",
       "source_file": "lib/screens/reports/pm_schedule_screen.dart",
       "source_location": "L29"
-    },
-    {
-      "id": "lib_screens_home_screen_buildwebtoolbar",
-      "label": "_buildWebToolbar",
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "ticket_verification_screen.dart",
-      "file_type": "code",
-      "norm_label": "_buildwebtoolbar",
-      "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L974"
     },
     {
       "id": "lib_screens_master_spares_spare_screen_build",
@@ -5480,7 +5662,7 @@
       "file_type": "code",
       "norm_label": "_animation",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1799"
+      "source_location": "L1547"
     },
     {
       "id": "lib_screens_home_screen_animationgeneration",
@@ -5513,7 +5695,7 @@
       "file_type": "code",
       "norm_label": "_buildactionbutton",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1413"
+      "source_location": "L1161"
     },
     {
       "id": "lib_screens_home_screen_buildcollapsedactionrow",
@@ -5524,7 +5706,7 @@
       "file_type": "code",
       "norm_label": "_buildcollapsedactionrow",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1249"
+      "source_location": "L997"
     },
     {
       "id": "lib_screens_home_screen_buildcompacticonbutton",
@@ -5535,7 +5717,7 @@
       "file_type": "code",
       "norm_label": "_buildcompacticonbutton",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1472"
+      "source_location": "L1220"
     },
     {
       "id": "lib_screens_home_screen_buildexpandedsearchrow",
@@ -5546,7 +5728,7 @@
       "file_type": "code",
       "norm_label": "_buildexpandedsearchrow",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1310"
+      "source_location": "L1058"
     },
     {
       "id": "lib_screens_home_screen_buildpagination",
@@ -5557,7 +5739,7 @@
       "file_type": "code",
       "norm_label": "_buildpagination",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1676"
+      "source_location": "L1424"
     },
     {
       "id": "lib_screens_home_screen_buildsearchsortfilterrow",
@@ -5568,7 +5750,7 @@
       "file_type": "code",
       "norm_label": "_buildsearchsortfilterrow",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1217"
+      "source_location": "L965"
     },
     {
       "id": "lib_screens_home_screen_buildsortoptiontile",
@@ -5579,7 +5761,7 @@
       "file_type": "code",
       "norm_label": "_buildsortoptiontile",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1604"
+      "source_location": "L1352"
     },
     {
       "id": "lib_screens_home_screen_buildstatcard",
@@ -5590,7 +5772,7 @@
       "file_type": "code",
       "norm_label": "_buildstatcard",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1706"
+      "source_location": "L1454"
     },
     {
       "id": "lib_screens_home_screen_checkandfetchpermissions",
@@ -5612,7 +5794,7 @@
       "file_type": "code",
       "norm_label": "_controller",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1798"
+      "source_location": "L1546"
     },
     {
       "id": "lib_screens_home_screen_createstate",
@@ -5645,7 +5827,7 @@
       "file_type": "code",
       "norm_label": "deltaindex",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1779"
+      "source_location": "L1527"
     },
     {
       "id": "lib_screens_home_screen_didupdatewidget",
@@ -5656,7 +5838,7 @@
       "file_type": "code",
       "norm_label": "didupdatewidget",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1840"
+      "source_location": "L1588"
     },
     {
       "id": "lib_screens_home_screen_dispose",
@@ -5678,7 +5860,7 @@
       "file_type": "code",
       "norm_label": "_getsortshortlabel",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1664"
+      "source_location": "L1412"
     },
     {
       "id": "lib_screens_home_screen_golden",
@@ -5700,7 +5882,7 @@
       "file_type": "code",
       "norm_label": "_handledgeneration",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1802"
+      "source_location": "L1550"
     },
     {
       "id": "lib_screens_home_screen_index",
@@ -5711,7 +5893,7 @@
       "file_type": "code",
       "norm_label": "index",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1778"
+      "source_location": "L1526"
     },
     {
       "id": "lib_screens_home_screen_initanimation",
@@ -5722,7 +5904,7 @@
       "file_type": "code",
       "norm_label": "_initanimation",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1818"
+      "source_location": "L1566"
     },
     {
       "id": "lib_screens_home_screen_isloadingaccess",
@@ -5744,7 +5926,7 @@
       "file_type": "code",
       "norm_label": "_isnewitem",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1801"
+      "source_location": "L1549"
     },
     {
       "id": "lib_screens_home_screen_issearchexpanded",
@@ -5777,7 +5959,7 @@
       "file_type": "code",
       "norm_label": "isweb",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1781"
+      "source_location": "L1529"
     },
     {
       "id": "lib_screens_home_screen_kitchenzones",
@@ -5898,7 +6080,7 @@
       "file_type": "code",
       "norm_label": "_showsortbottomsheet",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1522"
+      "source_location": "L1270"
     },
     {
       "id": "lib_screens_home_screen_startoffsety",
@@ -5909,7 +6091,7 @@
       "file_type": "code",
       "norm_label": "_startoffsety",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1800"
+      "source_location": "L1548"
     },
     {
       "id": "lib_screens_home_screen_supabase",
@@ -5931,7 +6113,7 @@
       "file_type": "code",
       "norm_label": "ticket",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1777"
+      "source_location": "L1525"
     },
     {
       "id": "lib_screens_home_screen_validreportcodes",
@@ -7705,17 +7887,6 @@
       "source_location": null
     },
     {
-      "id": "formstate",
-      "label": "FormState",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "area_screen.dart",
-      "file_type": "code",
-      "norm_label": "formstate",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "lib_screens_master_area_screen",
       "label": "area_screen.dart",
       "_origin": "ast",
@@ -8002,171 +8173,6 @@
       "source_location": "L29"
     },
     {
-      "id": "lib_screens_master_kitchen_screen",
-      "label": "kitchen_screen.dart",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "area_screen.dart",
-      "file_type": "code",
-      "norm_label": "kitchen_screen.dart",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_background",
-      "label": "background",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "area_screen.dart",
-      "file_type": "code",
-      "norm_label": "background",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L15"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_build",
-      "label": "build",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "area_screen.dart",
-      "file_type": "code",
-      "norm_label": "build",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L124"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_createstate",
-      "label": "createState",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "area_screen.dart",
-      "file_type": "code",
-      "norm_label": "createstate",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L9"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_fetchkitchens",
-      "label": "_fetchKitchens",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "area_screen.dart",
-      "file_type": "code",
-      "norm_label": "_fetchkitchens",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L27"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_golden",
-      "label": "golden",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "area_screen.dart",
-      "file_type": "code",
-      "norm_label": "golden",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L14"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_initstate",
-      "label": "initState",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "area_screen.dart",
-      "file_type": "code",
-      "norm_label": "initstate",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L22"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_isloading",
-      "label": "_isLoading",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "area_screen.dart",
-      "file_type": "code",
-      "norm_label": "_isloading",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L19"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_kitchenmasterscreen",
-      "label": "KitchenMasterScreen",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "area_screen.dart",
-      "file_type": "code",
-      "norm_label": "kitchenmasterscreen",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L5"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_kitchenmasterscreenstate",
-      "label": "_KitchenMasterScreenState",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "area_screen.dart",
-      "file_type": "code",
-      "norm_label": "_kitchenmasterscreenstate",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L12"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_kitchens",
-      "label": "_kitchens",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "area_screen.dart",
-      "file_type": "code",
-      "norm_label": "_kitchens",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L18"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_navy",
-      "label": "navy",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "area_screen.dart",
-      "file_type": "code",
-      "norm_label": "navy",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L13"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_showkitchenform",
-      "label": "_showKitchenForm",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "area_screen.dart",
-      "file_type": "code",
-      "norm_label": "_showkitchenform",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L39"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_supabase",
-      "label": "_supabase",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "area_screen.dart",
-      "file_type": "code",
-      "norm_label": "_supabase",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L17"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_togglestatus",
-      "label": "_toggleStatus",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "area_screen.dart",
-      "file_type": "code",
-      "norm_label": "_togglestatus",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L114"
-    },
-    {
       "id": "lib_screens_master_tools_screen",
       "label": "tools_screen.dart",
       "_origin": "ast",
@@ -8442,259 +8448,6 @@
       "source_location": "L8"
     },
     {
-      "id": "lib_screens_master_spares_spare_inventory_screen",
-      "label": "spare_inventory_screen.dart",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "spare_inventory_screen.dart",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_addqtycontroller",
-      "label": "_addQtyController",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "_addqtycontroller",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L27"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_background",
-      "label": "background",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "background",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L17"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_build",
-      "label": "build",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "build",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L124"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_createstate",
-      "label": "createState",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "createstate",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L11"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_currentqty",
-      "label": "_currentQty",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "_currentqty",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L23"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_dispose",
-      "label": "dispose",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "dispose",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L38"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_fetchinventorydata",
-      "label": "_fetchInventoryData",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "_fetchinventorydata",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L44"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_formkey",
-      "label": "_formKey",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "_formkey",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L29"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_getstatuscolor",
-      "label": "_getStatusColor",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "_getstatuscolor",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L117"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_golden",
-      "label": "golden",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "golden",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L16"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_initstate",
-      "label": "initState",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "initstate",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L32"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_isloading",
-      "label": "_isLoading",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "_isloading",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L20"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_issaving",
-      "label": "_isSaving",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "_issaving",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L21"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_minalert",
-      "label": "_minAlert",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "_minalert",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L25"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_minalertcontroller",
-      "label": "_minAlertController",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "_minalertcontroller",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L28"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_navy",
-      "label": "navy",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "navy",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L15"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_spare",
-      "label": "spare",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "spare",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L6"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_spareinventoryscreen",
-      "label": "SpareInventoryScreen",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "spareinventoryscreen",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L5"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_spareinventoryscreenstate",
-      "label": "_SpareInventoryScreenState",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "_spareinventoryscreenstate",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L14"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_supabase",
-      "label": "_supabase",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "_supabase",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L19"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_totalqty",
-      "label": "_totalQty",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "_totalqty",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L24"
-    },
-    {
-      "id": "lib_screens_master_spares_spare_inventory_screen_updateinventory",
-      "label": "_updateInventory",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "_updateinventory",
-      "source_file": "lib/screens/master/spares/spare_inventory_screen.dart",
-      "source_location": "L72"
-    },
-    {
       "id": "lib_screens_master_vendor_screen",
       "label": "vendor_screen.dart",
       "_origin": "ast",
@@ -8968,17 +8721,6 @@
       "norm_label": "_vendors",
       "source_file": "lib/screens/master/vendor_screen.dart",
       "source_location": "L21"
-    },
-    {
-      "id": "texteditingcontroller",
-      "label": "TextEditingController",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "texteditingcontroller",
-      "source_file": null,
-      "source_location": null
     },
     {
       "id": "lib_screens_master_user_management",
@@ -9817,145 +9559,178 @@
       "source_location": "L26"
     },
     {
-      "id": "firebasemessaging",
-      "label": "FirebaseMessaging",
+      "id": "lib_screens_master_kitchen_screen",
+      "label": "kitchen_screen.dart",
       "_origin": "ast",
       "community": 27,
-      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "community_name": "List",
       "file_type": "code",
-      "norm_label": "firebasemessaging",
-      "source_file": null,
+      "norm_label": "kitchen_screen.dart",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
       "source_location": null
     },
     {
-      "id": "lib_core_services_notification_service",
-      "label": "notification_service.dart",
+      "id": "lib_screens_master_kitchen_screen_background",
+      "label": "background",
       "_origin": "ast",
       "community": 27,
-      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "community_name": "List",
       "file_type": "code",
-      "norm_label": "notification_service.dart",
-      "source_file": "lib/core/services/notification_service.dart",
-      "source_location": null
+      "norm_label": "background",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L15"
     },
     {
-      "id": "lib_core_services_notification_service_fcm",
-      "label": "_fcm",
+      "id": "lib_screens_master_kitchen_screen_build",
+      "label": "build",
       "_origin": "ast",
       "community": 27,
-      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "community_name": "List",
       "file_type": "code",
-      "norm_label": "_fcm",
-      "source_file": "lib/core/services/notification_service.dart",
-      "source_location": "L10"
+      "norm_label": "build",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L124"
     },
     {
-      "id": "lib_core_services_notification_service_handlenotificationclick",
-      "label": "_handleNotificationClick",
+      "id": "lib_screens_master_kitchen_screen_createstate",
+      "label": "createState",
       "_origin": "ast",
       "community": 27,
-      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "community_name": "List",
       "file_type": "code",
-      "norm_label": "_handlenotificationclick",
-      "source_file": "lib/core/services/notification_service.dart",
-      "source_location": "L96"
-    },
-    {
-      "id": "lib_core_services_notification_service_initnotifications",
-      "label": "initNotifications",
-      "_origin": "ast",
-      "community": 27,
-      "community_name": "package:supabase_flutter/supabase_flutter.dart",
-      "file_type": "code",
-      "norm_label": "initnotifications",
-      "source_file": "lib/core/services/notification_service.dart",
-      "source_location": "L14"
-    },
-    {
-      "id": "lib_core_services_notification_service_notificationservice",
-      "label": "NotificationService",
-      "_origin": "ast",
-      "community": 27,
-      "community_name": "package:supabase_flutter/supabase_flutter.dart",
-      "file_type": "code",
-      "norm_label": "notificationservice",
-      "source_file": "lib/core/services/notification_service.dart",
+      "norm_label": "createstate",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
       "source_location": "L9"
     },
     {
-      "id": "lib_core_services_notification_service_savetokentodatabase",
-      "label": "_saveTokenToDatabase",
+      "id": "lib_screens_master_kitchen_screen_fetchkitchens",
+      "label": "_fetchKitchens",
       "_origin": "ast",
       "community": 27,
-      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "community_name": "List",
       "file_type": "code",
-      "norm_label": "_savetokentodatabase",
-      "source_file": "lib/core/services/notification_service.dart",
-      "source_location": "L72"
+      "norm_label": "_fetchkitchens",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L27"
     },
     {
-      "id": "lib_core_services_notification_service_supabase",
+      "id": "lib_screens_master_kitchen_screen_golden",
+      "label": "golden",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "golden",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L14"
+    },
+    {
+      "id": "lib_screens_master_kitchen_screen_initstate",
+      "label": "initState",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "initstate",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L22"
+    },
+    {
+      "id": "lib_screens_master_kitchen_screen_isloading",
+      "label": "_isLoading",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "_isloading",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L19"
+    },
+    {
+      "id": "lib_screens_master_kitchen_screen_kitchenmasterscreen",
+      "label": "KitchenMasterScreen",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "kitchenmasterscreen",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L5"
+    },
+    {
+      "id": "lib_screens_master_kitchen_screen_kitchenmasterscreenstate",
+      "label": "_KitchenMasterScreenState",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "_kitchenmasterscreenstate",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L12"
+    },
+    {
+      "id": "lib_screens_master_kitchen_screen_kitchens",
+      "label": "_kitchens",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "_kitchens",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L18"
+    },
+    {
+      "id": "lib_screens_master_kitchen_screen_navy",
+      "label": "navy",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "navy",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L13"
+    },
+    {
+      "id": "lib_screens_master_kitchen_screen_showkitchenform",
+      "label": "_showKitchenForm",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "_showkitchenform",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L39"
+    },
+    {
+      "id": "lib_screens_master_kitchen_screen_supabase",
       "label": "_supabase",
       "_origin": "ast",
       "community": 27,
-      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "community_name": "List",
       "file_type": "code",
       "norm_label": "_supabase",
-      "source_file": "lib/core/services/notification_service.dart",
-      "source_location": "L11"
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L17"
     },
     {
-      "id": "main_dart",
-      "label": "../../main.dart",
+      "id": "lib_screens_master_kitchen_screen_togglestatus",
+      "label": "_toggleStatus",
       "_origin": "ast",
       "community": 27,
-      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "community_name": "List",
       "file_type": "code",
-      "norm_label": "../../main.dart",
-      "source_file": null,
-      "source_location": null
+      "norm_label": "_togglestatus",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L114"
     },
     {
-      "id": "package_firebase_messaging_firebase_messaging_dart",
-      "label": "package:firebase_messaging/firebase_messaging.dart",
+      "id": "list",
+      "label": "List",
       "_origin": "ast",
       "community": 27,
-      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "community_name": "List",
       "file_type": "code",
-      "norm_label": "package:firebase_messaging/firebase_messaging.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_supabase_flutter_supabase_flutter_dart",
-      "label": "package:supabase_flutter/supabase_flutter.dart",
-      "_origin": "ast",
-      "community": 27,
-      "community_name": "package:supabase_flutter/supabase_flutter.dart",
-      "file_type": "code",
-      "norm_label": "package:supabase_flutter/supabase_flutter.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "supabaseclient",
-      "label": "SupabaseClient",
-      "_origin": "ast",
-      "community": 27,
-      "community_name": "package:supabase_flutter/supabase_flutter.dart",
-      "file_type": "code",
-      "norm_label": "supabaseclient",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "route_ticket_details",
-      "label": "Route /ticket-details",
-      "_origin": "ast",
-      "community": 27,
-      "community_name": "package:supabase_flutter/supabase_flutter.dart",
-      "file_type": "concept",
-      "norm_label": "route /ticket-details",
+      "norm_label": "list",
       "source_file": null,
       "source_location": null
     },
@@ -10468,7 +10243,7 @@
       "node_kind": "heading",
       "norm_label": "4. ticket lifecycle & state transitions",
       "source_file": "flow.md",
-      "source_location": "L104"
+      "source_location": "L102"
     },
     {
       "id": "flow_5_search_filter_sorting_concurrency_sequencing",
@@ -10480,7 +10255,7 @@
       "node_kind": "heading",
       "norm_label": "5. search, filter, sorting & concurrency sequencing",
       "source_file": "flow.md",
-      "source_location": "L127"
+      "source_location": "L125"
     },
     {
       "id": "flow_6_ticket_verification_flow_zone_based",
@@ -10492,7 +10267,7 @@
       "node_kind": "heading",
       "norm_label": "6. ticket verification flow (zone-based)",
       "source_file": "flow.md",
-      "source_location": "L162"
+      "source_location": "L160"
     },
     {
       "id": "flow_7_media_upload_storage_pipeline",
@@ -10504,7 +10279,7 @@
       "node_kind": "heading",
       "norm_label": "7. media upload & storage pipeline",
       "source_file": "flow.md",
-      "source_location": "L180"
+      "source_location": "L178"
     },
     {
       "id": "flow_8_external_integrations_push_notifications",
@@ -10516,7 +10291,7 @@
       "node_kind": "heading",
       "norm_label": "8. external integrations & push notifications",
       "source_file": "flow.md",
-      "source_location": "L195"
+      "source_location": "L193"
     },
     {
       "id": "flow_9_master_data_plant_maintenance_modules",
@@ -10528,7 +10303,7 @@
       "node_kind": "heading",
       "norm_label": "9. master data & plant maintenance modules",
       "source_file": "flow.md",
-      "source_location": "L210"
+      "source_location": "L208"
     },
     {
       "id": "flow_application_flow_architecture_map_kitchen_maintenance",
@@ -10552,7 +10327,7 @@
       "node_kind": "heading",
       "norm_label": "data refresh capabilities",
       "source_file": "flow.md",
-      "source_location": "L97"
+      "source_location": "L95"
     },
     {
       "id": "flow_mandatory_requirements_per_step",
@@ -10564,7 +10339,7 @@
       "node_kind": "heading",
       "norm_label": "mandatory requirements per step",
       "source_file": "flow.md",
-      "source_location": "L120"
+      "source_location": "L118"
     },
     {
       "id": "flow_roles_access_scopes",
@@ -11372,17 +11147,6 @@
       "source_location": null
     },
     {
-      "id": "core_constants_api_constants_dart",
-      "label": "../core/constants/api_constants.dart",
-      "_origin": "ast",
-      "community": 31,
-      "community_name": "tools_tackles_screen.dart",
-      "file_type": "code",
-      "norm_label": "../core/constants/api_constants.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "lib_screens_reports_tools_tackles_screen",
       "label": "tools_tackles_screen.dart",
       "_origin": "ast",
@@ -11599,6 +11363,17 @@
       "community_name": "tools_tackles_screen.dart",
       "file_type": "code",
       "norm_label": "package:http/http.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "package_open_filex_open_filex_dart",
+      "label": "package:open_filex/open_filex.dart",
+      "_origin": "ast",
+      "community": 31,
+      "community_name": "tools_tackles_screen.dart",
+      "file_type": "code",
+      "norm_label": "package:open_filex/open_filex.dart",
       "source_file": null,
       "source_location": null
     },
@@ -11965,6 +11740,17 @@
       "source_location": ""
     },
     {
+      "id": "core_constants_api_constants_dart",
+      "label": "../core/constants/api_constants.dart",
+      "_origin": "ast",
+      "community": 34,
+      "community_name": "master_equipment_report_screen.dart",
+      "file_type": "code",
+      "norm_label": "../core/constants/api_constants.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
       "id": "int",
       "label": "int?",
       "_origin": "ast",
@@ -12130,17 +11916,6 @@
       "source_location": "L39"
     },
     {
-      "id": "package_open_filex_open_filex_dart",
-      "label": "package:open_filex/open_filex.dart",
-      "_origin": "ast",
-      "community": 34,
-      "community_name": "master_equipment_report_screen.dart",
-      "file_type": "code",
-      "norm_label": "package:open_filex/open_filex.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "package_path_provider_path_provider_dart",
       "label": "package:path_provider/path_provider.dart",
       "_origin": "ast",
@@ -12174,6 +11949,19 @@
       "norm_label": "oncreate",
       "source_file": "windows/runner/flutter_window.h",
       "source_location": "L20"
+    },
+    {
+      "id": "windows_runner_flutter_window_flutterwindow_ondestroy",
+      "label": "OnDestroy",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "Win32Window",
+      "definition_file": "windows/runner/flutter_window.cpp",
+      "definition_location": "L42",
+      "file_type": "code",
+      "norm_label": "ondestroy",
+      "source_file": "windows/runner/flutter_window.h",
+      "source_location": "L21"
     },
     {
       "id": "windows_runner_win32_window_win32window_setchildcontent",
@@ -12215,6 +12003,30 @@
       "source_location": "L69"
     },
     {
+      "id": "windows_runner_win32_window_win32window_ondestroy",
+      "label": "OnDestroy",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "Win32Window",
+      "definition_file": "windows/runner/win32_window.cpp",
+      "definition_location": "L271",
+      "file_type": "code",
+      "norm_label": "ondestroy",
+      "source_file": "windows/runner/win32_window.h",
+      "source_location": "L72"
+    },
+    {
+      "id": "flutterviewcontroller",
+      "label": "FlutterViewController",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "Win32Window",
+      "file_type": "code",
+      "norm_label": "flutterviewcontroller",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
       "id": "rect",
       "label": "RECT",
       "_origin": "ast",
@@ -12222,6 +12034,50 @@
       "community_name": "Win32Window",
       "file_type": "code",
       "norm_label": "rect",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "unique_ptr",
+      "label": "unique_ptr",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "Win32Window",
+      "file_type": "code",
+      "norm_label": "unique_ptr",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "windows_runner_flutter_window_flutterwindow_flutter_controller",
+      "label": "flutter_controller_",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "Win32Window",
+      "file_type": "code",
+      "norm_label": "flutter_controller_",
+      "source_file": "windows/runner/flutter_window.h",
+      "source_location": "L30"
+    },
+    {
+      "id": "windows_runner_flutter_window_flutterwindow_project",
+      "label": "project_",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "Win32Window",
+      "file_type": "code",
+      "norm_label": "project_",
+      "source_file": "windows/runner/flutter_window.h",
+      "source_location": "L27"
+    },
+    {
+      "id": "windows_runner_flutter_window_h_dartproject",
+      "label": "DartProject",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "Win32Window",
+      "file_type": "code",
+      "norm_label": "dartproject",
       "source_file": "",
       "source_location": ""
     },
@@ -13038,10 +12894,10 @@
       "node_kind": "heading",
       "norm_label": "adr-002: dual backend architecture \u2014 supabase (data/auth) + firebase (storage & fcm)",
       "source_file": "decisions.md",
-      "source_location": "L48"
+      "source_location": "L47"
     },
     {
-      "id": "decisions_consequences_70",
+      "id": "decisions_consequences_69",
       "label": "Consequences",
       "_origin": "ast",
       "community": 39,
@@ -13050,10 +12906,10 @@
       "node_kind": "heading",
       "norm_label": "consequences",
       "source_file": "decisions.md",
-      "source_location": "L70"
+      "source_location": "L69"
     },
     {
-      "id": "decisions_context_53",
+      "id": "decisions_context_52",
       "label": "Context",
       "_origin": "ast",
       "community": 39,
@@ -13062,10 +12918,10 @@
       "node_kind": "heading",
       "norm_label": "context",
       "source_file": "decisions.md",
-      "source_location": "L53"
+      "source_location": "L52"
     },
     {
-      "id": "decisions_decision_60",
+      "id": "decisions_decision_59",
       "label": "Decision",
       "_origin": "ast",
       "community": 39,
@@ -13074,10 +12930,10 @@
       "node_kind": "heading",
       "norm_label": "decision",
       "source_file": "decisions.md",
-      "source_location": "L60"
+      "source_location": "L59"
     },
     {
-      "id": "decisions_status_50",
+      "id": "decisions_status_49",
       "label": "Status",
       "_origin": "ast",
       "community": 39,
@@ -13086,7 +12942,7 @@
       "node_kind": "heading",
       "norm_label": "status",
       "source_file": "decisions.md",
-      "source_location": "L50"
+      "source_location": "L49"
     },
     {
       "id": "lib_screens_reports_testing_equipment_screen",
@@ -14046,10 +13902,10 @@
       "node_kind": "heading",
       "norm_label": "adr-003: state management architecture via provider",
       "source_file": "decisions.md",
-      "source_location": "L80"
+      "source_location": "L79"
     },
     {
-      "id": "decisions_consequences_97",
+      "id": "decisions_consequences_96",
       "label": "Consequences",
       "_origin": "ast",
       "community": 42,
@@ -14058,10 +13914,10 @@
       "node_kind": "heading",
       "norm_label": "consequences",
       "source_file": "decisions.md",
-      "source_location": "L97"
+      "source_location": "L96"
     },
     {
-      "id": "decisions_context_85",
+      "id": "decisions_context_84",
       "label": "Context",
       "_origin": "ast",
       "community": 42,
@@ -14070,10 +13926,10 @@
       "node_kind": "heading",
       "norm_label": "context",
       "source_file": "decisions.md",
-      "source_location": "L85"
+      "source_location": "L84"
     },
     {
-      "id": "decisions_decision_92",
+      "id": "decisions_decision_91",
       "label": "Decision",
       "_origin": "ast",
       "community": 42,
@@ -14082,10 +13938,10 @@
       "node_kind": "heading",
       "norm_label": "decision",
       "source_file": "decisions.md",
-      "source_location": "L92"
+      "source_location": "L91"
     },
     {
-      "id": "decisions_status_82",
+      "id": "decisions_status_81",
       "label": "Status",
       "_origin": "ast",
       "community": 42,
@@ -14094,14 +13950,102 @@
       "node_kind": "heading",
       "norm_label": "status",
       "source_file": "decisions.md",
-      "source_location": "L82"
+      "source_location": "L81"
+    },
+    {
+      "id": "firebasemessaging",
+      "label": "FirebaseMessaging",
+      "_origin": "ast",
+      "community": 43,
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "file_type": "code",
+      "norm_label": "firebasemessaging",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "lib_core_services_notification_service",
+      "label": "notification_service.dart",
+      "_origin": "ast",
+      "community": 43,
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "file_type": "code",
+      "norm_label": "notification_service.dart",
+      "source_file": "lib/core/services/notification_service.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_core_services_notification_service_fcm",
+      "label": "_fcm",
+      "_origin": "ast",
+      "community": 43,
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "file_type": "code",
+      "norm_label": "_fcm",
+      "source_file": "lib/core/services/notification_service.dart",
+      "source_location": "L10"
+    },
+    {
+      "id": "lib_core_services_notification_service_handlenotificationclick",
+      "label": "_handleNotificationClick",
+      "_origin": "ast",
+      "community": 43,
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "file_type": "code",
+      "norm_label": "_handlenotificationclick",
+      "source_file": "lib/core/services/notification_service.dart",
+      "source_location": "L96"
+    },
+    {
+      "id": "lib_core_services_notification_service_initnotifications",
+      "label": "initNotifications",
+      "_origin": "ast",
+      "community": 43,
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "file_type": "code",
+      "norm_label": "initnotifications",
+      "source_file": "lib/core/services/notification_service.dart",
+      "source_location": "L14"
+    },
+    {
+      "id": "lib_core_services_notification_service_notificationservice",
+      "label": "NotificationService",
+      "_origin": "ast",
+      "community": 43,
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "file_type": "code",
+      "norm_label": "notificationservice",
+      "source_file": "lib/core/services/notification_service.dart",
+      "source_location": "L9"
+    },
+    {
+      "id": "lib_core_services_notification_service_savetokentodatabase",
+      "label": "_saveTokenToDatabase",
+      "_origin": "ast",
+      "community": 43,
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "file_type": "code",
+      "norm_label": "_savetokentodatabase",
+      "source_file": "lib/core/services/notification_service.dart",
+      "source_location": "L72"
+    },
+    {
+      "id": "lib_core_services_notification_service_supabase",
+      "label": "_supabase",
+      "_origin": "ast",
+      "community": 43,
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "file_type": "code",
+      "norm_label": "_supabase",
+      "source_file": "lib/core/services/notification_service.dart",
+      "source_location": "L11"
     },
     {
       "id": "lib_screens_authentication_register_screen",
       "label": "register_screen.dart",
       "_origin": "ast",
       "community": 43,
-      "community_name": "register_screen.dart",
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
       "file_type": "code",
       "norm_label": "register_screen.dart",
       "source_file": "lib/screens/authentication/register_screen.dart",
@@ -14112,7 +14056,7 @@
       "label": "_address",
       "_origin": "ast",
       "community": 43,
-      "community_name": "register_screen.dart",
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
       "file_type": "code",
       "norm_label": "_address",
       "source_file": "lib/screens/authentication/register_screen.dart",
@@ -14123,7 +14067,7 @@
       "label": "_amp",
       "_origin": "ast",
       "community": 43,
-      "community_name": "register_screen.dart",
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
       "file_type": "code",
       "norm_label": "_amp",
       "source_file": "lib/screens/authentication/register_screen.dart",
@@ -14134,7 +14078,7 @@
       "label": "_availableKitchens",
       "_origin": "ast",
       "community": 43,
-      "community_name": "register_screen.dart",
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
       "file_type": "code",
       "norm_label": "_availablekitchens",
       "source_file": "lib/screens/authentication/register_screen.dart",
@@ -14145,7 +14089,7 @@
       "label": "build",
       "_origin": "ast",
       "community": 43,
-      "community_name": "register_screen.dart",
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
       "file_type": "code",
       "norm_label": "build",
       "source_file": "lib/screens/authentication/register_screen.dart",
@@ -14156,7 +14100,7 @@
       "label": "_buildTextField",
       "_origin": "ast",
       "community": 43,
-      "community_name": "register_screen.dart",
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
       "file_type": "code",
       "norm_label": "_buildtextfield",
       "source_file": "lib/screens/authentication/register_screen.dart",
@@ -14167,7 +14111,7 @@
       "label": "createState",
       "_origin": "ast",
       "community": 43,
-      "community_name": "register_screen.dart",
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
       "file_type": "code",
       "norm_label": "createstate",
       "source_file": "lib/screens/authentication/register_screen.dart",
@@ -14178,7 +14122,7 @@
       "label": "dispose",
       "_origin": "ast",
       "community": 43,
-      "community_name": "register_screen.dart",
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
       "file_type": "code",
       "norm_label": "dispose",
       "source_file": "lib/screens/authentication/register_screen.dart",
@@ -14189,7 +14133,7 @@
       "label": "_fetchKitchens",
       "_origin": "ast",
       "community": 43,
-      "community_name": "register_screen.dart",
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
       "file_type": "code",
       "norm_label": "_fetchkitchens",
       "source_file": "lib/screens/authentication/register_screen.dart",
@@ -14200,7 +14144,7 @@
       "label": "golden",
       "_origin": "ast",
       "community": 43,
-      "community_name": "register_screen.dart",
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
       "file_type": "code",
       "norm_label": "golden",
       "source_file": "lib/screens/authentication/register_screen.dart",
@@ -14211,7 +14155,7 @@
       "label": "initState",
       "_origin": "ast",
       "community": 43,
-      "community_name": "register_screen.dart",
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
       "file_type": "code",
       "norm_label": "initstate",
       "source_file": "lib/screens/authentication/register_screen.dart",
@@ -14222,7 +14166,7 @@
       "label": "_isLoadingKitchens",
       "_origin": "ast",
       "community": 43,
-      "community_name": "register_screen.dart",
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
       "file_type": "code",
       "norm_label": "_isloadingkitchens",
       "source_file": "lib/screens/authentication/register_screen.dart",
@@ -14233,7 +14177,7 @@
       "label": "_name",
       "_origin": "ast",
       "community": 43,
-      "community_name": "register_screen.dart",
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
       "file_type": "code",
       "norm_label": "_name",
       "source_file": "lib/screens/authentication/register_screen.dart",
@@ -14244,7 +14188,7 @@
       "label": "navy",
       "_origin": "ast",
       "community": 43,
-      "community_name": "register_screen.dart",
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
       "file_type": "code",
       "norm_label": "navy",
       "source_file": "lib/screens/authentication/register_screen.dart",
@@ -14255,7 +14199,7 @@
       "label": "RegisterScreen",
       "_origin": "ast",
       "community": 43,
-      "community_name": "register_screen.dart",
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
       "file_type": "code",
       "norm_label": "registerscreen",
       "source_file": "lib/screens/authentication/register_screen.dart",
@@ -14266,7 +14210,7 @@
       "label": "_RegisterScreenState",
       "_origin": "ast",
       "community": 43,
-      "community_name": "register_screen.dart",
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
       "file_type": "code",
       "norm_label": "_registerscreenstate",
       "source_file": "lib/screens/authentication/register_screen.dart",
@@ -14277,11 +14221,66 @@
       "label": "_selectedKitchenIds",
       "_origin": "ast",
       "community": 43,
-      "community_name": "register_screen.dart",
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
       "file_type": "code",
       "norm_label": "_selectedkitchenids",
       "source_file": "lib/screens/authentication/register_screen.dart",
       "source_location": "L23"
+    },
+    {
+      "id": "main_dart",
+      "label": "../../main.dart",
+      "_origin": "ast",
+      "community": 43,
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "file_type": "code",
+      "norm_label": "../../main.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "package_firebase_messaging_firebase_messaging_dart",
+      "label": "package:firebase_messaging/firebase_messaging.dart",
+      "_origin": "ast",
+      "community": 43,
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "file_type": "code",
+      "norm_label": "package:firebase_messaging/firebase_messaging.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "package_supabase_flutter_supabase_flutter_dart",
+      "label": "package:supabase_flutter/supabase_flutter.dart",
+      "_origin": "ast",
+      "community": 43,
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "file_type": "code",
+      "norm_label": "package:supabase_flutter/supabase_flutter.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "supabaseclient",
+      "label": "SupabaseClient",
+      "_origin": "ast",
+      "community": 43,
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "file_type": "code",
+      "norm_label": "supabaseclient",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "route_ticket_details",
+      "label": "Route /ticket-details",
+      "_origin": "ast",
+      "community": 43,
+      "community_name": "package:supabase_flutter/supabase_flutter.dart",
+      "file_type": "concept",
+      "norm_label": "route /ticket-details",
+      "source_file": null,
+      "source_location": null
     },
     {
       "id": "color",
@@ -14436,7 +14435,7 @@
       "node_kind": "heading",
       "norm_label": "adr-001: mobile & web platform selection (flutter & dart)",
       "source_file": "decisions.md",
-      "source_location": "L23"
+      "source_location": "L22"
     },
     {
       "id": "decisions_consequences",
@@ -14448,7 +14447,7 @@
       "node_kind": "heading",
       "norm_label": "consequences",
       "source_file": "decisions.md",
-      "source_location": "L37"
+      "source_location": "L36"
     },
     {
       "id": "decisions_context",
@@ -14460,7 +14459,7 @@
       "node_kind": "heading",
       "norm_label": "context",
       "source_file": "decisions.md",
-      "source_location": "L28"
+      "source_location": "L27"
     },
     {
       "id": "decisions_decision",
@@ -14472,7 +14471,7 @@
       "node_kind": "heading",
       "norm_label": "decision",
       "source_file": "decisions.md",
-      "source_location": "L34"
+      "source_location": "L33"
     },
     {
       "id": "decisions_status",
@@ -14484,7 +14483,7 @@
       "node_kind": "heading",
       "norm_label": "status",
       "source_file": "decisions.md",
-      "source_location": "L25"
+      "source_location": "L24"
     },
     {
       "id": "in",
@@ -15125,24 +15124,11 @@
       "source_location": null
     },
     {
-      "id": "windows_runner_flutter_window_flutterwindow_ondestroy",
-      "label": "OnDestroy",
-      "_origin": "ast",
-      "community": 50,
-      "community_name": "FlutterWindow",
-      "definition_file": "windows/runner/flutter_window.cpp",
-      "definition_location": "L42",
-      "file_type": "code",
-      "norm_label": "ondestroy",
-      "source_file": "windows/runner/flutter_window.h",
-      "source_location": "L21"
-    },
-    {
       "id": "windows_runner_flutter_window_flutterwindow_messagehandler",
       "label": "MessageHandler",
       "_origin": "ast",
       "community": 50,
-      "community_name": "FlutterWindow",
+      "community_name": "MessageHandler",
       "definition_file": "windows/runner/flutter_window.cpp",
       "definition_location": "L50",
       "file_type": "code",
@@ -15151,46 +15137,11 @@
       "source_location": "L22"
     },
     {
-      "id": "windows_runner_win32_window_win32window_ondestroy",
-      "label": "OnDestroy",
-      "_origin": "ast",
-      "community": 50,
-      "community_name": "FlutterWindow",
-      "definition_file": "windows/runner/win32_window.cpp",
-      "definition_location": "L271",
-      "file_type": "code",
-      "norm_label": "ondestroy",
-      "source_file": "windows/runner/win32_window.h",
-      "source_location": "L72"
-    },
-    {
-      "id": "flutterviewcontroller",
-      "label": "FlutterViewController",
-      "_origin": "ast",
-      "community": 50,
-      "community_name": "FlutterWindow",
-      "file_type": "code",
-      "norm_label": "flutterviewcontroller",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "unique_ptr",
-      "label": "unique_ptr",
-      "_origin": "ast",
-      "community": 50,
-      "community_name": "FlutterWindow",
-      "file_type": "code",
-      "norm_label": "unique_ptr",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
       "id": "windows_runner_flutter_window_cpp_dartproject",
       "label": "DartProject",
       "_origin": "ast",
       "community": 50,
-      "community_name": "FlutterWindow",
+      "community_name": "MessageHandler",
       "file_type": "code",
       "norm_label": "dartproject",
       "source_file": "",
@@ -15201,7 +15152,7 @@
       "label": "HWND",
       "_origin": "ast",
       "community": 50,
-      "community_name": "FlutterWindow",
+      "community_name": "MessageHandler",
       "file_type": "code",
       "norm_label": "hwnd",
       "source_file": "",
@@ -15212,7 +15163,7 @@
       "label": "LPARAM",
       "_origin": "ast",
       "community": 50,
-      "community_name": "FlutterWindow",
+      "community_name": "MessageHandler",
       "file_type": "code",
       "norm_label": "lparam",
       "source_file": "",
@@ -15223,7 +15174,7 @@
       "label": "LRESULT",
       "_origin": "ast",
       "community": 50,
-      "community_name": "FlutterWindow",
+      "community_name": "MessageHandler",
       "file_type": "code",
       "norm_label": "lresult",
       "source_file": "",
@@ -15234,7 +15185,7 @@
       "label": "UINT",
       "_origin": "ast",
       "community": 50,
-      "community_name": "FlutterWindow",
+      "community_name": "MessageHandler",
       "file_type": "code",
       "norm_label": "uint",
       "source_file": "",
@@ -15245,7 +15196,7 @@
       "label": "flutter_window.cpp",
       "_origin": "ast",
       "community": 50,
-      "community_name": "FlutterWindow",
+      "community_name": "MessageHandler",
       "file_type": "code",
       "norm_label": "flutter_window.cpp",
       "source_file": "windows/runner/flutter_window.cpp",
@@ -15256,42 +15207,9 @@
       "label": "WPARAM",
       "_origin": "ast",
       "community": 50,
-      "community_name": "FlutterWindow",
+      "community_name": "MessageHandler",
       "file_type": "code",
       "norm_label": "wparam",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "windows_runner_flutter_window_flutterwindow_flutter_controller",
-      "label": "flutter_controller_",
-      "_origin": "ast",
-      "community": 50,
-      "community_name": "FlutterWindow",
-      "file_type": "code",
-      "norm_label": "flutter_controller_",
-      "source_file": "windows/runner/flutter_window.h",
-      "source_location": "L30"
-    },
-    {
-      "id": "windows_runner_flutter_window_flutterwindow_project",
-      "label": "project_",
-      "_origin": "ast",
-      "community": 50,
-      "community_name": "FlutterWindow",
-      "file_type": "code",
-      "norm_label": "project_",
-      "source_file": "windows/runner/flutter_window.h",
-      "source_location": "L27"
-    },
-    {
-      "id": "windows_runner_flutter_window_h_dartproject",
-      "label": "DartProject",
-      "_origin": "ast",
-      "community": 50,
-      "community_name": "FlutterWindow",
-      "file_type": "code",
-      "norm_label": "dartproject",
       "source_file": "",
       "source_location": ""
     },
@@ -15582,6 +15500,50 @@
       "source_location": "L4"
     },
     {
+      "id": "lib_widgets_ticket_ticket_status_banner",
+      "label": "ticket_status_banner.dart",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "package:flutter/material.dart",
+      "file_type": "code",
+      "norm_label": "ticket_status_banner.dart",
+      "source_file": "lib/widgets/ticket/ticket_status_banner.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_status_banner_build",
+      "label": "build",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "package:flutter/material.dart",
+      "file_type": "code",
+      "norm_label": "build",
+      "source_file": "lib/widgets/ticket/ticket_status_banner.dart",
+      "source_location": "L10"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_status_banner_currentstatus",
+      "label": "currentStatus",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "package:flutter/material.dart",
+      "file_type": "code",
+      "norm_label": "currentstatus",
+      "source_file": "lib/widgets/ticket/ticket_status_banner.dart",
+      "source_location": "L5"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_status_banner_ticketstatusbanner",
+      "label": "TicketStatusBanner",
+      "_origin": "ast",
+      "community": 54,
+      "community_name": "package:flutter/material.dart",
+      "file_type": "code",
+      "norm_label": "ticketstatusbanner",
+      "source_file": "lib/widgets/ticket/ticket_status_banner.dart",
+      "source_location": "L4"
+    },
+    {
       "id": "package_flutter_material_dart",
       "label": "package:flutter/material.dart",
       "_origin": "ast",
@@ -15593,24 +15555,13 @@
       "source_location": null
     },
     {
-      "id": "package_flutter_test_flutter_test_dart",
-      "label": "package:flutter_test/flutter_test.dart",
+      "id": "package_google_fonts_google_fonts_dart",
+      "label": "package:google_fonts/google_fonts.dart",
       "_origin": "ast",
       "community": 54,
       "community_name": "package:flutter/material.dart",
       "file_type": "code",
-      "norm_label": "package:flutter_test/flutter_test.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "package_kitchen_maintanence_main_dart",
-      "label": "package:kitchen_maintanence/main.dart",
-      "_origin": "ast",
-      "community": 54,
-      "community_name": "package:flutter/material.dart",
-      "file_type": "code",
-      "norm_label": "package:kitchen_maintanence/main.dart",
+      "norm_label": "package:google_fonts/google_fonts.dart",
       "source_file": null,
       "source_location": null
     },
@@ -15624,28 +15575,6 @@
       "norm_label": "static const",
       "source_file": null,
       "source_location": null
-    },
-    {
-      "id": "test_widget_test",
-      "label": "widget_test.dart",
-      "_origin": "ast",
-      "community": 54,
-      "community_name": "package:flutter/material.dart",
-      "file_type": "code",
-      "norm_label": "widget_test.dart",
-      "source_file": "test/widget_test.dart",
-      "source_location": null
-    },
-    {
-      "id": "test_widget_test_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 54,
-      "community_name": "package:flutter/material.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "test/widget_test.dart",
-      "source_location": "L13"
     },
     {
       "id": "lib_firebase_options",
@@ -16858,6 +16787,28 @@
       "source_location": "L17"
     },
     {
+      "id": "windows_runner_win32_window_size_height",
+      "label": "height",
+      "_origin": "ast",
+      "community": 62,
+      "community_name": "Point",
+      "file_type": "code",
+      "norm_label": "height",
+      "source_file": "windows/runner/win32_window.h",
+      "source_location": "L23"
+    },
+    {
+      "id": "windows_runner_win32_window_size_width",
+      "label": "width",
+      "_origin": "ast",
+      "community": 62,
+      "community_name": "Point",
+      "file_type": "code",
+      "norm_label": "width",
+      "source_file": "windows/runner/win32_window.h",
+      "source_location": "L22"
+    },
+    {
       "id": "cocoa",
       "label": "Cocoa",
       "_origin": "ast",
@@ -16969,7 +16920,7 @@
       "node_kind": "heading",
       "norm_label": "[2.0.0] - 2026-05-10",
       "source_file": "changes.md",
-      "source_location": "L120"
+      "source_location": "L115"
     },
     {
       "id": "changes_2_1_2_2026_07_15",
@@ -16981,7 +16932,7 @@
       "node_kind": "heading",
       "norm_label": "[2.1.2] - 2026-07-15",
       "source_file": "changes.md",
-      "source_location": "L90"
+      "source_location": "L85"
     },
     {
       "id": "changes_2_2_0_2026_07_25",
@@ -16993,7 +16944,7 @@
       "node_kind": "heading",
       "norm_label": "[2.2.0] - 2026-07-25",
       "source_file": "changes.md",
-      "source_location": "L69"
+      "source_location": "L64"
     },
     {
       "id": "changes_2_2_1_2026_07_28",
@@ -17005,7 +16956,7 @@
       "node_kind": "heading",
       "norm_label": "[2.2.1] - 2026-07-28",
       "source_file": "changes.md",
-      "source_location": "L60"
+      "source_location": "L55"
     },
     {
       "id": "changes_2_2_3_9_2026_09_23",
@@ -17032,7 +16983,7 @@
       "source_location": "L11"
     },
     {
-      "id": "changes_added_122",
+      "id": "changes_added_117",
       "label": "Added",
       "_origin": "ast",
       "community": 65,
@@ -17041,10 +16992,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "changes.md",
-      "source_location": "L122"
+      "source_location": "L117"
     },
     {
-      "id": "changes_added_71",
+      "id": "changes_added_66",
       "label": "Added",
       "_origin": "ast",
       "community": 65,
@@ -17053,10 +17004,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "changes.md",
-      "source_location": "L71"
+      "source_location": "L66"
     },
     {
-      "id": "changes_added_92",
+      "id": "changes_added_87",
       "label": "Added",
       "_origin": "ast",
       "community": 65,
@@ -17065,7 +17016,7 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "changes.md",
-      "source_location": "L92"
+      "source_location": "L87"
     },
     {
       "id": "changes_changed",
@@ -17077,10 +17028,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "changes.md",
-      "source_location": "L44"
+      "source_location": "L39"
     },
     {
-      "id": "changes_changed_109",
+      "id": "changes_changed_104",
       "label": "Changed",
       "_origin": "ast",
       "community": 65,
@@ -17089,10 +17040,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "changes.md",
-      "source_location": "L109"
+      "source_location": "L104"
     },
     {
-      "id": "changes_changed_62",
+      "id": "changes_changed_57",
       "label": "Changed",
       "_origin": "ast",
       "community": 65,
@@ -17101,7 +17052,7 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "changes.md",
-      "source_location": "L62"
+      "source_location": "L57"
     },
     {
       "id": "changes_changelog_project_changes_kitchen_maintenance",
@@ -17125,10 +17076,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "changes.md",
-      "source_location": "L52"
+      "source_location": "L47"
     },
     {
-      "id": "changes_fixed_113",
+      "id": "changes_fixed_108",
       "label": "Fixed",
       "_origin": "ast",
       "community": 65,
@@ -17137,7 +17088,7 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "changes.md",
-      "source_location": "L113"
+      "source_location": "L108"
     },
     {
       "id": "changes_security",
@@ -17149,7 +17100,7 @@
       "node_kind": "heading",
       "norm_label": "security",
       "source_file": "changes.md",
-      "source_location": "L85"
+      "source_location": "L80"
     },
     {
       "id": "flutterpluginregistry",
@@ -17956,11 +17907,22 @@
       "source_location": "L15"
     },
     {
+      "id": "icondata",
+      "label": "IconData",
+      "_origin": "ast",
+      "community": 75,
+      "community_name": "responsive_sidebar.dart",
+      "file_type": "code",
+      "norm_label": "icondata",
+      "source_file": null,
+      "source_location": null
+    },
+    {
       "id": "lib_widgets_responsive_sidebar",
       "label": "responsive_sidebar.dart",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "responsive_sidebar.dart",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -17971,7 +17933,7 @@
       "label": "activeIcon",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "activeicon",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -17982,7 +17944,7 @@
       "label": "build",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "build",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -17993,7 +17955,7 @@
       "label": "icon",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "icon",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -18004,7 +17966,7 @@
       "label": "isFixed",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "isfixed",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -18015,7 +17977,7 @@
       "label": "items",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "items",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -18026,7 +17988,7 @@
       "label": "label",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "label",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -18037,7 +17999,7 @@
       "label": "navy",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "navy",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -18048,7 +18010,7 @@
       "label": "onToggleFixed",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "ontogglefixed",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -18059,7 +18021,7 @@
       "label": "selectedIndex",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "selectedindex",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -18070,29 +18032,18 @@
       "label": "SidebarItem",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "sidebaritem",
       "source_file": "lib/widgets/responsive_sidebar.dart",
       "source_location": "L106"
     },
     {
-      "id": "list",
-      "label": "List",
-      "_origin": "ast",
-      "community": 75,
-      "community_name": "List",
-      "file_type": "code",
-      "norm_label": "list",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "voidcallback",
       "label": "VoidCallback?",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "voidcallback?",
       "source_file": null,
@@ -18129,7 +18080,7 @@
       "file_type": "code",
       "norm_label": "_animatedticketcard",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1776"
+      "source_location": "L1524"
     },
     {
       "id": "lib_screens_home_screen_animatedticketcardstate",
@@ -18140,7 +18091,7 @@
       "file_type": "code",
       "norm_label": "_animatedticketcardstate",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1796"
+      "source_location": "L1544"
     },
     {
       "id": "singletickerproviderstatemixin",
@@ -19438,17 +19389,6 @@
       "source_location": "L1"
     },
     {
-      "id": "bool_get",
-      "label": "bool get",
-      "_origin": "ast",
-      "community": 95,
-      "community_name": "package:provider/provider.dart",
-      "file_type": "code",
-      "norm_label": "bool get",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "package_kitchen_maintanence_providers_auth_provider_dart",
       "label": "package:kitchen_maintanence/providers/auth_provider.dart",
       "_origin": "ast",
@@ -19500,17 +19440,6 @@
       "community_name": "package:provider/provider.dart",
       "file_type": "code",
       "norm_label": "package:shared_preferences/shared_preferences.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "string_get",
-      "label": "String? get",
-      "_origin": "ast",
-      "community": 95,
-      "community_name": "package:provider/provider.dart",
-      "file_type": "code",
-      "norm_label": "string? get",
       "source_file": null,
       "source_location": null
     },
@@ -19667,10 +19596,10 @@
       "node_kind": "heading",
       "norm_label": "adr-004: ticket lifecycle & zone-based verification model",
       "source_file": "decisions.md",
-      "source_location": "L107"
+      "source_location": "L106"
     },
     {
-      "id": "decisions_consequences_121",
+      "id": "decisions_consequences_120",
       "label": "Consequences",
       "_origin": "ast",
       "community": 97,
@@ -19679,10 +19608,10 @@
       "node_kind": "heading",
       "norm_label": "consequences",
       "source_file": "decisions.md",
-      "source_location": "L121"
+      "source_location": "L120"
     },
     {
-      "id": "decisions_context_112",
+      "id": "decisions_context_111",
       "label": "Context",
       "_origin": "ast",
       "community": 97,
@@ -19691,10 +19620,10 @@
       "node_kind": "heading",
       "norm_label": "context",
       "source_file": "decisions.md",
-      "source_location": "L112"
+      "source_location": "L111"
     },
     {
-      "id": "decisions_decision_115",
+      "id": "decisions_decision_114",
       "label": "Decision",
       "_origin": "ast",
       "community": 97,
@@ -19703,10 +19632,10 @@
       "node_kind": "heading",
       "norm_label": "decision",
       "source_file": "decisions.md",
-      "source_location": "L115"
+      "source_location": "L114"
     },
     {
-      "id": "decisions_status_109",
+      "id": "decisions_status_108",
       "label": "Status",
       "_origin": "ast",
       "community": 97,
@@ -19715,7 +19644,7 @@
       "node_kind": "heading",
       "norm_label": "status",
       "source_file": "decisions.md",
-      "source_location": "L109"
+      "source_location": "L108"
     },
     {
       "id": "decisions_adr_005_telegram_bot_notification_threading_railway_webhooks",
@@ -19727,10 +19656,10 @@
       "node_kind": "heading",
       "norm_label": "adr-005: telegram bot notification threading & railway webhooks",
       "source_file": "decisions.md",
-      "source_location": "L130"
+      "source_location": "L129"
     },
     {
-      "id": "decisions_consequences_143",
+      "id": "decisions_consequences_142",
       "label": "Consequences",
       "_origin": "ast",
       "community": 98,
@@ -19739,10 +19668,10 @@
       "node_kind": "heading",
       "norm_label": "consequences",
       "source_file": "decisions.md",
-      "source_location": "L143"
+      "source_location": "L142"
     },
     {
-      "id": "decisions_context_135",
+      "id": "decisions_context_134",
       "label": "Context",
       "_origin": "ast",
       "community": 98,
@@ -19751,10 +19680,10 @@
       "node_kind": "heading",
       "norm_label": "context",
       "source_file": "decisions.md",
-      "source_location": "L135"
+      "source_location": "L134"
     },
     {
-      "id": "decisions_decision_138",
+      "id": "decisions_decision_137",
       "label": "Decision",
       "_origin": "ast",
       "community": 98,
@@ -19763,10 +19692,10 @@
       "node_kind": "heading",
       "norm_label": "decision",
       "source_file": "decisions.md",
-      "source_location": "L138"
+      "source_location": "L137"
     },
     {
-      "id": "decisions_status_132",
+      "id": "decisions_status_131",
       "label": "Status",
       "_origin": "ast",
       "community": 98,
@@ -19775,7 +19704,7 @@
       "node_kind": "heading",
       "norm_label": "status",
       "source_file": "decisions.md",
-      "source_location": "L132"
+      "source_location": "L131"
     },
     {
       "id": "decisions_adr_006_responsive_hybrid_architecture_for_desktop_web_and_mobile",
@@ -19787,10 +19716,10 @@
       "node_kind": "heading",
       "norm_label": "adr-006: responsive hybrid architecture for desktop/web and mobile",
       "source_file": "decisions.md",
-      "source_location": "L152"
+      "source_location": "L151"
     },
     {
-      "id": "decisions_consequences_171",
+      "id": "decisions_consequences_170",
       "label": "Consequences",
       "_origin": "ast",
       "community": 99,
@@ -19799,10 +19728,10 @@
       "node_kind": "heading",
       "norm_label": "consequences",
       "source_file": "decisions.md",
-      "source_location": "L171"
+      "source_location": "L170"
     },
     {
-      "id": "decisions_context_157",
+      "id": "decisions_context_156",
       "label": "Context",
       "_origin": "ast",
       "community": 99,
@@ -19811,10 +19740,10 @@
       "node_kind": "heading",
       "norm_label": "context",
       "source_file": "decisions.md",
-      "source_location": "L157"
+      "source_location": "L156"
     },
     {
-      "id": "decisions_decision_160",
+      "id": "decisions_decision_159",
       "label": "Decision",
       "_origin": "ast",
       "community": 99,
@@ -19823,10 +19752,10 @@
       "node_kind": "heading",
       "norm_label": "decision",
       "source_file": "decisions.md",
-      "source_location": "L160"
+      "source_location": "L159"
     },
     {
-      "id": "decisions_status_154",
+      "id": "decisions_status_153",
       "label": "Status",
       "_origin": "ast",
       "community": 99,
@@ -19835,7 +19764,7 @@
       "node_kind": "heading",
       "norm_label": "status",
       "source_file": "decisions.md",
-      "source_location": "L154"
+      "source_location": "L153"
     },
     {
       "id": "file_selector_plugin",
@@ -20130,7 +20059,7 @@
       "label": "generated_plugin_registrant",
       "_origin": "semantic",
       "community": 50,
-      "community_name": "FlutterWindow",
+      "community_name": "MessageHandler",
       "external": true,
       "file_type": "concept",
       "norm_label": "generated_plugin_registrant",
@@ -20142,7 +20071,7 @@
       "label": "optional",
       "_origin": "semantic",
       "community": 50,
-      "community_name": "FlutterWindow",
+      "community_name": "MessageHandler",
       "external": true,
       "file_type": "concept",
       "norm_label": "optional",
@@ -24117,19 +24046,7 @@
       "confidence_score": 1.0,
       "context": "route_object",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L654",
-      "weight": 1.0
-    },
-    {
-      "source": "lib_screens_home_screen_buildwebtoolbar",
-      "target": "materialpageroute",
-      "relation": "navigates",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "route_object",
-      "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1143",
+      "source_location": "L658",
       "weight": 1.0
     },
     {
@@ -24393,7 +24310,7 @@
       "confidence_score": 1.0,
       "context": "type_lookup",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L604",
+      "source_location": "L616",
       "weight": 1.0
     },
     {
@@ -25473,7 +25390,7 @@
       "confidence_score": 1.0,
       "context": "variable_type",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1779",
+      "source_location": "L1527",
       "weight": 1.0
     },
     {
@@ -25485,7 +25402,7 @@
       "confidence_score": 1.0,
       "context": "variable_type",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1798",
+      "source_location": "L1546",
       "weight": 1.0
     },
     {
@@ -25497,7 +25414,7 @@
       "confidence_score": 1.0,
       "context": "variable_type",
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1799",
+      "source_location": "L1547",
       "weight": 1.0
     },
     {
@@ -27718,57 +27635,57 @@
     },
     {
       "source": "changes_2_0_0_2026_05_10",
-      "target": "changes_added_122",
+      "target": "changes_added_117",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L122",
+      "source_location": "L117",
       "weight": 1.0
     },
     {
       "source": "changes_2_1_2_2026_07_15",
-      "target": "changes_changed_109",
+      "target": "changes_changed_104",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L109",
+      "source_location": "L104",
       "weight": 1.0
     },
     {
       "source": "changes_2_1_2_2026_07_15",
-      "target": "changes_fixed_113",
+      "target": "changes_fixed_108",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L113",
+      "source_location": "L108",
       "weight": 1.0
     },
     {
       "source": "changes_2_1_2_2026_07_15",
-      "target": "changes_added_92",
+      "target": "changes_added_87",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L92",
+      "source_location": "L87",
       "weight": 1.0
     },
     {
       "source": "changes_2_2_0_2026_07_25",
-      "target": "changes_added_71",
+      "target": "changes_added_66",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L71",
+      "source_location": "L66",
       "weight": 1.0
     },
     {
@@ -27779,18 +27696,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L85",
+      "source_location": "L80",
       "weight": 1.0
     },
     {
       "source": "changes_2_2_1_2026_07_28",
-      "target": "changes_changed_62",
+      "target": "changes_changed_57",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L62",
+      "source_location": "L57",
       "weight": 1.0
     },
     {
@@ -27812,7 +27729,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L44",
+      "source_location": "L39",
       "weight": 1.0
     },
     {
@@ -27823,7 +27740,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L52",
+      "source_location": "L47",
       "weight": 1.0
     },
     {
@@ -27834,7 +27751,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L120",
+      "source_location": "L115",
       "weight": 1.0
     },
     {
@@ -27845,7 +27762,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L60",
+      "source_location": "L55",
       "weight": 1.0
     },
     {
@@ -27856,7 +27773,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L69",
+      "source_location": "L64",
+      "weight": 1.0
+    },
+    {
+      "source": "changes_changelog_project_changes_kitchen_maintenance",
+      "target": "changes_2_1_2_2026_07_15",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "changes.md",
+      "source_location": "L85",
       "weight": 1.0
     },
     {
@@ -27868,17 +27796,6 @@
       "confidence_score": 1.0,
       "source_file": "changes.md",
       "source_location": "L9",
-      "weight": 1.0
-    },
-    {
-      "source": "changes_changelog_project_changes_kitchen_maintenance",
-      "target": "changes_2_1_2_2026_07_15",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "changes.md",
-      "source_location": "L90",
       "weight": 1.0
     },
     {
@@ -27900,7 +27817,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L25",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
@@ -27911,7 +27828,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L28",
+      "source_location": "L27",
       "weight": 1.0
     },
     {
@@ -27922,7 +27839,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L34",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -27933,447 +27850,403 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L37",
+      "source_location": "L36",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_002_dual_backend_architecture_supabase_data_auth_firebase_storage_fcm",
-      "target": "decisions_status_50",
+      "target": "decisions_status_49",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L50",
+      "source_location": "L49",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_002_dual_backend_architecture_supabase_data_auth_firebase_storage_fcm",
-      "target": "decisions_context_53",
+      "target": "decisions_context_52",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L53",
+      "source_location": "L52",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_002_dual_backend_architecture_supabase_data_auth_firebase_storage_fcm",
-      "target": "decisions_decision_60",
+      "target": "decisions_decision_59",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L60",
+      "source_location": "L59",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_002_dual_backend_architecture_supabase_data_auth_firebase_storage_fcm",
-      "target": "decisions_consequences_70",
+      "target": "decisions_consequences_69",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L70",
+      "source_location": "L69",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_003_state_management_architecture_via_provider",
-      "target": "decisions_status_82",
+      "target": "decisions_status_81",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L82",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_003_state_management_architecture_via_provider",
-      "target": "decisions_context_85",
+      "target": "decisions_context_84",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L85",
+      "source_location": "L84",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_003_state_management_architecture_via_provider",
-      "target": "decisions_decision_92",
+      "target": "decisions_decision_91",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L92",
+      "source_location": "L91",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_003_state_management_architecture_via_provider",
-      "target": "decisions_consequences_97",
+      "target": "decisions_consequences_96",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L97",
+      "source_location": "L96",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_004_ticket_lifecycle_zone_based_verification_model",
-      "target": "decisions_status_109",
+      "target": "decisions_status_108",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L109",
+      "source_location": "L108",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_004_ticket_lifecycle_zone_based_verification_model",
-      "target": "decisions_context_112",
+      "target": "decisions_context_111",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L112",
+      "source_location": "L111",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_004_ticket_lifecycle_zone_based_verification_model",
-      "target": "decisions_decision_115",
+      "target": "decisions_decision_114",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L115",
+      "source_location": "L114",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_004_ticket_lifecycle_zone_based_verification_model",
-      "target": "decisions_consequences_121",
+      "target": "decisions_consequences_120",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L121",
+      "source_location": "L120",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_005_telegram_bot_notification_threading_railway_webhooks",
-      "target": "decisions_status_132",
+      "target": "decisions_status_131",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L132",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_005_telegram_bot_notification_threading_railway_webhooks",
-      "target": "decisions_context_135",
+      "target": "decisions_context_134",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L135",
+      "source_location": "L134",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_005_telegram_bot_notification_threading_railway_webhooks",
-      "target": "decisions_decision_138",
+      "target": "decisions_decision_137",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L138",
+      "source_location": "L137",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_005_telegram_bot_notification_threading_railway_webhooks",
-      "target": "decisions_consequences_143",
+      "target": "decisions_consequences_142",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L143",
+      "source_location": "L142",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_006_responsive_hybrid_architecture_for_desktop_web_and_mobile",
-      "target": "decisions_status_154",
+      "target": "decisions_status_153",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L154",
+      "source_location": "L153",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_006_responsive_hybrid_architecture_for_desktop_web_and_mobile",
-      "target": "decisions_context_157",
+      "target": "decisions_context_156",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L157",
+      "source_location": "L156",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_006_responsive_hybrid_architecture_for_desktop_web_and_mobile",
-      "target": "decisions_decision_160",
+      "target": "decisions_decision_159",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L160",
+      "source_location": "L159",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_006_responsive_hybrid_architecture_for_desktop_web_and_mobile",
-      "target": "decisions_consequences_171",
+      "target": "decisions_consequences_170",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L171",
+      "source_location": "L170",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_007_app_update_enforcement_versioning_mechanism",
-      "target": "decisions_status_182",
+      "target": "decisions_status_181",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L182",
+      "source_location": "L181",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_007_app_update_enforcement_versioning_mechanism",
-      "target": "decisions_context_185",
+      "target": "decisions_context_184",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L185",
+      "source_location": "L184",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_007_app_update_enforcement_versioning_mechanism",
-      "target": "decisions_decision_188",
+      "target": "decisions_decision_187",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L188",
+      "source_location": "L187",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_007_app_update_enforcement_versioning_mechanism",
-      "target": "decisions_consequences_193",
+      "target": "decisions_consequences_192",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L193",
+      "source_location": "L192",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_008_official_tapf_brand_identity_header_standardization",
-      "target": "decisions_status_204",
+      "target": "decisions_status_203",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L204",
+      "source_location": "L203",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_008_official_tapf_brand_identity_header_standardization",
-      "target": "decisions_context_207",
+      "target": "decisions_context_206",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L207",
+      "source_location": "L206",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_008_official_tapf_brand_identity_header_standardization",
-      "target": "decisions_decision_210",
+      "target": "decisions_decision_209",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L210",
+      "source_location": "L209",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_008_official_tapf_brand_identity_header_standardization",
-      "target": "decisions_consequences_215",
+      "target": "decisions_consequences_214",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L215",
+      "source_location": "L214",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_009_dynamic_ticket_swapping_staggered_transition_animations",
-      "target": "decisions_status_224",
+      "target": "decisions_status_223",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L224",
+      "source_location": "L223",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_009_dynamic_ticket_swapping_staggered_transition_animations",
-      "target": "decisions_context_227",
+      "target": "decisions_context_226",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L227",
+      "source_location": "L226",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_009_dynamic_ticket_swapping_staggered_transition_animations",
-      "target": "decisions_decision_230",
+      "target": "decisions_decision_229",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L230",
+      "source_location": "L229",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_009_dynamic_ticket_swapping_staggered_transition_animations",
-      "target": "decisions_consequences_237",
+      "target": "decisions_consequences_236",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L237",
+      "source_location": "L236",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_010_asynchronous_query_concurrency_guards_atomic_state_resets",
-      "target": "decisions_status_248",
+      "target": "decisions_status_247",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L248",
+      "source_location": "L247",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_010_asynchronous_query_concurrency_guards_atomic_state_resets",
-      "target": "decisions_context_251",
+      "target": "decisions_context_250",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L251",
+      "source_location": "L250",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_010_asynchronous_query_concurrency_guards_atomic_state_resets",
-      "target": "decisions_decision_254",
+      "target": "decisions_decision_253",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L254",
+      "source_location": "L253",
       "weight": 1.0
     },
     {
       "source": "decisions_adr_010_asynchronous_query_concurrency_guards_atomic_state_resets",
-      "target": "decisions_consequences_259",
+      "target": "decisions_consequences_258",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L259",
-      "weight": 1.0
-    },
-    {
-      "source": "decisions_adr_011_web_tablet_view_toolbar_decoupling_from_global_appbar",
-      "target": "decisions_status_268",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "decisions.md",
-      "source_location": "L268",
-      "weight": 1.0
-    },
-    {
-      "source": "decisions_adr_011_web_tablet_view_toolbar_decoupling_from_global_appbar",
-      "target": "decisions_context_271",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "decisions.md",
-      "source_location": "L271",
-      "weight": 1.0
-    },
-    {
-      "source": "decisions_adr_011_web_tablet_view_toolbar_decoupling_from_global_appbar",
-      "target": "decisions_decision_274",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "decisions.md",
-      "source_location": "L274",
-      "weight": 1.0
-    },
-    {
-      "source": "decisions_adr_011_web_tablet_view_toolbar_decoupling_from_global_appbar",
-      "target": "decisions_consequences_284",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "decisions.md",
-      "source_location": "L284",
+      "source_location": "L258",
       "weight": 1.0
     },
     {
@@ -28384,7 +28257,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L107",
+      "source_location": "L106",
       "weight": 1.0
     },
     {
@@ -28395,7 +28268,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L130",
+      "source_location": "L129",
       "weight": 1.0
     },
     {
@@ -28406,7 +28279,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L152",
+      "source_location": "L151",
       "weight": 1.0
     },
     {
@@ -28417,7 +28290,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L180",
+      "source_location": "L179",
       "weight": 1.0
     },
     {
@@ -28428,18 +28301,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L202",
-      "weight": 1.0
-    },
-    {
-      "source": "decisions_architecture_decision_records_adrs_kitchen_maintenance",
-      "target": "decisions_adr_009_dynamic_ticket_swapping_staggered_transition_animations",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "decisions.md",
-      "source_location": "L222",
+      "source_location": "L201",
       "weight": 1.0
     },
     {
@@ -28450,7 +28312,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L23",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "decisions_architecture_decision_records_adrs_kitchen_maintenance",
+      "target": "decisions_adr_009_dynamic_ticket_swapping_staggered_transition_animations",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "decisions.md",
+      "source_location": "L221",
       "weight": 1.0
     },
     {
@@ -28461,18 +28334,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L246",
-      "weight": 1.0
-    },
-    {
-      "source": "decisions_architecture_decision_records_adrs_kitchen_maintenance",
-      "target": "decisions_adr_011_web_tablet_view_toolbar_decoupling_from_global_appbar",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "decisions.md",
-      "source_location": "L266",
+      "source_location": "L245",
       "weight": 1.0
     },
     {
@@ -28483,7 +28345,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L48",
+      "source_location": "L47",
       "weight": 1.0
     },
     {
@@ -28505,7 +28367,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "decisions.md",
-      "source_location": "L80",
+      "source_location": "L79",
       "weight": 1.0
     },
     {
@@ -28538,7 +28400,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "flow.md",
-      "source_location": "L97",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
@@ -28549,7 +28411,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "flow.md",
-      "source_location": "L120",
+      "source_location": "L118",
       "weight": 1.0
     },
     {
@@ -28560,7 +28422,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "flow.md",
-      "source_location": "L104",
+      "source_location": "L102",
       "weight": 1.0
     },
     {
@@ -28571,7 +28433,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "flow.md",
-      "source_location": "L127",
+      "source_location": "L125",
       "weight": 1.0
     },
     {
@@ -28582,7 +28444,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "flow.md",
-      "source_location": "L162",
+      "source_location": "L160",
       "weight": 1.0
     },
     {
@@ -28593,7 +28455,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "flow.md",
-      "source_location": "L180",
+      "source_location": "L178",
       "weight": 1.0
     },
     {
@@ -28604,7 +28466,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "flow.md",
-      "source_location": "L195",
+      "source_location": "L193",
       "weight": 1.0
     },
     {
@@ -28626,7 +28488,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "flow.md",
-      "source_location": "L210",
+      "source_location": "L208",
       "weight": 1.0
     },
     {
@@ -31084,35 +30946,57 @@
     },
     {
       "source": "lib_screens_home_screen",
-      "target": "lib_screens_home_screen_buildsearchsortfilterrow",
-      "relation": "defines",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1217",
-      "weight": 1.0
-    },
-    {
-      "source": "lib_screens_home_screen",
-      "target": "lib_screens_home_screen_buildcollapsedactionrow",
-      "relation": "defines",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1249",
-      "weight": 1.0
-    },
-    {
-      "source": "lib_screens_home_screen",
       "target": "lib_screens_home_screen_buildexpandedsearchrow",
       "relation": "defines",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1310",
+      "source_location": "L1058",
+      "weight": 1.0
+    },
+    {
+      "source": "lib_screens_home_screen",
+      "target": "lib_screens_home_screen_buildactionbutton",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/screens/home_screen.dart",
+      "source_location": "L1161",
+      "weight": 1.0
+    },
+    {
+      "source": "lib_screens_home_screen",
+      "target": "lib_screens_home_screen_buildcompacticonbutton",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/screens/home_screen.dart",
+      "source_location": "L1220",
+      "weight": 1.0
+    },
+    {
+      "source": "lib_screens_home_screen",
+      "target": "lib_screens_home_screen_showsortbottomsheet",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/screens/home_screen.dart",
+      "source_location": "L1270",
+      "weight": 1.0
+    },
+    {
+      "source": "lib_screens_home_screen",
+      "target": "lib_screens_home_screen_buildsortoptiontile",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/screens/home_screen.dart",
+      "source_location": "L1352",
       "weight": 1.0
     },
     {
@@ -31128,57 +31012,13 @@
     },
     {
       "source": "lib_screens_home_screen",
-      "target": "lib_screens_home_screen_buildactionbutton",
-      "relation": "defines",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1413",
-      "weight": 1.0
-    },
-    {
-      "source": "lib_screens_home_screen",
-      "target": "lib_screens_home_screen_buildcompacticonbutton",
-      "relation": "defines",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1472",
-      "weight": 1.0
-    },
-    {
-      "source": "lib_screens_home_screen",
-      "target": "lib_screens_home_screen_showsortbottomsheet",
-      "relation": "defines",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1522",
-      "weight": 1.0
-    },
-    {
-      "source": "lib_screens_home_screen",
-      "target": "lib_screens_home_screen_buildsortoptiontile",
-      "relation": "defines",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1604",
-      "weight": 1.0
-    },
-    {
-      "source": "lib_screens_home_screen",
       "target": "lib_screens_home_screen_getsortshortlabel",
       "relation": "defines",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1664",
+      "source_location": "L1412",
       "weight": 1.0
     },
     {
@@ -31189,7 +31029,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1676",
+      "source_location": "L1424",
       "weight": 1.0
     },
     {
@@ -31200,7 +31040,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1706",
+      "source_location": "L1454",
       "weight": 1.0
     },
     {
@@ -31211,7 +31051,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1776",
+      "source_location": "L1524",
       "weight": 1.0
     },
     {
@@ -31222,7 +31062,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1777",
+      "source_location": "L1525",
       "weight": 1.0
     },
     {
@@ -31233,7 +31073,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1778",
+      "source_location": "L1526",
       "weight": 1.0
     },
     {
@@ -31244,7 +31084,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1779",
+      "source_location": "L1527",
       "weight": 1.0
     },
     {
@@ -31255,7 +31095,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1781",
+      "source_location": "L1529",
       "weight": 1.0
     },
     {
@@ -31266,7 +31106,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1796",
+      "source_location": "L1544",
       "weight": 1.0
     },
     {
@@ -31277,7 +31117,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1798",
+      "source_location": "L1546",
       "weight": 1.0
     },
     {
@@ -31288,7 +31128,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1799",
+      "source_location": "L1547",
       "weight": 1.0
     },
     {
@@ -31299,7 +31139,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1800",
+      "source_location": "L1548",
       "weight": 1.0
     },
     {
@@ -31310,7 +31150,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1801",
+      "source_location": "L1549",
       "weight": 1.0
     },
     {
@@ -31321,7 +31161,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1802",
+      "source_location": "L1550",
       "weight": 1.0
     },
     {
@@ -31332,7 +31172,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1818",
+      "source_location": "L1566",
       "weight": 1.0
     },
     {
@@ -31343,7 +31183,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1840",
+      "source_location": "L1588",
       "weight": 1.0
     },
     {
@@ -31656,13 +31496,24 @@
     },
     {
       "source": "lib_screens_home_screen",
-      "target": "lib_screens_home_screen_buildwebtoolbar",
+      "target": "lib_screens_home_screen_buildsearchsortfilterrow",
       "relation": "defines",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L974",
+      "source_location": "L965",
+      "weight": 1.0
+    },
+    {
+      "source": "lib_screens_home_screen",
+      "target": "lib_screens_home_screen_buildcollapsedactionrow",
+      "relation": "defines",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/screens/home_screen.dart",
+      "source_location": "L997",
       "weight": 1.0
     },
     {
@@ -48008,7 +47859,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1776",
+      "source_location": "L1524",
       "weight": 1.0
     },
     {
@@ -48019,7 +47870,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1796",
+      "source_location": "L1544",
       "weight": 1.0
     },
     {
@@ -49350,7 +49201,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1796",
+      "source_location": "L1544",
       "weight": 1.0
     },
     {
@@ -49405,7 +49256,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "lib/screens/home_screen.dart",
-      "source_location": "L1796",
+      "source_location": "L1544",
       "weight": 1.0
     },
     {

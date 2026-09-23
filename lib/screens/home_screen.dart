@@ -194,10 +194,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (isWeb) {
       final List<SidebarItem> sidebarItems = [
-        SidebarItem(icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Home'),
+        SidebarItem(
+          icon: Icons.home_outlined,
+          activeIcon: Icons.home,
+          label: 'Home',
+        ),
         // if (showReportsTab) SidebarItem(icon: Icons.analytics_outlined, activeIcon: Icons.analytics, label: 'Reports'),
-        if (isAdmin) SidebarItem(icon: Icons.people_outline, activeIcon: Icons.people, label: 'Users'),
-        SidebarItem(icon: Icons.menu, activeIcon: Icons.menu_open, label: 'More'),
+        if (isAdmin)
+          SidebarItem(
+            icon: Icons.people_outline,
+            activeIcon: Icons.people,
+            label: 'Users',
+          ),
+        SidebarItem(
+          icon: Icons.menu,
+          activeIcon: Icons.menu_open,
+          label: 'More',
+        ),
       ];
 
       return Scaffold(
@@ -207,7 +220,8 @@ class _HomeScreenState extends State<HomeScreen> {
               selectedIndex: _selectedIndex,
               onItemSelected: (index) => setState(() => _selectedIndex = index),
               isFixed: _isSidebarFixed,
-              onToggleFixed: () => setState(() => _isSidebarFixed = !_isSidebarFixed),
+              onToggleFixed: () =>
+                  setState(() => _isSidebarFixed = !_isSidebarFixed),
               items: sidebarItems,
             ),
             Expanded(child: bodyContent),
@@ -271,6 +285,19 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
 
   List<Map<String, dynamic>> _kitchenZones = [];
   bool _isSearchExpanded = false;
+
+  final Map<String, int> _previousTicketIndices = {};
+  List<String> _lastTicketIds = [];
+  int _animationGeneration = 0;
+  Map<String, int?> _currentDeltaIndices = {};
+
+  bool _areListsEqual(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 
   @override
   void initState() {
@@ -350,6 +377,34 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
     final authProv = context.watch<AuthProvider>();
     final isWeb = MediaQuery.of(context).size.width > 800;
 
+    final currentTicketIds = ticketProvider.tickets
+        .map((t) => (t['id'] ?? t['ticket_no'] ?? '').toString())
+        .toList();
+
+    final bool listChanged =
+        currentTicketIds.length != _lastTicketIds.length ||
+        !_areListsEqual(currentTicketIds, _lastTicketIds);
+
+    if (listChanged) {
+      _animationGeneration++;
+      _currentDeltaIndices = {};
+      for (int i = 0; i < currentTicketIds.length; i++) {
+        final id = currentTicketIds[i];
+        if (id.isNotEmpty && _previousTicketIndices.containsKey(id)) {
+          _currentDeltaIndices[id] = _previousTicketIndices[id]! - i;
+        } else {
+          _currentDeltaIndices[id] = null;
+        }
+      }
+      _previousTicketIndices.clear();
+      for (int i = 0; i < currentTicketIds.length; i++) {
+        if (currentTicketIds[i].isNotEmpty) {
+          _previousTicketIndices[currentTicketIds[i]] = i;
+        }
+      }
+      _lastTicketIds = List.from(currentTicketIds);
+    }
+
     String? validDropdownValue = ticketProvider.kitchenFilter;
     if (validDropdownValue == 'ALL' ||
         !authProv.assignedKitchens.any(
@@ -366,7 +421,9 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
         ticketProvider.zoneFilter != 'ALL' ||
         ticketProvider.areaFilter != 'ALL' ||
         ticketProvider.assignedToMeFilter ||
-        ticketProvider.raisedByMeFilter;
+        ticketProvider.raisedByMeFilter ||
+        ticketProvider.searchQuery.isNotEmpty ||
+        ticketProvider.statusFilter != 'ALL';
     final bool isSingleKitchen = authProv.assignedKitchens.length <= 1;
 
     return GestureDetector(
@@ -419,7 +476,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                     else
                       Container(
                         height: 32,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(8),
@@ -427,6 +484,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
+                            isExpanded: true,
                             borderRadius: const BorderRadius.all(
                               Radius.circular(12),
                             ),
@@ -435,10 +493,10 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                             icon: const Icon(
                               Icons.keyboard_arrow_down_rounded,
                               color: navy,
-                              size: 20,
+                              size: 18,
                             ),
                             style: GoogleFonts.inter(
-                              fontSize: 14,
+                              fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: navy,
                             ),
@@ -448,7 +506,10 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                                     value: k['id'].toString(),
                                     child: Text(
                                       k['name'] ?? 'Unknown',
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                       style: GoogleFonts.inter(
+                                        fontSize: 13,
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
@@ -475,15 +536,55 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                     padding: const EdgeInsets.symmetric(vertical: 4.0),
                     child: Row(
                       children: [
-                        Expanded(child: _buildStatCard("Total", ticketProvider.total, Colors.blueGrey, 'ALL', ticketProvider)),
+                        Expanded(
+                          child: _buildStatCard(
+                            "Total",
+                            ticketProvider.total,
+                            Colors.blueGrey,
+                            'ALL',
+                            ticketProvider,
+                          ),
+                        ),
                         const SizedBox(width: 6),
-                        Expanded(child: _buildStatCard("To Do", ticketProvider.toDo, Colors.redAccent, 'TO DO', ticketProvider)),
+                        Expanded(
+                          child: _buildStatCard(
+                            "To Do",
+                            ticketProvider.toDo,
+                            Colors.redAccent,
+                            'TO DO',
+                            ticketProvider,
+                          ),
+                        ),
                         const SizedBox(width: 6),
-                        Expanded(child: _buildStatCard("WIP", ticketProvider.inProgress, Colors.orange, 'IN PROGRESS', ticketProvider)),
+                        Expanded(
+                          child: _buildStatCard(
+                            "WIP",
+                            ticketProvider.inProgress,
+                            Colors.orange,
+                            'IN PROGRESS',
+                            ticketProvider,
+                          ),
+                        ),
                         const SizedBox(width: 6),
-                        Expanded(child: _buildStatCard("Done", ticketProvider.completed, Colors.green, 'COMPLETED', ticketProvider)),
+                        Expanded(
+                          child: _buildStatCard(
+                            "Done",
+                            ticketProvider.completed,
+                            Colors.green,
+                            'COMPLETED',
+                            ticketProvider,
+                          ),
+                        ),
                         const SizedBox(width: 6),
-                        Expanded(child: _buildStatCard("Verified", ticketProvider.verified, Colors.teal, 'VERIFIED', ticketProvider)),
+                        Expanded(
+                          child: _buildStatCard(
+                            "Verified",
+                            ticketProvider.verified,
+                            Colors.teal,
+                            'VERIFIED',
+                            ticketProvider,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -493,13 +594,34 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                   flex: 4,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: _buildSearchSortFilterRow(context, ticketProvider, authProv, hasActiveFilters),
+                    child: _buildSearchSortFilterRow(
+                      context,
+                      ticketProvider,
+                      authProv,
+                      hasActiveFilters,
+                    ),
                   ),
                 ),
-              ]
+              ],
             ],
           ),
           actions: [
+            IconButton(
+              icon: ticketProvider.isLoading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(navy),
+                      ),
+                    )
+                  : const Icon(Icons.refresh_rounded, color: navy, size: 24),
+              tooltip: "Refresh Tickets",
+              onPressed: ticketProvider.isLoading
+                  ? null
+                  : () => ticketProvider.refreshTickets(),
+            ),
             IconButton(
               icon: Stack(
                 clipBehavior: Clip.none,
@@ -544,104 +666,279 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
         ),
         body: Center(
           child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: isWeb ? double.infinity : 1200),
+            constraints: BoxConstraints(
+              maxWidth: isWeb ? double.infinity : 1200,
+            ),
             child: RefreshIndicator(
               color: golden,
               backgroundColor: Colors.white,
               onRefresh: () => ticketProvider.refreshTickets(),
-          child: isWeb ? Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: WebTicketTable(
-              tickets: ticketProvider.tickets,
-              isLoading: ticketProvider.isLoading,
-              onLoadMore: ticketProvider.tickets.length < ticketProvider.currentFilterTotal 
-                  ? () => ticketProvider.fetchMoreTickets() 
-                  : null,
-            ),
-          ) : CustomScrollView(
-            controller: _scrollController,
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverAppBar(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                floating: true,
-                snap: true,
-                automaticallyImplyLeading: false,
-                toolbarHeight: 4,
-                bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(165),
-                  child: Container(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: const BorderRadius.vertical(
-                        bottom: Radius.circular(24),
+              child: isWeb
+                  ? Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: WebTicketTable(
+                        tickets: ticketProvider.tickets,
+                        isLoading: ticketProvider.isLoading,
+                        deltaIndices: _currentDeltaIndices,
+                        animationGeneration: _animationGeneration,
+                        onRefresh: () => ticketProvider.refreshTickets(),
+                        onLoadMore:
+                            ticketProvider.tickets.length <
+                                ticketProvider.currentFilterTotal
+                            ? () => ticketProvider.fetchMoreTickets()
+                            : null,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                            padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
-                            width: double.infinity,
-                            child: Row(
-                              children: [
-                                Expanded(child: _buildStatCard("Total", ticketProvider.total, Colors.blueGrey, 'ALL', ticketProvider)),
-                                const SizedBox(width: 6),
-                                Expanded(child: _buildStatCard("To Do", ticketProvider.toDo, Colors.redAccent, 'TO DO', ticketProvider)),
-                                const SizedBox(width: 6),
-                                Expanded(child: _buildStatCard("WIP", ticketProvider.inProgress, Colors.orange, 'IN PROGRESS', ticketProvider)),
-                                const SizedBox(width: 6),
-                                Expanded(child: _buildStatCard("Done", ticketProvider.completed, Colors.green, 'COMPLETED', ticketProvider)),
-                                const SizedBox(width: 6),
-                                Expanded(child: _buildStatCard("Verified", ticketProvider.verified, Colors.teal, 'VERIFIED', ticketProvider)),
-                              ],
+                    )
+                  : CustomScrollView(
+                      controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        SliverAppBar(
+                          backgroundColor: Colors.transparent,
+                          elevation: 0,
+                          floating: true,
+                          snap: true,
+                          automaticallyImplyLeading: false,
+                          toolbarHeight: 4,
+                          bottom: PreferredSize(
+                            preferredSize: const Size.fromHeight(165),
+                            child: Container(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: const BorderRadius.vertical(
+                                  bottom: Radius.circular(24),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.06),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      12,
+                                      10,
+                                      12,
+                                      14,
+                                    ),
+                                    width: double.infinity,
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: _buildStatCard(
+                                            "Total",
+                                            ticketProvider.total,
+                                            Colors.blueGrey,
+                                            'ALL',
+                                            ticketProvider,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: _buildStatCard(
+                                            "To Do",
+                                            ticketProvider.toDo,
+                                            Colors.redAccent,
+                                            'TO DO',
+                                            ticketProvider,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: _buildStatCard(
+                                            "WIP",
+                                            ticketProvider.inProgress,
+                                            Colors.orange,
+                                            'IN PROGRESS',
+                                            ticketProvider,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: _buildStatCard(
+                                            "Done",
+                                            ticketProvider.completed,
+                                            Colors.green,
+                                            'COMPLETED',
+                                            ticketProvider,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: _buildStatCard(
+                                            "Verified",
+                                            ticketProvider.verified,
+                                            Colors.teal,
+                                            'VERIFIED',
+                                            ticketProvider,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    child: _buildSearchSortFilterRow(
+                                      context,
+                                      ticketProvider,
+                                      authProv,
+                                      hasActiveFilters,
+                                    ),
+                                  ),
+                                  Container(
+                                    margin: const EdgeInsets.only(top: 8),
+                                    height: 2.5,
+                                    child: ticketProvider.isLoading
+                                        ? const ClipRRect(
+                                            borderRadius: BorderRadius.all(
+                                              Radius.circular(2),
+                                            ),
+                                            child: LinearProgressIndicator(
+                                              backgroundColor:
+                                                  Colors.transparent,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                    golden,
+                                                  ),
+                                            ),
+                                          )
+                                        : const SizedBox.shrink(),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: _buildSearchSortFilterRow(
-                            context,
-                            ticketProvider,
-                            authProv,
-                            hasActiveFilters,
-                          ),
                         ),
+
+                        if (ticketProvider.tickets.isEmpty &&
+                            !ticketProvider.isLoading)
+                          SliverToBoxAdapter(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 48,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 68,
+                                    height: 68,
+                                    decoration: BoxDecoration(
+                                      color: navy.withOpacity(0.07),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.search_off_rounded,
+                                      size: 34,
+                                      color: navy,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    "No Tickets Found",
+                                    style: GoogleFonts.inter(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w700,
+                                      color: navy,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    hasActiveFilters
+                                        ? "Try adjusting your search query, priority, or area filters to see more results."
+                                        : "No maintenance tickets match the selected status.",
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      color: Colors.grey.shade600,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  if (hasActiveFilters) ...[
+                                    const SizedBox(height: 20),
+                                    OutlinedButton.icon(
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        _searchFocusNode.unfocus();
+                                        setState(
+                                          () => _isSearchExpanded = false,
+                                        );
+                                        ticketProvider.resetAllFilters(
+                                          keepKitchen: true,
+                                          keepStatus: false,
+                                        );
+                                      },
+                                      icon: const Icon(
+                                        Icons.refresh_rounded,
+                                        size: 16,
+                                      ),
+                                      label: const Text("Reset All Filters"),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: navy,
+                                        side: const BorderSide(color: navy),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 10,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                            sliver: SliverList(
+                              delegate: SliverChildBuilderDelegate((
+                                context,
+                                index,
+                              ) {
+                                final ticket = ticketProvider.tickets[index];
+                                final ticketId =
+                                    (ticket['id'] ??
+                                            ticket['ticket_no'] ??
+                                            index)
+                                        .toString();
+                                return _AnimatedTicketCard(
+                                  key: ValueKey(ticketId),
+                                  ticket: ticket,
+                                  index: index,
+                                  deltaIndex: _currentDeltaIndices[ticketId],
+                                  animationGeneration: _animationGeneration,
+                                  isWeb: isWeb,
+                                );
+                              }, childCount: ticketProvider.tickets.length),
+                            ),
+                          ),
+                        if (ticketProvider.tickets.isNotEmpty)
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: 80,
+                                top: 16,
+                              ),
+                              child: _buildPagination(ticketProvider),
+                            ),
+                          ),
                       ],
                     ),
-                  ),
-                ),
-              ),
-
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final ticket = ticketProvider.tickets[index];
-                      return isWeb ? WebTicketCard(ticket: ticket) : TicketCard(ticket: ticket);
-                    },
-                    childCount: ticketProvider.tickets.length,
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 80, top: 16),
-                  child: _buildPagination(ticketProvider),
-                ),
-              ),
-            ],
-          ),
-          ),
+            ),
           ),
         ),
         floatingActionButton: FloatingActionButton.extended(
@@ -726,7 +1023,9 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
         Expanded(
           child: _buildActionButton(
             icon: Icons.swap_vert_rounded,
-            label: isSortActive ? _getSortShortLabel(ticketProvider.sortBy) : "Sort",
+            label: isSortActive
+                ? _getSortShortLabel(ticketProvider.sortBy)
+                : "Sort",
             isActive: isSortActive,
             showDot: isSortActive,
             onTap: () => _showSortBottomSheet(context, ticketProvider),
@@ -805,7 +1104,11 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                 ),
                 prefixIcon: const Icon(Icons.search, color: navy, size: 20),
                 suffixIcon: IconButton(
-                  icon: const Icon(Icons.close_rounded, color: Colors.grey, size: 20),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: Colors.grey,
+                    size: 20,
+                  ),
                   tooltip: "Close search",
                   onPressed: () {
                     _searchController.clear();
@@ -871,9 +1174,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
         decoration: BoxDecoration(
           color: isActive ? navy : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isActive ? navy : Colors.grey.shade200,
-          ),
+          border: Border.all(color: isActive ? navy : Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.04),
@@ -885,11 +1186,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              color: isActive ? Colors.white : navy,
-              size: 19,
-            ),
+            Icon(icon, color: isActive ? Colors.white : navy, size: 19),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
@@ -937,9 +1234,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
           decoration: BoxDecoration(
             color: isActive ? navy : Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isActive ? navy : Colors.grey.shade200,
-            ),
+            border: Border.all(color: isActive ? navy : Colors.grey.shade200),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.04),
@@ -951,11 +1246,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Icon(
-                icon,
-                color: isActive ? Colors.white : navy,
-                size: 20,
-              ),
+              Icon(icon, color: isActive ? Colors.white : navy, size: 20),
               if (isActive)
                 Positioned(
                   top: 8,
@@ -1087,8 +1378,9 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
                     title,
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w600,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w600,
                       color: isSelected ? navy : const Color(0xFF0F172A),
                     ),
                   ),
@@ -1222,6 +1514,120 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ============================================================================
+// ANIMATED TICKET CARD WITH SWAPPING & TRANSITION EFFECTS
+// ============================================================================
+class _AnimatedTicketCard extends StatefulWidget {
+  final Map<String, dynamic> ticket;
+  final int index;
+  final int? deltaIndex;
+  final int animationGeneration;
+  final bool isWeb;
+
+  const _AnimatedTicketCard({
+    super.key,
+    required this.ticket,
+    required this.index,
+    required this.deltaIndex,
+    required this.animationGeneration,
+    required this.isWeb,
+  });
+
+  @override
+  State<_AnimatedTicketCard> createState() => _AnimatedTicketCardState();
+}
+
+class _AnimatedTicketCardState extends State<_AnimatedTicketCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+  double _startOffsetY = 0.0;
+  bool _isNewItem = false;
+  int _handledGeneration = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    );
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    );
+    _initAnimation();
+  }
+
+  void _initAnimation() {
+    _handledGeneration = widget.animationGeneration;
+    if (widget.deltaIndex != null && widget.deltaIndex != 0) {
+      // Swapping positions between existing tickets
+      _isNewItem = false;
+      final clampedDelta = widget.deltaIndex!.clamp(-8, 8);
+      _startOffsetY = clampedDelta * 122.0;
+      _controller.forward(from: 0.0);
+    } else if (widget.deltaIndex == null) {
+      // New incoming ticket entering the list
+      _isNewItem = true;
+      _startOffsetY = 20.0;
+      _controller.forward(from: 0.0);
+    } else {
+      // deltaIndex == 0: stationary item
+      _isNewItem = false;
+      _startOffsetY = 0.0;
+      _controller.value = 1.0;
+    }
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedTicketCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.animationGeneration != _handledGeneration) {
+      _initAnimation();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cardWidget = widget.isWeb
+        ? WebTicketCard(ticket: widget.ticket)
+        : TicketCard(ticket: widget.ticket);
+
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        final progress = _animation.value;
+        final currentOffsetY = (1.0 - progress) * _startOffsetY;
+        final opacity = _isNewItem
+            ? (0.2 + 0.8 * progress).clamp(0.0, 1.0)
+            : 1.0;
+
+        // Subtle scale / elevation lift during swapping motion
+        final bool isSwapping = !_isNewItem && _startOffsetY != 0.0;
+        final scale = isSwapping
+            ? 1.0 + (0.025 * (1.0 - ((progress - 0.5).abs() * 2)))
+            : 1.0;
+
+        return Transform.translate(
+          offset: Offset(0, currentOffsetY),
+          child: Transform.scale(
+            scale: scale,
+            child: Opacity(opacity: opacity, child: child),
+          ),
+        );
+      },
+      child: cardWidget,
     );
   }
 }

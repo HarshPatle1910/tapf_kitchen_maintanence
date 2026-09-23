@@ -41,6 +41,7 @@ class TicketProvider with ChangeNotifier {
 
   List<String> _allowedKitchenIds = [];
   RealtimeChannel? _ticketChannel;
+  int _fetchRequestId = 0;
 
   List<Map<String, dynamic>> get tickets => _tickets;
   bool get isLoading => _isLoading;
@@ -147,7 +148,24 @@ class TicketProvider with ChangeNotifier {
 
   void setSearchQuery(String query) {
     _searchQuery = query;
-    refreshTickets();
+    refreshTickets(forceRefresh: true);
+  }
+
+  void resetAllFilters({bool keepKitchen = true, bool keepStatus = false}) {
+    _searchQuery = '';
+    _priorityFilter = 'ALL';
+    _zoneFilter = 'ALL';
+    _areaFilter = 'ALL';
+    _assignedToMeFilter = false;
+    _raisedByMeFilter = false;
+    _startDate = null;
+    _endDate = null;
+    if (!keepStatus) {
+      _statusFilter = 'ALL';
+    }
+    _offset = 0;
+    _currentPage = 1;
+    refreshTickets(forceRefresh: true);
   }
 
   void setFilters({
@@ -161,6 +179,7 @@ class TicketProvider with ChangeNotifier {
     DateTime? start,
     DateTime? end,
     String? sort,
+    String? searchQuery,
     bool clearDates = false,
   }) {
     if (status != null) _statusFilter = status;
@@ -171,6 +190,7 @@ class TicketProvider with ChangeNotifier {
     if (assignedToMe != null) _assignedToMeFilter = assignedToMe;
     if (raisedByMe != null) _raisedByMeFilter = raisedByMe;
     if (sort != null) _sortBy = sort;
+    if (searchQuery != null) _searchQuery = searchQuery;
 
     if (clearDates) {
       _startDate = null;
@@ -180,17 +200,17 @@ class TicketProvider with ChangeNotifier {
       if (end != null) _endDate = end;
     }
 
-    refreshTickets();
+    refreshTickets(forceRefresh: true);
   }
 
-  Future<void> refreshTickets({bool isRealtime = false}) async {
+  Future<void> refreshTickets({bool isRealtime = false, bool forceRefresh = false}) async {
     _offset = 0;
     _currentPage = 1;
     if (_allowedKitchenIds.isNotEmpty) {
       // Run both concurrently for faster UI updates
       await Future.wait([
         _fetchGlobalStats(),
-        fetchTickets(forceRefresh: isRealtime),
+        fetchTickets(forceRefresh: forceRefresh || isRealtime),
       ]);
     }
   }
@@ -321,8 +341,10 @@ class TicketProvider with ChangeNotifier {
   }
 
   Future<void> fetchTickets({bool loadMore = false, bool forceRefresh = false}) async {
-    if (_isLoading && !forceRefresh) return;
     if (_allowedKitchenIds.isEmpty) return;
+    if (_isLoading && !forceRefresh && !loadMore) return;
+
+    final int currentRequestId = ++_fetchRequestId;
 
     _isLoading = true;
     notifyListeners();
@@ -354,9 +376,11 @@ class TicketProvider with ChangeNotifier {
         final List<String> areaIds = areas.map((a) => a['id'].toString()).toList();
 
         if (areaIds.isEmpty) {
-          _tickets.clear();
-          _isLoading = false;
-          notifyListeners();
+          if (currentRequestId == _fetchRequestId) {
+            _tickets.clear();
+            _isLoading = false;
+            notifyListeners();
+          }
           return;
         }
         query = query.inFilter('area_id', areaIds);
@@ -409,6 +433,8 @@ class TicketProvider with ChangeNotifier {
       final bool isAscending = _sortBy == 'DATE_ASC';
       final response = await query.order('ticket_raised_time', ascending: isAscending).range(_offset, _offset + _itemsPerPage - 1);
 
+      if (currentRequestId != _fetchRequestId) return;
+
       if (!loadMore) _tickets.clear();
       _tickets.addAll(List<Map<String, dynamic>>.from(response));
 
@@ -423,8 +449,10 @@ class TicketProvider with ChangeNotifier {
     } catch (e) {
       debugPrint("Error fetching tickets: $e");
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (currentRequestId == _fetchRequestId) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 }

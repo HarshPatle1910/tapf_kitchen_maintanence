@@ -6,9 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [2.2.3] - 2026-09-23
+## [2.2.3+9] - 2026-09-23
 
 ### Added
+- **Ticket Swapping & State Transition Animations**:
+  - Implemented physical position-swapping animations in [`HomeScreen`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/lib/screens/home_screen.dart) via `_AnimatedTicketCard` (mobile) and [`WebTicketTable`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/lib/widgets/web_ticket_table.dart) via `_AnimatedTableRow` (desktop/web view).
+  - Added relative delta-index calculation tracking previous item positions across search, sort, and filter state changes.
+  - Added physical elevation/scale lift (`+2.5%` mobile, `+1.5%` web) during swap glide to visually elevate moving cards/rows over/under other elements.
+  - Tuned animation duration to `650ms` with `Curves.easeOutCubic` for a smooth, natural transition across both platforms.
+  - Added dynamic golden loading indicator (`LinearProgressIndicator`) below the filter bar on mobile and below table headers on web during data fetching.
+- **Web & Desktop Refresh Controls**:
+  - Added dedicated refresh button in the Home AppBar actions next to verification with in-flight spinner state.
+  - Added interactive refresh button in the [`WebTicketTable`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/lib/widgets/web_ticket_table.dart) header column action slot.
+  - Added "Refresh Data" action in the empty-state container when no tickets match active filters.
 - **Official TAPF Branding**:
   - Integrated official Akshaya Patra Foundation corporate logo (`assets/icon/akshaya_patra_logo.png`) into the Home screen AppBar.
   - Sized cleanly with `BoxFit.contain` and wrapped adjacent kitchen selector in `Flexible` to eliminate mobile layout overflow.
@@ -21,6 +31,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Added zone selection modal and state binding.
 - **User Profile Management**:
   - Added user profile edit functionality and responsive UI for updating user details.
+- **Comprehensive Application Flow Documentation**:
+  - Created [`flow.md`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/flow.md) documenting complete end-to-end architecture, user journeys, authentication state machine, ticket lifecycle states, search/filter concurrency sequencing diagrams, and master data hierarchies.
 - **Knowledge Graph Integration**:
   - Integrated `graphify` knowledge graph tooling and agent rules for automated architectural mapping and navigation.
 
@@ -29,6 +41,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Refactored ticket verification logic from blanket admin privileges to zone-based sign-off: supervisors can now verify tickets only for zones under their authority.
 - **Scrollable App Update Screen**:
   - Refactored `AppUpdateScreen` layout with a scrollable container to prevent UI overflow on smaller handheld devices.
+- **App Version Bump**:
+  - Updated application build version to `2.2.3+9` in [`pubspec.yaml`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/pubspec.yaml).
+
+### Fixed
+- **Filter Reset Concurrency & Race Condition**:
+  - Added atomic [`resetAllFilters()`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/lib/providers/ticket_provider.dart) in `TicketProvider` and implemented `_fetchRequestId` concurrency guards.
+  - Eliminated the race condition where `setSearchQuery` followed by `setFilters` silently dropped the query because `_isLoading` was true, leaving the screen stuck on "No Tickets Found" until a manual pull-to-refresh.
+  - Enhanced empty state reset button to cleanly reset filters and reload tickets instantly with animated entrance.
 
 ---
 

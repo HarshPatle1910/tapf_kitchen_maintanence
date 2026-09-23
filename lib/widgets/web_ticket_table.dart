@@ -6,6 +6,9 @@ class WebTicketTable extends StatelessWidget {
   final List<Map<String, dynamic>> tickets;
   final bool isLoading;
   final VoidCallback? onLoadMore;
+  final VoidCallback? onRefresh;
+  final Map<String, int?>? deltaIndices;
+  final int animationGeneration;
   static const Color navy = Color(0xFF26538D);
 
   const WebTicketTable({
@@ -13,6 +16,9 @@ class WebTicketTable extends StatelessWidget {
     required this.tickets,
     this.isLoading = false,
     this.onLoadMore,
+    this.onRefresh,
+    this.deltaIndices,
+    this.animationGeneration = 0,
   });
 
   @override
@@ -35,13 +41,67 @@ class WebTicketTable extends StatelessWidget {
         children: [
           // Fixed Header
           _buildHeaderRow(),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 550),
+            height: isLoading ? 2.5 : 0.0,
+            child: isLoading
+                ? const LinearProgressIndicator(
+                    backgroundColor: Colors.transparent,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(0xFFFFB300),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
           const Divider(height: 1, thickness: 1),
-          
+
           // Scrollable List
           if (tickets.isEmpty && !isLoading)
-            const Padding(
-              padding: EdgeInsets.all(32.0),
-              child: Center(child: Text("No tickets found.")),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 32.0,
+                vertical: 48.0,
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.search_off_rounded,
+                      size: 40,
+                      color: Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      "No tickets found.",
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    if (onRefresh != null) ...[
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
+                        onPressed: onRefresh,
+                        icon: const Icon(Icons.refresh_rounded, size: 16),
+                        label: const Text("Refresh Data"),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: navy,
+                          side: const BorderSide(color: navy),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             )
           else
             Expanded(
@@ -57,22 +117,48 @@ class WebTicketTable extends StatelessWidget {
                         child: OutlinedButton(
                           onPressed: isLoading ? null : onLoadMore,
                           style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
                             side: const BorderSide(color: navy),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
                           child: isLoading
-                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
                               : Text(
                                   "Show More",
-                                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: navy),
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w600,
+                                    color: navy,
+                                  ),
                                 ),
                         ),
                       ),
                     );
                   }
                   final ticket = tickets[index];
-                  return _ExpandableTableRow(ticket: ticket);
+                  final ticketId =
+                      (ticket['id'] ?? ticket['ticket_no'] ?? index).toString();
+                  final deltaIndex = deltaIndices != null
+                      ? deltaIndices![ticketId]
+                      : null;
+
+                  return _AnimatedTableRow(
+                    key: ValueKey(ticketId),
+                    ticket: ticket,
+                    index: index,
+                    deltaIndex: deltaIndex,
+                    animationGeneration: animationGeneration,
+                  );
                 },
               ),
             ),
@@ -97,7 +183,31 @@ class WebTicketTable extends StatelessWidget {
           _buildHeaderCell('Assigned To', flex: 1),
           _buildHeaderCell('Status', flex: 1),
           _buildHeaderCell('Time Ago', flex: 1),
-          _buildHeaderCell('', flex: 0, width: 40), // For Action
+          SizedBox(
+            width: 40,
+            child: onRefresh != null
+                ? IconButton(
+                    icon: isLoading
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(navy),
+                            ),
+                          )
+                        : const Icon(
+                            Icons.refresh_rounded,
+                            size: 18,
+                            color: navy,
+                          ),
+                    tooltip: "Refresh Data",
+                    onPressed: isLoading ? null : onRefresh,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );
@@ -112,15 +222,12 @@ class WebTicketTable extends StatelessWidget {
         color: navy,
       ),
     );
-    
+
     if (width != null) {
       return SizedBox(width: width, child: textWidget);
     }
-    
-    return Expanded(
-      flex: flex,
-      child: textWidget,
-    );
+
+    return Expanded(flex: flex, child: textWidget);
   }
 }
 
@@ -170,14 +277,18 @@ class _ExpandableTableRowState extends State<_ExpandableTableRow> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          border: Border(
-            left: BorderSide(color: priorityInfo.color, width: 4),
-          ),
+          border: Border(left: BorderSide(color: priorityInfo.color, width: 4)),
         ),
         child: Row(
-          crossAxisAlignment: _isExpanded ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+          crossAxisAlignment: _isExpanded
+              ? CrossAxisAlignment.start
+              : CrossAxisAlignment.center,
           children: [
-            _buildDataCell(ticket['ticket_no'] ?? '#---', flex: 1, isBold: true),
+            _buildDataCell(
+              ticket['ticket_no'] ?? '#---',
+              flex: 1,
+              isBold: true,
+            ),
             _buildDataCell(ticket['title'] ?? 'No Title', flex: 2),
             _buildPriorityCell(priorityInfo, flex: 1),
             _buildUserCell(raisedByName, flex: 1),
@@ -187,7 +298,7 @@ class _ExpandableTableRowState extends State<_ExpandableTableRow> {
             SizedBox(
               width: 40,
               child: IconButton(
-                icon: const Icon(Icons.more_vert, size: 20),
+                icon: const Icon(Icons.arrow_forward_ios, size: 20),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -206,7 +317,12 @@ class _ExpandableTableRowState extends State<_ExpandableTableRow> {
     );
   }
 
-  Widget _buildDataCell(String text, {int flex = 1, bool isBold = false, Color? color}) {
+  Widget _buildDataCell(
+    String text, {
+    int flex = 1,
+    bool isBold = false,
+    Color? color,
+  }) {
     return Expanded(
       flex: flex,
       child: Padding(
@@ -250,7 +366,9 @@ class _ExpandableTableRowState extends State<_ExpandableTableRow> {
                   color: priorityInfo.color,
                 ),
                 maxLines: _isExpanded ? null : 1,
-                overflow: _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                overflow: _isExpanded
+                    ? TextOverflow.visible
+                    : TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -258,7 +376,7 @@ class _ExpandableTableRowState extends State<_ExpandableTableRow> {
       ),
     );
   }
-  
+
   Widget _buildUserCell(String name, {int flex = 1}) {
     return Expanded(
       flex: flex,
@@ -266,7 +384,9 @@ class _ExpandableTableRowState extends State<_ExpandableTableRow> {
         padding: const EdgeInsets.only(right: 8.0),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: _isExpanded ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+          crossAxisAlignment: _isExpanded
+              ? CrossAxisAlignment.start
+              : CrossAxisAlignment.center,
           children: [
             CircleAvatar(
               radius: 10,
@@ -290,7 +410,9 @@ class _ExpandableTableRowState extends State<_ExpandableTableRow> {
                   color: Colors.black87,
                 ),
                 maxLines: _isExpanded ? null : 1,
-                overflow: _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                overflow: _isExpanded
+                    ? TextOverflow.visible
+                    : TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -340,22 +462,33 @@ class _ExpandableTableRowState extends State<_ExpandableTableRow> {
 
   Color _getStatusColor(String? status) {
     switch (status) {
-      case 'RAISED': return Colors.redAccent;
-      case 'ASSIGNED': return Colors.blueAccent;
-      case 'IN_PROGRESS': return Colors.orange;
-      case 'COMPLETED': return Colors.green;
-      case 'VERIFIED': return Colors.teal;
-      default: return Colors.grey;
+      case 'RAISED':
+        return Colors.redAccent;
+      case 'ASSIGNED':
+        return Colors.blueAccent;
+      case 'IN_PROGRESS':
+        return Colors.orange;
+      case 'COMPLETED':
+        return Colors.green;
+      case 'VERIFIED':
+        return Colors.teal;
+      default:
+        return Colors.grey;
     }
   }
 
   _PriorityData _getPriorityInfo(String? priority) {
     switch (priority) {
-      case 'CRITICAL': return _PriorityData(Colors.red.shade700, 'CRITICAL');
-      case 'HIGH': return _PriorityData(Colors.orange.shade700, 'HIGH');
-      case 'MEDIUM': return _PriorityData(Colors.blue.shade600, 'MEDIUM');
-      case 'LOW': return _PriorityData(Colors.green.shade600, 'LOW');
-      default: return _PriorityData(Colors.grey, 'NONE');
+      case 'CRITICAL':
+        return _PriorityData(Colors.red.shade700, 'CRITICAL');
+      case 'HIGH':
+        return _PriorityData(Colors.orange.shade700, 'HIGH');
+      case 'MEDIUM':
+        return _PriorityData(Colors.blue.shade600, 'MEDIUM');
+      case 'LOW':
+        return _PriorityData(Colors.green.shade600, 'LOW');
+      default:
+        return _PriorityData(Colors.grey, 'NONE');
     }
   }
 }
@@ -364,4 +497,112 @@ class _PriorityData {
   final Color color;
   final String label;
   _PriorityData(this.color, this.label);
+}
+
+// ============================================================================
+// ANIMATED TABLE ROW WITH SWAPPING & TRANSITION EFFECTS
+// ============================================================================
+class _AnimatedTableRow extends StatefulWidget {
+  final Map<String, dynamic> ticket;
+  final int index;
+  final int? deltaIndex;
+  final int animationGeneration;
+
+  const _AnimatedTableRow({
+    super.key,
+    required this.ticket,
+    required this.index,
+    required this.deltaIndex,
+    required this.animationGeneration,
+  });
+
+  @override
+  State<_AnimatedTableRow> createState() => _AnimatedTableRowState();
+}
+
+class _AnimatedTableRowState extends State<_AnimatedTableRow>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+  double _startOffsetY = 0.0;
+  bool _isNewItem = false;
+  int _handledGeneration = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    );
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    );
+    _initAnimation();
+  }
+
+  void _initAnimation() {
+    _handledGeneration = widget.animationGeneration;
+    if (widget.deltaIndex != null && widget.deltaIndex != 0) {
+      // Swapping positions between existing table rows (table row height ~ 48px)
+      _isNewItem = false;
+      final clampedDelta = widget.deltaIndex!.clamp(-15, 15);
+      _startOffsetY = clampedDelta * 48.0;
+      _controller.forward(from: 0.0);
+    } else if (widget.deltaIndex == null) {
+      // New incoming table row entering the list
+      _isNewItem = true;
+      _startOffsetY = 16.0;
+      _controller.forward(from: 0.0);
+    } else {
+      // deltaIndex == 0: stationary item
+      _isNewItem = false;
+      _startOffsetY = 0.0;
+      _controller.value = 1.0;
+    }
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedTableRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.animationGeneration != _handledGeneration) {
+      _initAnimation();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        final progress = _animation.value;
+        final currentOffsetY = (1.0 - progress) * _startOffsetY;
+        final opacity = _isNewItem
+            ? (0.2 + 0.8 * progress).clamp(0.0, 1.0)
+            : 1.0;
+
+        // Subtle scale / elevation lift during swapping motion
+        final bool isSwapping = !_isNewItem && _startOffsetY != 0.0;
+        final scale = isSwapping
+            ? 1.0 + (0.015 * (1.0 - ((progress - 0.5).abs() * 2)))
+            : 1.0;
+
+        return Transform.translate(
+          offset: Offset(0, currentOffsetY),
+          child: Transform.scale(
+            scale: scale,
+            child: Opacity(opacity: opacity, child: child),
+          ),
+        );
+      },
+      child: _ExpandableTableRow(ticket: widget.ticket),
+    );
+  }
 }
