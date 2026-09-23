@@ -71,6 +71,9 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
       if (_tabController == null || _tabController!.length != 2) {
         _tabController?.dispose();
         _tabController = TabController(length: 2, vsync: this);
+        _tabController!.addListener(() {
+          if (mounted) setState(() {});
+        });
       }
     } else {
       _tabController?.dispose();
@@ -199,6 +202,38 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
           pendingZone = allZoneCompleted.where((t) {
             return t['admin_verified'] != true;
           }).toList();
+        }
+      }
+
+      // Fetch completion proof media for all pending tickets
+      final allUniqueTicketIds = <String>{
+        ...pendingRaiser.map((t) => t['id']?.toString() ?? ''),
+        ...pendingZone.map((t) => t['id']?.toString() ?? ''),
+      }..remove('');
+
+      if (allUniqueTicketIds.isNotEmpty) {
+        try {
+          final mediaRes = await _supabase
+              .from('ticket_media')
+              .select('id, ticket_id, media_url, media_type, upload_stage')
+              .inFilter('ticket_id', allUniqueTicketIds.toList());
+
+          final Map<String, List<Map<String, dynamic>>> mediaByTicket = {};
+          for (var m in mediaRes) {
+            final tId = m['ticket_id']?.toString();
+            if (tId != null) {
+              mediaByTicket.putIfAbsent(tId, () => []).add(Map<String, dynamic>.from(m));
+            }
+          }
+
+          for (var t in pendingRaiser) {
+            t['ticket_media'] = mediaByTicket[t['id'].toString()] ?? [];
+          }
+          for (var t in pendingZone) {
+            t['ticket_media'] = mediaByTicket[t['id'].toString()] ?? [];
+          }
+        } catch (mediaErr) {
+          debugPrint("Error fetching ticket_media: $mediaErr");
         }
       }
 
@@ -603,6 +638,23 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
     } else if (assignedKitchens.isNotEmpty) {
       activeKitchenName = assignedKitchens.first['name'] ?? 'Facility';
     }
+    final isWeb = MediaQuery.of(context).size.width > 800;
+    final int totalPending =
+        _raiserPendingTickets.length + _zonePendingTickets.length;
+
+    if (isWeb) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        appBar: _buildWebAppBar(
+          context,
+          authProv,
+          isSingleKitchen,
+          activeKitchenName,
+          totalPending,
+        ),
+        body: _buildWebBody(),
+      );
+    }
 
     return Scaffold(
       backgroundColor: background,
@@ -876,6 +928,650 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
     );
   }
 
+  // ==========================================
+  // WEB DESKTOP LAYOUT (width > 800)
+  // ==========================================
+
+  PreferredSizeWidget _buildWebAppBar(
+    BuildContext context,
+    AuthProvider authProv,
+    bool isSingleKitchen,
+    String activeKitchenName,
+    int totalPending,
+  ) {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(75),
+      child: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        toolbarHeight: 75,
+        leadingWidth: 0,
+        automaticallyImplyLeading: false,
+        title: Row(
+          children: [
+            InkWell(
+              onTap: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else {
+                  context.go(AppRoutes.home);
+                }
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.arrow_back_rounded, size: 16, color: navy),
+                    const SizedBox(width: 4),
+                    Text(
+                      "Back",
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: navy,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Image.asset(
+              "assets/icon/akshaya_patra_logo.png",
+              height: 40,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "SELECTED KITCHEN",
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade500,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  if (isSingleKitchen)
+                    Text(
+                      activeKitchenName,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: navy,
+                        letterSpacing: -0.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    )
+                  else
+                    Container(
+                      height: 32,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          borderRadius: const BorderRadius.all(Radius.circular(12)),
+                          value: _selectedKitchenId,
+                          isDense: true,
+                          icon: const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: navy,
+                            size: 18,
+                          ),
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: navy,
+                          ),
+                          items: authProv.assignedKitchens.map((k) {
+                            return DropdownMenuItem<String>(
+                              value: k['id'].toString(),
+                              child: Text(
+                                k['name'] ?? 'Unknown Kitchen',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null && val != _selectedKitchenId) {
+                              setState(() => _selectedKitchenId = val);
+                              context.read<TicketProvider>().setFilters(kitchenId: val);
+                              _fetchAllTickets();
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 24),
+
+            // Stat Cards Row
+            Expanded(
+              flex: 5,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildWebStatCard(
+                        label: "Total Pending",
+                        count: totalPending,
+                        color: navy,
+                        isSelected: false,
+                        onTap: null,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildWebStatCard(
+                        label: "Raised by Me",
+                        count: _raiserPendingTickets.length,
+                        color: raiserColor,
+                        isSelected: _tabController == null || _tabController!.index == 0,
+                        onTap: () {
+                          if (_tabController != null && _tabController!.index != 0) {
+                            _tabController!.animateTo(0);
+                            setState(() {});
+                          }
+                        },
+                      ),
+                    ),
+                    if (_canAccessZoneSignOff) ...[
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildWebStatCard(
+                          label: "Zone Sign-Off",
+                          count: _zonePendingTickets.length,
+                          color: adminColor,
+                          isSelected: _tabController != null && _tabController!.index == 1,
+                          onTap: () {
+                            if (_tabController != null && _tabController!.index != 1) {
+                              _tabController!.animateTo(1);
+                              setState(() {});
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 16),
+            // Refresh button
+            IconButton(
+              icon: _isLoading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(navy),
+                      ),
+                    )
+                  : const Icon(Icons.refresh_rounded, color: navy, size: 24),
+              tooltip: "Refresh Tickets",
+              onPressed: _isLoading ? null : _fetchAllTickets,
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebStatCard({
+    required String label,
+    required int count,
+    required Color color,
+    required bool isSelected,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.1) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade300,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+          boxShadow: isSelected
+              ? []
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              count.toString(),
+              style: GoogleFonts.inter(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: isSelected ? color : navy,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? color : Colors.grey.shade600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebBody() {
+    final isZoneTab = _canAccessZoneSignOff && (_tabController?.index ?? 0) == 1;
+    final activeTickets = isZoneTab
+        ? _filterZoneList(_zonePendingTickets)
+        : _filterList(_raiserPendingTickets);
+
+    return Column(
+      children: [
+        // Web Control Bar (Search + Tab Pills + Zone Chips)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  // Search Box
+                  Expanded(
+                    flex: 4,
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        style: GoogleFonts.inter(fontSize: 13, color: Colors.black87),
+                        onChanged: (val) {
+                          setState(() => _searchQuery = val.trim());
+                        },
+                        decoration: InputDecoration(
+                          hintText: "Search by ticket #, title, technician, zone, area...",
+                          hintStyle: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: Colors.grey.shade400,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.search_rounded,
+                            size: 18,
+                            color: navy,
+                          ),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear_rounded, size: 16),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _searchQuery = '');
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 16),
+
+                  // Tab Switcher Pills
+                  if (_canAccessZoneSignOff && _tabController != null)
+                    _buildWebTabPills(),
+                ],
+              ),
+
+              // Zone Filter Chips if on Zone tab and multiple zones
+              if (isZoneTab && _allocatedZones.length > 1) ...[
+                const SizedBox(height: 10),
+                _buildZoneFilterChips(),
+              ],
+            ],
+          ),
+        ),
+
+        // Main Table Area
+        Expanded(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator(color: navy))
+              : Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: activeTickets.isEmpty
+                      ? _buildWebEmptyState(isZoneTab)
+                      : _buildWebVerificationTable(
+                          context,
+                          activeTickets,
+                          isZoneTab,
+                        ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWebTabPills() {
+    final activeIndex = _tabController?.index ?? 0;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      padding: const EdgeInsets.all(3),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildWebPillButton(
+            title: "Raised by Me",
+            count: _raiserPendingTickets.length,
+            isSelected: activeIndex == 0,
+            color: raiserColor,
+            onTap: () {
+              if (_tabController != null && _tabController!.index != 0) {
+                _tabController!.animateTo(0);
+                setState(() {});
+              }
+            },
+          ),
+          const SizedBox(width: 4),
+          _buildWebPillButton(
+            title: "Zone Sign-Off",
+            count: _zonePendingTickets.length,
+            isSelected: activeIndex == 1,
+            color: adminColor,
+            onTap: () {
+              if (_tabController != null && _tabController!.index != 1) {
+                _tabController!.animateTo(1);
+                setState(() {});
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWebPillButton({
+    required String title,
+    required int count,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                color: isSelected ? color : Colors.grey.shade600,
+              ),
+            ),
+            if (count > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isSelected ? color.withOpacity(0.15) : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  count.toString(),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: isSelected ? color : Colors.grey.shade700,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebEmptyState(bool isZoneTab) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.verified_rounded,
+                size: 48,
+                color: Colors.green.shade600,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              isZoneTab
+                  ? "No Pending Zone Sign-Offs"
+                  : "No Pending Raiser Verifications",
+              style: GoogleFonts.inter(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: navy,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isZoneTab
+                  ? (_selectedZoneFilter == 'ALL'
+                      ? "All completed tickets in your allocated zones have received zone sign-off."
+                      : "No pending sign-offs in the selected zone.")
+                  : "None of your raised tickets in this kitchen require verification.",
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: Colors.grey.shade600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            OutlinedButton.icon(
+              onPressed: _fetchAllTickets,
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text("Refresh List"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: navy,
+                side: const BorderSide(color: navy),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebVerificationTable(
+    BuildContext context,
+    List<Map<String, dynamic>> tickets,
+    bool isZoneTab,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Fixed Header
+          _buildWebTableHeader(),
+          const Divider(height: 1, thickness: 1),
+
+          // Rows
+          Expanded(
+            child: ListView.separated(
+              itemCount: tickets.length,
+              separatorBuilder: (_, _) => const Divider(height: 1, thickness: 1),
+              itemBuilder: (context, index) {
+                final ticket = tickets[index];
+                return _WebVerificationTableRow(
+                  key: ValueKey(ticket['id'] ?? ticket['ticket_no'] ?? index),
+                  ticket: ticket,
+                  index: index,
+                  isZoneTab: isZoneTab,
+                  onVerify: () => _confirmVerificationDialog(
+                    ticket: ticket,
+                    isVerifyingAsZoneLeader: isZoneTab,
+                  ),
+                  onOpenImage: (url) => _openImageViewer(context, url),
+                  getCompletionImageUrl: _getCompletionImageUrl,
+                  formatDate: _formatDate,
+                  getPriorityColor: _getPriorityColor,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWebTableHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      child: Row(
+        children: [
+          _buildWebHeaderCell('Ticket #', flex: 2),
+          _buildWebHeaderCell('Title & Description', flex: 4),
+          _buildWebHeaderCell('Zone & Area', flex: 3),
+          _buildWebHeaderCell('Priority', flex: 2),
+          _buildWebHeaderCell('Assigned Tech', flex: 3),
+          _buildWebHeaderCell('Proof Media', flex: 2),
+          _buildWebHeaderCell('Resolution Info', flex: 3),
+          _buildWebHeaderCell('Audit Status', flex: 3),
+          _buildWebHeaderCell('Action', flex: 3),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWebHeaderCell(String title, {int flex = 1, double? width}) {
+    final textWidget = Text(
+      title,
+      style: GoogleFonts.inter(
+        fontWeight: FontWeight.w700,
+        fontSize: 12,
+        color: navy,
+      ),
+    );
+
+    if (width != null) {
+      return SizedBox(width: width, child: textWidget);
+    }
+    return Expanded(flex: flex, child: textWidget);
+  }
+
   // --- Zone Filter Chips for Zone Sign-Off Tab ---
   Widget _buildZoneFilterChips() {
     return Container(
@@ -1061,6 +1757,93 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
     );
   }
 
+  String? _getCompletionImageUrl(Map<String, dynamic> ticket) {
+    final mediaList = ticket['ticket_media'] as List<dynamic>?;
+    if (mediaList != null && mediaList.isNotEmpty) {
+      for (var m in mediaList) {
+        if (m is Map<String, dynamic>) {
+          final stage = (m['upload_stage'] ?? '').toString().toUpperCase();
+          final url = m['media_url']?.toString();
+          if (stage == 'COMPLETED' && url != null && url.isNotEmpty) {
+            if (!url.startsWith('http')) {
+              return _supabase.storage.from('ticket-media').getPublicUrl(url);
+            }
+            return url;
+          }
+        }
+      }
+      for (var m in mediaList) {
+        if (m is Map<String, dynamic>) {
+          final url = m['media_url']?.toString();
+          if (url != null && url.isNotEmpty) {
+            if (!url.startsWith('http')) {
+              return _supabase.storage.from('ticket-media').getPublicUrl(url);
+            }
+            return url;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  void _openImageViewer(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(20),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              panEnabled: true,
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    return const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      "Failed to load image",
+                      style: GoogleFonts.inter(color: Colors.red),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 12,
+              right: 12,
+              child: IconButton(
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.black54,
+                  foregroundColor: Colors.white,
+                ),
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // --- 1. RAISER CARD: Distinct Purple / Violet Theme ---
   Widget _buildRaiserCard(Map<String, dynamic> ticket) {
     final priorityColor = _getPriorityColor(ticket['priority']);
@@ -1228,6 +2011,83 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                 ],
               ),
               const SizedBox(height: 12),
+
+              // Completion Proof Image Preview (Mobile)
+              Builder(
+                builder: (context) {
+                  final completionUrl = _getCompletionImageUrl(ticket);
+                  if (completionUrl == null) return const SizedBox.shrink();
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: InkWell(
+                      onTap: () => _openImageViewer(context, completionUrl),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                completionUrl,
+                                width: 54,
+                                height: 54,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Container(
+                                  width: 54,
+                                  height: 54,
+                                  color: Colors.grey.shade200,
+                                  child: const Icon(Icons.broken_image,
+                                      size: 20, color: Colors.grey),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.check_circle_outline,
+                                          size: 14, color: Colors.green),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        "Completion Proof Photo",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: navy,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    "Tap to view full resolution photo",
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.zoom_in_rounded,
+                                size: 20, color: Colors.grey),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
 
               // Action Taken Summary Box
               if (ticket['action_taken'] != null &&
@@ -1549,6 +2409,83 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
               ),
               const SizedBox(height: 12),
 
+              // Completion Proof Image Preview (Mobile)
+              Builder(
+                builder: (context) {
+                  final completionUrl = _getCompletionImageUrl(ticket);
+                  if (completionUrl == null) return const SizedBox.shrink();
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: InkWell(
+                      onTap: () => _openImageViewer(context, completionUrl),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                completionUrl,
+                                width: 54,
+                                height: 54,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Container(
+                                  width: 54,
+                                  height: 54,
+                                  color: Colors.grey.shade200,
+                                  child: const Icon(Icons.broken_image,
+                                      size: 20, color: Colors.grey),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.check_circle_outline,
+                                          size: 14, color: Colors.green),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        "Completion Proof Photo",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: navy,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    "Tap to view full resolution photo",
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.zoom_in_rounded,
+                                size: 20, color: Colors.grey),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+
               // Cause and Action Taken summary
               if ((ticket['cause_of_issue'] != null &&
                       ticket['cause_of_issue'].toString().trim().isNotEmpty) ||
@@ -1685,3 +2622,540 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
     }
   }
 }
+
+class _WebVerificationTableRow extends StatefulWidget {
+  final Map<String, dynamic> ticket;
+  final int index;
+  final bool isZoneTab;
+  final VoidCallback onVerify;
+  final Function(String) onOpenImage;
+  final String? Function(Map<String, dynamic>) getCompletionImageUrl;
+  final String Function(String?) formatDate;
+  final Color Function(String?) getPriorityColor;
+
+  const _WebVerificationTableRow({
+    super.key,
+    required this.ticket,
+    required this.index,
+    required this.isZoneTab,
+    required this.onVerify,
+    required this.onOpenImage,
+    required this.getCompletionImageUrl,
+    required this.formatDate,
+    required this.getPriorityColor,
+  });
+
+  @override
+  State<_WebVerificationTableRow> createState() =>
+      _WebVerificationTableRowState();
+}
+
+class _WebVerificationTableRowState extends State<_WebVerificationTableRow> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final ticket = widget.ticket;
+    final ticketId = (ticket['id'] ?? ticket['ticket_no'] ?? '').toString();
+    final priorityColor = widget.getPriorityColor(ticket['priority']);
+    final raiserVerified = ticket['is_verified_by_raiser'] == true;
+    final adminVerified = ticket['is_verified_by_admin'] == true;
+    final completionUrl = widget.getCompletionImageUrl(ticket);
+    final techName = ticket['assigned_to']?['name'] ?? 'Technician';
+    final completedTime = widget.formatDate(ticket['ticket_completion_time']);
+    final zoneName = ticket['m_area']?['m_zone']?['name'] ?? 'Unknown Zone';
+    final areaName = ticket['m_area']?['area_name'] ?? 'General Area';
+    final assetName = ticket['m_asset']?['name'];
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: InkWell(
+        onTap: () {
+          context.push(
+            AppRoutes.ticketDetailPath(ticketId),
+            extra: ticket,
+          );
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: _isHovered
+                ? const Color(0xFFF1F5F9)
+                : (widget.index.isEven ? Colors.white : const Color(0xFFFAFAFA)),
+            border: Border(
+              left: BorderSide(
+                color: priorityColor,
+                width: 4,
+              ),
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // 1. Ticket #
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF26538D).withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      "#${ticket['ticket_no'] ?? ticket['id'] ?? '---'}",
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF26538D),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ),
+
+              // 2. Title & Description
+              Expanded(
+                flex: 4,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        ticket['title'] ?? 'No Title',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1E293B),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (assetName != null &&
+                          assetName.toString().isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Icon(Icons.precision_manufacturing_outlined,
+                                size: 12, color: Colors.grey.shade600),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                assetName.toString(),
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey.shade600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+
+              // 3. Zone & Area
+              Expanded(
+                flex: 3,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD97706).withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          zoneName,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFFB45309),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        areaName,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: Colors.grey.shade600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 4. Priority
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: priorityColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          ticket['priority'] ?? 'MEDIUM',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: priorityColor,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 5. Assigned Tech
+              Expanded(
+                flex: 3,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.handyman_outlined,
+                              size: 13, color: Colors.grey.shade600),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              techName,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        completedTime,
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: Colors.grey.shade500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 6. Proof Media (Completion Image Thumbnail)
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: completionUrl != null
+                      ? Tooltip(
+                          message: "Click to preview completion photo",
+                          child: InkWell(
+                            onTap: () => widget.onOpenImage(completionUrl),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border:
+                                    Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(7),
+                                    child: Image.network(
+                                      completionUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              Container(
+                                        color: Colors.grey.shade200,
+                                        child: const Icon(Icons.broken_image,
+                                            size: 16, color: Colors.grey),
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 2,
+                                    right: 2,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black54,
+                                        borderRadius:
+                                            BorderRadius.circular(4),
+                                      ),
+                                      child: const Icon(
+                                        Icons.zoom_in,
+                                        size: 10,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )
+                      : Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Icons.no_photography_outlined,
+                              size: 18,
+                              color: Colors.grey.shade400,
+                            ),
+                          ),
+                        ),
+                ),
+              ),
+
+              // 7. Resolution Info
+              Expanded(
+                flex: 3,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: (ticket['action_taken'] != null &&
+                          ticket['action_taken']
+                              .toString()
+                              .trim()
+                              .isNotEmpty)
+                      ? Tooltip(
+                          message: ticket['action_taken'].toString(),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              ticket['action_taken'].toString(),
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: Colors.grey.shade800,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                      : Text(
+                          "No remarks",
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontStyle: FontStyle.italic,
+                            color: Colors.grey.shade400,
+                          ),
+                        ),
+                ),
+              ),
+
+              // 8. Audit Status
+              Expanded(
+                flex: 3,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: raiserVerified
+                              ? Colors.green.shade50
+                              : Colors.purple.shade50,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              raiserVerified
+                                  ? Icons.check_circle_rounded
+                                  : Icons.hourglass_top_rounded,
+                              size: 11,
+                              color: raiserVerified
+                                  ? Colors.green.shade700
+                                  : Colors.purple.shade700,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              raiserVerified
+                                  ? "Raiser Verified"
+                                  : "Awaiting Raiser",
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: raiserVerified
+                                    ? Colors.green.shade700
+                                    : Colors.purple.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: adminVerified
+                              ? Colors.green.shade50
+                              : Colors.amber.shade50,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              adminVerified
+                                  ? Icons.verified_rounded
+                                  : Icons.hourglass_top_rounded,
+                              size: 11,
+                              color: adminVerified
+                                  ? Colors.green.shade700
+                                  : Colors.amber.shade800,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              adminVerified
+                                  ? "Zone Approved"
+                                  : "Awaiting Zone",
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: adminVerified
+                                    ? Colors.green.shade700
+                                    : Colors.amber.shade800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 9. Actions
+              Expanded(
+                flex: 3,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: widget.isZoneTab
+                              ? const Color(0xFFD97706)
+                              : const Color(0xFF6366F1),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        icon: Icon(
+                          widget.isZoneTab
+                              ? Icons.verified_outlined
+                              : Icons.check_circle_outline,
+                          size: 14,
+                        ),
+                        label: Text(
+                          widget.isZoneTab ? "Sign-Off" : "Verify",
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        onPressed: widget.onVerify,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.open_in_new_rounded,
+                        size: 16,
+                        color: Color(0xFF26538D),
+                      ),
+                      tooltip: "View Ticket Details",
+                      onPressed: () {
+                        context.push(
+                          AppRoutes.ticketDetailPath(ticketId),
+                          extra: ticket,
+                        );
+                      },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                          minWidth: 32, minHeight: 32),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

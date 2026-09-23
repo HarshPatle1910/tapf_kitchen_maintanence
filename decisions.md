@@ -17,6 +17,7 @@ This document tracks key architectural, technical, and structural decisions made
 - [ADR-009: Dynamic Ticket Swapping & Staggered Transition Animations](#adr-009-dynamic-ticket-swapping--staggered-transition-animations)
 - [ADR-010: Asynchronous Query Concurrency Guards & Atomic State Resets](#adr-010-asynchronous-query-concurrency-guards--atomic-state-resets)
 - [ADR-011: Declarative URL Routing & Reactive Navigation Guard Architecture (go_router)](#adr-011-declarative-url-routing--reactive-navigation-guard-architecture-go_router)
+- [ADR-012: Desktop Web Layout & In-Line Completion Proof Inspection for Ticket Verification](#adr-012-desktop-web-layout--in-line-completion-proof-inspection-for-ticket-verification)
 
 ---
 
@@ -295,4 +296,38 @@ Migrate the complete application to **`go_router` (v17.x)** with declarative rou
   - Consistent developer ergonomics across all screens (`context.push(...)`, `context.go(...)`).
 - **Negative:**
   - Complex object parameters passed via `extra` do not persist across hard browser reloads on web, requiring components to support fetching by ID parameter when `extra` is null.
+
+---
+
+## ADR-012: Desktop Web Layout & In-Line Completion Proof Inspection for Ticket Verification
+
+### Status
+**Accepted**
+
+### Context
+Plant managers, zone supervisors, and central maintenance directors review pending completed tickets on wide desktop screens (monitors, laptops, and tablets > 800px). The initial `TicketVerificationScreen` employed a vertical, mobile-card layout regardless of viewport width. This resulted in:
+1. Low information density with excessive scrolling across dozens of completed repairs.
+2. Inconsistent aesthetics with the TAPF Web Home Screen (`HomeScreen` web layout).
+3. The lack of immediately visible completion proof media, requiring auditors to open each ticket detail screen individually just to inspect repair photographs.
+
+### Decision
+1. **Responsive Web Forking (`width > 800`):** Implement desktop-optimized views conforming to TAPF Web design tokens:
+   - **Desktop Web AppBar:** 75px fixed height with TAPF brand logo, facility/kitchen selector, live interactive stat cards ("Total Pending", "Raised by Me", "Zone Sign-Off"), and refresh controls.
+   - **Desktop Web Table:** High-density data grid with left priority border indicators, fixed header row, and hover state highlights.
+   - **Audit Action Column:** Inline quick-action buttons allowing immediate "Verify Resolution" (Raiser context) or "Approve & Zone Sign-Off" (Zone context) directly from the table.
+2. **In-Line Completion Proof Media Pipeline:**
+   - Query `ticket_media` using PostgREST `inFilter('ticket_id', allUniqueTicketIds)` to eliminate join schema-cache limitations.
+   - Extract the completion proof image (`upload_stage == 'COMPLETED'`) with automatic fallback to any attached ticket media.
+   - Render 44x44 (desktop) and 54x54 (mobile) thumbnail previews with rounded borders and zoom badges.
+   - Implement interactive lightbox dialog (`_openImageViewer`) featuring `InteractiveViewer` with pinch-to-zoom, pan, and 0.5x–4.0x zoom boundaries.
+3. **Mobile Parity:** Integrate completion proof thumbnail cards into mobile raiser and zone verification cards.
+
+### Consequences
+- **Positive:**
+  - Audit time reduced dramatically as supervisors can inspect resolution photos directly within the table or list.
+  - Visual consistency across the entire Web portal (Home screen and Verification screen share identical headers, stat cards, and table aesthetics).
+  - Works reliably across Android, iOS, and Web browsers.
+- **Negative:**
+  - Requires fetching media attachments for active verification tickets upon loading the verification screen.
+
 

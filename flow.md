@@ -184,21 +184,54 @@ sequenceDiagram
 
 ---
 
-## 6. Ticket Verification Flow (Zone-Based)
+## 6. Ticket Verification Flow & Dual-Auditor Lifecycle
+
+Completed tickets require sign-off before closure. Depending on role and allocation, users verify in two independent or concurrent capacities:
+1. **Raiser Verification**: The original creator of the ticket confirms that the reported defect has been resolved satisfactorily.
+2. **Zone Sign-Off**: The allocated Zone Leader or central Administrator audits the work, checks adherence to standards, and approves closure.
 
 ```mermaid
 graph TD
-    A[Supervisor clicks Verification Badge in AppBar] --> B[TicketVerificationScreen]
-    B --> C[Fetch COMPLETED tickets for Supervisor Assigned Kitchens]
-    C --> D[Filter tickets by Supervisor Assigned Zones]
-    D --> E[Review Before vs After Media & Resolution Notes]
-    E --> F{Audit Decision}
-    F -- "Approved" --> G[Call verifyTicket RPC -> Status: VERIFIED]
-    F -- "Rejected" --> H[Enter Rejection Reason -> Status: REOPENED]
-    G --> I[Telegram Notification Sent to Thread]
-    H --> I
-    I --> J[Return to HomeScreen & Auto-Refresh Counters]
+    A[Supervisor clicks Verification Badge in AppBar or /verification URL] --> B[TicketVerificationScreen]
+    B --> C{Device Viewport Check}
+    C -- "Web (width > 800px)" --> D[Render Web Layout: 75px Header + Metric Cards + Verification Data Grid]
+    C -- "Mobile (width <= 800px)" --> E[Render Mobile Layout: Kitchen Selector + Tab Bar + Card Feed]
+    
+    D --> F[Query COMPLETED tickets & inFilter ticket_media]
+    E --> F
+    
+    F --> G[Extract Completion Image upload_stage == COMPLETED]
+    G --> H[Render Thumbnail Preview with Zoom Badge in Table/Card]
+    
+    H --> I{User Interaction}
+    I -- "Tap Thumbnail" --> J[InteractiveViewer Lightbox: Pinch/Pan/Zoom 0.5x-4.0x]
+    I -- "Click Row / Ticket #" --> K[Navigate to /tickets/:id with extra]
+    I -- "Click Quick Action" --> L[Audit Confirmation Dialog]
+    
+    L -- "Raiser Verify" --> M[Call verifyTicket RPC -> is_verified_by_raiser = true]
+    L -- "Zone Sign-Off" --> N[Call verifyTicket RPC -> is_verified_by_admin = true]
+    
+    M --> O{Both Verified?}
+    N --> O
+    O -- "Yes" --> P[Ticket Status transitions to VERIFIED]
+    O -- "Pending other" --> Q[Ticket remains COMPLETED with partial sign-off badge]
+    
+    P --> R[Telegram Bot Thread Notification & Auto-Refresh]
+    Q --> R
 ```
+
+### Desktop Web Layout Columns
+| Column | Description |
+|---|---|
+| **Ticket #** | Unique ID badge with click-to-open routing. |
+| **Title & Description** | Defect title, asset icon & name, and problem statement. |
+| **Zone & Area** | Colored zone badge with specific area hierarchy. |
+| **Priority** | Priority indicator dot and color-coded text (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`). |
+| **Assigned Tech** | Technician name with completion timestamp. |
+| **Proof Media** | In-line 44x44 completion photo thumbnail with click-to-enlarge lightbox. |
+| **Resolution Info** | Technician's action taken and cause remarks. |
+| **Audit Status** | Dual status pills for Raiser and Zone approval. |
+| **Action** | Primary quick-action button ("Verify" or "Sign-Off") + detail shortcut. |
 
 ---
 

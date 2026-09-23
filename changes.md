@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [2.2.5] - 2026-09-23
+
+### Added
+- **Desktop Web Layout for Ticket Verification Screen (`width > 800`)**:
+  - Implemented desktop web interface for [`TicketVerificationScreen`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/lib/screens/ticket_verification_screen.dart) matching the TAPF Web design system.
+  - **75px Desktop Web Header**: Features official Akshaya Patra Foundation logo, interactive kitchen/facility dropdown selector, metric stat cards ("Total Pending", "Raised by Me", "Zone Sign-Off"), and asynchronous refresh controls.
+  - **Verification Control Bar**: Integrated full-text search field, segmented tab switcher pills ("Raised by Me" and "Zone Sign-Off"), and horizontal zone filter chips.
+  - **Desktop Verification Data Grid**: Fixed header row with 9 columns (`Ticket #`, `Title & Description`, `Zone & Area`, `Priority`, `Assigned Tech`, `Proof Media`, `Resolution Info`, `Audit Status`, `Action`), hover row state, left priority accent stripe, and inline action buttons ("Verify" and "Sign-Off").
+- **In-Line Completion Proof Media Inspection**:
+  - Query attached `ticket_media` using PostgREST `inFilter` to avoid join limitations.
+  - Extracted resolution proof image (`upload_stage == 'COMPLETED'`) with fallback to any attached ticket media.
+  - Rendered 44x44 (web table) and 54x54 (mobile cards) thumbnail previews with rounded borders and zoom badges.
+  - Built interactive lightbox viewer dialog (`_openImageViewer`) featuring `InteractiveViewer` with pinch-to-zoom, pan, and 0.5x–4.0x zoom boundaries.
+- **Mobile Verification Card Enhancements**:
+  - Added completion proof photo thumbnail cards to `_buildRaiserCard` and `_buildZoneCard` with tap-to-enlarge inspection.
+- **Architecture & System Documentation**:
+  - Added [ADR-012](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/decisions.md#adr-012-desktop-web-layout--in-line-completion-proof-inspection-for-ticket-verification) to `decisions.md`.
+  - Updated Section 6 of [`flow.md`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/flow.md) with desktop verification sequence diagram and table specification.
+
+---
+
 ## [2.2.4] - 2026-09-23
 
 ### Added
