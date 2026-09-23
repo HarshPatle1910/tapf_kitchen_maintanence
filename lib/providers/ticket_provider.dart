@@ -105,7 +105,7 @@ class TicketProvider with ChangeNotifier {
           "kitchen_id": kitchenId,
           "assigned_to_id": assignedToId,
           "raised_by_id": raisedById ?? _supabase.auth.currentUser?.id,
-          if (telegramMessageId != null) "telegram_message_id": telegramMessageId,
+          "telegram_message_id": ?telegramMessageId,
         }),
       );
       debugPrint('Notification Trigger [$action]: ${response.statusCode} - ${response.body}');
@@ -269,7 +269,7 @@ class TicketProvider with ChangeNotifier {
 
       final statsData = await query;
 
-      _total = statsData.length;
+      _total = statsData.where((t) => t['status'] != 'VERIFIED').length;
       _toDo = statsData.where((t) => t['status'] == 'RAISED').length;
       _inProgress = statsData.where((t) => t['status'] == 'IN_PROGRESS' || t['status'] == 'ASSIGNED').length;
       _completed = statsData.where((t) => t['status'] == 'COMPLETED').length;
@@ -385,6 +385,9 @@ class TicketProvider with ChangeNotifier {
         } else {
           query = query.eq('status', _statusFilter);
         }
+      } else {
+        // "Total" view: do not show verified tickets
+        query = query.neq('status', 'VERIFIED');
       }
 
       if (_priorityFilter != 'ALL') {

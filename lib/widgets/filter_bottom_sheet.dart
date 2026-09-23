@@ -50,7 +50,6 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
 
   late String tempPriority;
   late String tempStatus;
-  late String tempSort;
   late String tempKitchen;
   late String tempZone;
   late String tempArea;
@@ -79,7 +78,6 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
     // Initialize states from the provider
     tempPriority = widget.provider.priorityFilter;
     tempStatus = widget.provider.statusFilter;
-    tempSort = widget.provider.sortBy;
     tempKitchen = widget.provider.kitchenFilter;
     tempZone = widget.provider.zoneFilter;
     tempArea = widget.provider.areaFilter;
@@ -119,9 +117,10 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
               (a) => a['id'].toString() == tempArea,
               orElse: () => <String, dynamic>{},
             );
-            if (a.isNotEmpty)
+            if (a.isNotEmpty) {
               areaSearchController.text =
                   (a['area_name'] ?? a['display_name'] ?? '').toString();
+            }
           }
         });
       }
@@ -173,7 +172,6 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
       raisedByMe: tempRaisedByMe,
       start: tempStart,
       end: tempEnd,
-      sort: tempSort,
       clearDates:
           tempStart == null, // Passes true to clear the dates dynamically
     );
@@ -192,7 +190,6 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
       tempRaisedByMe = false;
       tempStart = null;
       tempEnd = null;
-      tempSort = 'DATE_DESC';
     });
   }
 
@@ -230,7 +227,7 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "Sort & Filter",
+                    "Filter",
                     style: GoogleFonts.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
@@ -595,36 +592,6 @@ class _FilterBottomSheetWidgetState extends State<_FilterBottomSheetWidget> {
                         ),
                       const SizedBox(height: 24),
 
-                      Text(
-                        "Sort By",
-                        style: GoogleFonts.inter(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          buildChip(
-                            "Newest First",
-                            tempSort == 'DATE_DESC',
-                            () => setState(() => tempSort = 'DATE_DESC'),
-                          ),
-                          buildChip(
-                            "Oldest First",
-                            tempSort == 'DATE_ASC',
-                            () => setState(() => tempSort = 'DATE_ASC'),
-                          ),
-                          buildChip(
-                            "Highest Priority",
-                            tempSort == 'PRIORITY_DESC',
-                            () => setState(() => tempSort = 'PRIORITY_DESC'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
 
                       Text(
                         "Date Raised",
