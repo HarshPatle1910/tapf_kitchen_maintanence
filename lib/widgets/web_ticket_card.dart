@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../screens/ticket_detail_screen.dart';
+import '../core/routes/app_routes.dart';
 
 class WebTicketCard extends StatelessWidget {
   final Map<String, dynamic> ticket;
@@ -53,12 +54,14 @@ class WebTicketCard extends StatelessWidget {
             ),
           ),
           child: InkWell(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => TicketDetailScreen(ticket: ticket),
-              ),
-            ),
+            onTap: () {
+              final ticketId =
+                  (ticket['id'] ?? ticket['ticket_no'] ?? '').toString();
+              context.push(
+                AppRoutes.ticketDetailPath(ticketId),
+                extra: ticket,
+              );
+            },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: Row(

@@ -1,24 +1,25 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:kitchen_maintanence/screens/updates/app_update_wrapper.dart';
+// ignore: depend_on_referenced_packages
+import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
-import 'package:google_fonts/google_fonts.dart';
-import 'package:kitchen_maintanence/screens/authentication/pending_approval_screen.dart';
-import 'package:kitchen_maintanence/screens/authentication/register_screen.dart';
-import 'package:kitchen_maintanence/screens/home_screen.dart';
-import 'package:kitchen_maintanence/screens/authentication/login_screen.dart';
-import 'package:kitchen_maintanence/screens/ticket_detail_screen.dart';
 
+import 'core/routes/app_router.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/ticket_provider.dart';
+import 'screens/updates/app_update_wrapper.dart';
 
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+// Alias navigatorKey to rootNavigatorKey for backward compatibility with notifications & dialogs
+final GlobalKey<NavigatorState> navigatorKey = rootNavigatorKey;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  usePathUrlStrategy();
   await dotenv.load(fileName: ".env");
 
   await Supabase.initialize(
@@ -41,61 +42,48 @@ Future<void> main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late final GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    final authProvider = context.read<AuthProvider>();
+    _router = createAppRouter(authProvider);
+  }
 
   @override
   Widget build(BuildContext context) {
     const Color navy = Color(0xFF26538D);
     const Color golden = Color(0xFFD4AF37);
 
-    final auth = context.watch<AuthProvider>();
-    Widget homeWidget;
-
-    if (auth.isInitializing) {
-      homeWidget = const Scaffold(
-        backgroundColor: navy,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.handyman_rounded, size: 80, color: Colors.white),
-              SizedBox(height: 24),
-              Text("Kitchen Maintenance App", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
-      );
-    } else {
-      switch (auth.authState) {
-        case AuthState.authenticated: homeWidget = const HomeScreen(); break;
-        case AuthState.profileIncomplete: homeWidget = const RegisterScreen(); break;
-        case AuthState.pendingApproval: homeWidget = const PendingApprovalScreen(); break;
-        case AuthState.unauthenticated: homeWidget = const LoginScreen(); break;
-      }
-    }
-
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Plant Maintenance',
       debugShowCheckedModeBanner: false,
-      navigatorKey: navigatorKey,
+      routerConfig: _router,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: navy, primary: navy, secondary: golden),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: navy,
+          primary: navy,
+          secondary: golden,
+        ),
         textTheme: GoogleFonts.interTextTheme(),
-        appBarTheme: const AppBarTheme(backgroundColor: Colors.white, foregroundColor: navy, elevation: 0),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: navy,
+          elevation: 0,
+        ),
       ),
-      // WRAP YOUR HOME WIDGET WITH THE UPDATE CHECKER
-      home: AppUpdateWrapper(child: homeWidget),
-      onGenerateRoute: (settings) {
-        if (settings.name == '/ticket-details') {
-          final args = settings.arguments as Map<String, dynamic>;
-          return MaterialPageRoute(
-            builder: (context) => TicketDetailScreen(ticket: {'id': args['id']}),
-          );
-        }
-        return null;
-      },
+      builder: (context, child) =>
+          AppUpdateWrapper(child: child ?? const SizedBox.shrink()),
     );
   }
 }

@@ -102,10 +102,10 @@
     "semantic_hash": "d59f37cbc900e98cc03713a978620896"
   },
   "lib/core/services/notification_service.dart": {
-    "mtime": 1785475939.5370939,
-    "seen": 1790145160.11243,
-    "ast_hash": "8bfa9ccef66f9fc0022f3512ee71dea3",
-    "semantic_hash": "8bfa9ccef66f9fc0022f3512ee71dea3"
+    "mtime": 1790155127.257387,
+    "seen": 1790156004.810109,
+    "ast_hash": "26922f31a4a36f1c5e7a601b5882f58f",
+    "semantic_hash": ""
   },
   "lib/core/themes/app_colors.dart": {
     "mtime": 1776503306.781413,
@@ -126,10 +126,10 @@
     "semantic_hash": "116864f5ac72ecb83caa47866a75017b"
   },
   "lib/main.dart": {
-    "mtime": 1779871324.6459143,
-    "seen": 1790145160.1124349,
-    "ast_hash": "010d03732886d576cb47b1ef02dcd058",
-    "semantic_hash": "010d03732886d576cb47b1ef02dcd058"
+    "mtime": 1790155875.4239295,
+    "seen": 1790156004.810278,
+    "ast_hash": "a86359e1e18515aac82bf7c96ec4f675",
+    "semantic_hash": ""
   },
   "lib/models/ticket.dart": {
     "mtime": 1776666331.863235,
@@ -168,9 +168,9 @@
     "semantic_hash": "e91c1660a8bab7d667dbe68907fa9048"
   },
   "lib/screens/home_screen.dart": {
-    "mtime": 1790150773.906235,
-    "seen": 1790150872.73948,
-    "ast_hash": "a3ae69e880d1779e84fda91f92e2158e",
+    "mtime": 1790155819.221544,
+    "seen": 1790156004.810612,
+    "ast_hash": "09d5456cf136b398c29fb82d8cbe7273",
     "semantic_hash": ""
   },
   "lib/screens/home_screen_backup.dart": {
@@ -204,10 +204,10 @@
     "semantic_hash": "96f3564d5cd08cc574ed36debbe268d7"
   },
   "lib/screens/master/spares/spare_screen.dart": {
-    "mtime": 1784625635.9055388,
-    "seen": 1790145160.112451,
-    "ast_hash": "f87314a9193949e3690f3384c284fcb7",
-    "semantic_hash": "f87314a9193949e3690f3384c284fcb7"
+    "mtime": 1790155839.9708304,
+    "seen": 1790156004.8108969,
+    "ast_hash": "ef36ab5bdee6ce8921be2d579f9f41c6",
+    "semantic_hash": ""
   },
   "lib/screens/master/tools_screen.dart": {
     "mtime": 1784625635.9006405,
@@ -240,10 +240,10 @@
     "semantic_hash": "bf8e237cfb1fcd8d4f76a1339568c811"
   },
   "lib/screens/more_screen.dart": {
-    "mtime": 1790082057.2450597,
-    "seen": 1790145160.112458,
-    "ast_hash": "16365720f93386177e5ab522e532dd0e",
-    "semantic_hash": "16365720f93386177e5ab522e532dd0e"
+    "mtime": 1790155531.206123,
+    "seen": 1790156004.811174,
+    "ast_hash": "fc1b42f3540c58cf449063c162a53e56",
+    "semantic_hash": ""
   },
   "lib/screens/reports/boiler_log_screen.dart": {
     "mtime": 1784626526.6039717,
@@ -300,10 +300,10 @@
     "semantic_hash": "d7d83e153344fe895cdbd4aa3734c62f"
   },
   "lib/screens/reports/reports_screen.dart": {
-    "mtime": 1784625635.911156,
-    "seen": 1790145160.112471,
-    "ast_hash": "dad94349a50a1638eab1bf740b8f4dd5",
-    "semantic_hash": "dad94349a50a1638eab1bf740b8f4dd5"
+    "mtime": 1790155807.3661432,
+    "seen": 1790156004.8117602,
+    "ast_hash": "c63faaa4e485e9eca546dc4bb018c0e3",
+    "semantic_hash": ""
   },
   "lib/screens/reports/ro_checklist_screen.dart": {
     "mtime": 1784625666.264677,
@@ -330,10 +330,10 @@
     "semantic_hash": "c5a405f65927355255fd3b98ab0c53d6"
   },
   "lib/screens/ticket_verification_screen.dart": {
-    "mtime": 1790082528.3470912,
-    "seen": 1790145160.1124759,
-    "ast_hash": "25520726925fe135f1d014cda41b115e",
-    "semantic_hash": "25520726925fe135f1d014cda41b115e"
+    "mtime": 1790155856.9760435,
+    "seen": 1790156004.8119822,
+    "ast_hash": "dde76de6e928469d3c35dbce9a12e4af",
+    "semantic_hash": ""
   },
   "lib/screens/updates/app_update_wrapper.dart": {
     "mtime": 1790076036.1208048,
@@ -372,21 +372,21 @@
     "semantic_hash": "2d4d0c91c173ef24d0438e53b8ba1fd3"
   },
   "lib/widgets/ticket_card.dart": {
-    "mtime": 1785403185.7452166,
-    "seen": 1790145160.112484,
-    "ast_hash": "89c3487d98d7dec03951281bf7b7cf90",
-    "semantic_hash": "89c3487d98d7dec03951281bf7b7cf90"
+    "mtime": 1790155211.3465564,
+    "seen": 1790156004.812313,
+    "ast_hash": "7d278881933cb9afcaf98fa27d0a112d",
+    "semantic_hash": ""
   },
   "lib/widgets/web_ticket_card.dart": {
-    "mtime": 1785403213.355105,
-    "seen": 1790145160.1124852,
-    "ast_hash": "619dcb656df863d9fa285745b3447693",
-    "semantic_hash": "619dcb656df863d9fa285745b3447693"
+    "mtime": 1790155279.998291,
+    "seen": 1790156004.812314,
+    "ast_hash": "9f3a5063419594c44b97f7fe34f3c487",
+    "semantic_hash": ""
   },
   "lib/widgets/web_ticket_table.dart": {
-    "mtime": 1790149057.998256,
-    "seen": 1790150872.742293,
-    "ast_hash": "d690478d1af814b3e6ddfe75f80ba2e6",
+    "mtime": 1790155316.6424828,
+    "seen": 1790156004.812316,
+    "ast_hash": "d46d72cad7e0ad7b8dc9fc48d8ee6a20",
     "semantic_hash": ""
   },
   "linux/flutter/generated_plugin_registrant.cc": {
@@ -612,15 +612,15 @@
     "semantic_hash": ""
   },
   "changes.md": {
-    "mtime": 1790150815.977552,
-    "seen": 1790150872.745055,
-    "ast_hash": "48e9bf1cd31773bacc64f8e573749257",
+    "mtime": 1790155991.7043035,
+    "seen": 1790156004.814286,
+    "ast_hash": "965c37d55622f56d1334c0190ddc44e5",
     "semantic_hash": ""
   },
   "decisions.md": {
-    "mtime": 1790150854.021794,
-    "seen": 1790150872.745057,
-    "ast_hash": "95f80d3ff0ea2a3735f1391212e77bb8",
+    "mtime": 1790155944.8775513,
+    "seen": 1790156004.8142872,
+    "ast_hash": "31c538512b5ac49308f01da02e6ef0b2",
     "semantic_hash": ""
   },
   "devtools_options.yaml": {
@@ -972,9 +972,21 @@
     "semantic_hash": ""
   },
   "flow.md": {
-    "mtime": 1790150860.7134266,
-    "seen": 1790150872.745125,
-    "ast_hash": "d0a7c89f744b23c2f482f550c81db5ed",
+    "mtime": 1790155968.7854881,
+    "seen": 1790156004.814336,
+    "ast_hash": "d0b3dfe7d40c32a1d4e22578fb19e236",
+    "semantic_hash": ""
+  },
+  "lib/core/routes/app_router.dart": {
+    "mtime": 1790155083.6653538,
+    "seen": 1790156004.8100438,
+    "ast_hash": "74d9fdcba32d632f4d3295a7a01caa29",
+    "semantic_hash": ""
+  },
+  "lib/core/routes/app_routes.dart": {
+    "mtime": 1790155057.8265483,
+    "seen": 1790156004.810047,
+    "ast_hash": "22c98bbfe8bdc75171406a384cc4565d",
     "semantic_hash": ""
   }
 }

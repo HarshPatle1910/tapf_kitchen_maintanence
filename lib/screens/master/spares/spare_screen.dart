@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/routes/app_routes.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../providers/ticket_provider.dart';
-import 'spare_inventory_screen.dart';
 
 class SparesMasterScreen extends StatefulWidget {
   const SparesMasterScreen({super.key});
@@ -687,9 +688,10 @@ class _SparesMasterScreenState extends State<SparesMasterScreen> {
                                         children: [
                                           TextButton.icon(
                                             onPressed: isActive ? () {
-                                              Navigator.push(context, MaterialPageRoute(
-                                                builder: (_) => SpareInventoryScreen(spare: spare),
-                                              ));
+                                              context.push(
+                                                AppRoutes.spareInventory,
+                                                extra: spare,
+                                              );
                                             } : null,
                                             icon: Icon(Icons.inventory_2_outlined, size: 18, color: isActive ? golden : Colors.grey.shade400),
                                             label: Text("Stock", style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: isActive ? golden : Colors.grey.shade400)),

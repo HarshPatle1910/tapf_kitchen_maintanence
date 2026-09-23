@@ -4,15 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:go_router/go_router.dart';
+import '../core/routes/app_routes.dart';
 import '../providers/auth_provider.dart';
 import '../providers/ticket_provider.dart';
-import 'master/area_screen.dart';
-import 'master/equipment_master_screen.dart';
-import 'master/spares/spare_screen.dart';
-import 'master/tools_screen.dart';
-import 'master/vendor_screen.dart';
-import 'master/zone_screen.dart';
-import 'ticket_verification_screen.dart';
 
 // // --- Master Screen Imports ---
 // import 'master/area_screen.dart';
@@ -783,18 +778,15 @@ class _MoreScreenState extends State<MoreScreen> {
                 // --- Section: Configuration ---
                 _buildSectionTitle("Facility Configuration"),
                 _buildMenuCard([
-                  // _MenuItem(Icons.kitchen_outlined, "Kitchen Master", const KitchenMasterScreen(), context),
                   _MenuItem(
                     Icons.place_outlined,
                     "Area Master",
-                    const AreaMasterScreen(),
-                    context,
+                    AppRoutes.areaMaster,
                   ),
                   _MenuItem(
                     Icons.layers_outlined,
                     "Zone Master",
-                    const ZoneMasterScreen(),
-                    context,
+                    AppRoutes.zoneMaster,
                   ),
                 ]),
                 const SizedBox(height: 24),
@@ -805,26 +797,22 @@ class _MoreScreenState extends State<MoreScreen> {
                   _MenuItem(
                     Icons.precision_manufacturing_outlined,
                     "Equipment Registry",
-                    const EquipmentMasterScreen(),
-                    context,
+                    AppRoutes.equipmentMaster,
                   ),
                   _MenuItem(
                     Icons.build_circle_outlined,
                     "Spares Master",
-                    const SparesMasterScreen(),
-                    context,
+                    AppRoutes.sparesMaster,
                   ),
                   _MenuItem(
                     Icons.handyman_outlined,
                     "Tools Master",
-                    const ToolsMasterScreen(),
-                    context,
+                    AppRoutes.toolsMaster,
                   ),
                   _MenuItem(
                     Icons.local_shipping_outlined,
                     "Vendor Directory",
-                    const VendorMasterScreen(),
-                    context,
+                    AppRoutes.vendorMaster,
                   ),
                 ]),
                 const SizedBox(height: 32),
@@ -951,10 +939,7 @@ class _MoreScreenState extends State<MoreScreen> {
                     ),
                   ],
                 ),
-                onTap: () => Navigator.push(
-                  item.context,
-                  MaterialPageRoute(builder: (_) => item.screen),
-                ).then((_) {
+                onTap: () => context.push(item.route).then((_) {
                   if (mounted) _fetchPendingVerificationCount();
                 }),
               ),
@@ -971,16 +956,14 @@ class _MoreScreenState extends State<MoreScreen> {
 class _MenuItem {
   final IconData icon;
   final String title;
-  final Widget screen;
-  final BuildContext context;
+  final String route;
   final String? badgeText;
   final Color? badgeColor;
 
   _MenuItem(
     this.icon,
     this.title,
-    this.screen,
-    this.context, {
+    this.route, {
     this.badgeText,
     this.badgeColor,
   });

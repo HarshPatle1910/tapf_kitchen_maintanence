@@ -17,50 +17,77 @@ This document provides a comprehensive end-to-end breakdown of the user flows, d
 
 ---
 
-## 1. App Initialization & Remote Version Enforcement
+## 1. App Initialization, Declarative Routing & Remote Version Enforcement
 
-Every app launch executes a synchronous bootstrap sequence wrapped with version enforcement:
+Every app launch executes a synchronous bootstrap sequence wrapped with version enforcement and declarative URL routing:
 
 ```mermaid
 graph TD
     A[main.dart] --> B[dotenv.load .env]
-    B --> C[Supabase.initialize]
-    C --> D[Firebase.initializeApp]
-    D --> E[MultiProvider: AuthProvider + TicketProvider]
-    E --> F[AppUpdateWrapper]
-    F --> G{Remote Version Check}
-    G -- "Current < Min Supported" --> H[AppUpdateScreen - Hard Block Force Update]
-    G -- "Current < Latest" --> I[Soft Update Alert Banner - Dismissible]
-    G -- "Version Valid" --> J[Render Authenticated / Login Hierarchy]
+    B --> C[usePathUrlStrategy Clean Web URLs]
+    C --> D[Supabase.initialize]
+    D --> E[Firebase.initializeApp]
+    E --> F[MultiProvider: AuthProvider + TicketProvider]
+    F --> G[createAppRouter with refreshListenable: AuthProvider]
+    G --> H[MaterialApp.router builder: AppUpdateWrapper]
+    H --> I{Remote Version Check}
+    I -- "Current < Min Supported" --> J[AppUpdateScreen - Hard Block Force Update]
+    I -- "Current < Latest" --> K[Soft Update Alert Banner - Dismissible]
+    I -- "Version Valid" --> L[GoRouter Evaluates Route & Redirect Guard]
 ```
 
 - **Entry Point**: [`lib/main.dart`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/lib/main.dart)
+- **Router Configuration**: [`lib/core/routes/app_router.dart`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/lib/core/routes/app_router.dart)
+- **Route Constants**: [`lib/core/routes/app_routes.dart`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/lib/core/routes/app_routes.dart)
 - **Version Guard**: [`AppUpdateWrapper`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/lib/screens/updates/app_update_wrapper.dart) reads version boundaries from remote configuration (`m_app_versions` or Firebase Remote Config).
+
+### Canonical URL Route Map
+
+| Path | Screen / View | Role / Guard Requirements |
+|---|---|---|
+| `/splash` | `_SplashScreen` | Internal: Shown while `authProvider.isInitializing` |
+| `/login` | `LoginScreen` | Public: Authenticates via Supabase |
+| `/register` | `RegisterScreen` | Public: New user onboarding |
+| `/pending-approval` | `PendingApprovalScreen` | Guarded: Users where `isApproved == false` |
+| `/` | `HomeScreen` | Authenticated: Main ticket dashboard & tabs |
+| `/tickets/new` | `CreateTicketScreen` | Authenticated: Issue raising |
+| `/tickets/:id` | `TicketDetailScreen` | Authenticated: Deep-linkable ticket details |
+| `/verification` | `TicketVerificationScreen` | Authenticated (Supervisor/Admin) |
+| `/master/area` | `AreaMasterScreen` | Authenticated (Admin) |
+| `/master/zone` | `ZoneMasterScreen` | Authenticated (Admin) |
+| `/master/equipment` | `EquipmentMasterScreen` | Authenticated (Admin) |
+| `/master/spares` | `SparesMasterScreen` | Authenticated (Admin) |
+| `/master/spares/inventory` | `SpareInventoryScreen` | Authenticated (Admin) |
+| `/master/tools` | `ToolsMasterScreen` | Authenticated (Admin) |
+| `/master/vendors` | `VendorMasterScreen` | Authenticated (Admin) |
+| `/master/users` | `UserManagementScreen` | Authenticated (Admin) |
+| `/reports` | `ReportsScreen` | Authenticated (Supervisor/Admin) |
+| `/reports/*` | Utility & Maintenance Log Screens | Authenticated (Guarded per report code) |
 
 ---
 
-## 2. Authentication & Authorization State Machine
+## 2. Authentication & Authorization State Machine (Reactive Navigation Guards)
 
-User sessions transition through four deterministic states managed by [`AuthProvider`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/lib/providers/auth_provider.dart):
+User sessions transition through deterministic states managed by [`AuthProvider`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/lib/providers/auth_provider.dart). The router acts as a listener on `AuthProvider` via `refreshListenable`, reactively re-evaluating the current route upon state change:
 
 ```mermaid
 stateDiagram-v2
     [*] --> Initializing: App Boot
+    Initializing --> /splash: authProvider.isInitializing == true
+    
     Initializing --> Unauthenticated: No Active Session
-    Initializing --> FetchProfile: Active Supabase Token
+    Unauthenticated --> /login: Redirect Guard forces /login
     
-    Unauthenticated --> LoginScreen: User provides credentials
-    LoginScreen --> FetchProfile: Successful Auth
+    /login --> FetchProfile: Successful Auth Credentials
+    FetchProfile --> /pending-approval: User profile status == PENDING
+    /pending-approval --> /login: User logs out
     
-    FetchProfile --> ProfileIncomplete: Profile Record Missing
-    ProfileIncomplete --> RegisterScreen: User Completes Profile
-    RegisterScreen --> FetchProfile: Profile Saved
-    
-    FetchProfile --> PendingApproval: status == 'PENDING'
-    PendingApproval --> PendingApprovalScreen: Block access until admin activates
-    
-    FetchProfile --> Authenticated: status == 'ACTIVE'
-    Authenticated --> HomeScreen: Load assigned kitchens & tickets
+    FetchProfile --> /: User profile status == ACTIVE
+    / --> /tickets/:id: User clicks ticket card / Deep link
+    / --> /verification: Supervisor clicks verification badge
+    / --> /master/*: Admin navigates via More Screen
+    / --> /reports/*: Supervisor navigates via Reports
+    / --> /login: User logs out -> Guard bounces to /login
 ```
 
 ### Roles & Access Scopes

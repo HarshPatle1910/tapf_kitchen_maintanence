@@ -3,30 +3,18 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// --- Screen Imports ---
+import 'package:go_router/go_router.dart';
+import '../../core/routes/app_routes.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/ticket_provider.dart';
-
-import 'package:kitchen_maintanence/screens/reports/complaint_report_screen.dart';
-import 'package:kitchen_maintanence/screens/reports/master_equipment_report_screen.dart';
-import 'package:kitchen_maintanence/screens/reports/pm_checklist_screen.dart';
-import 'package:kitchen_maintanence/screens/reports/pm_schedule_screen.dart';
-import 'package:kitchen_maintanence/screens/reports/ro_checklist_screen.dart';
-import 'package:kitchen_maintanence/screens/reports/testing_equipment_screen.dart';
-import 'package:kitchen_maintanence/screens/reports/tools_tackles_screen.dart';
-import 'boiler_log_screen.dart';
-import 'breakdown_report_screen.dart';
-import 'critical_spares_report_screen.dart';
-import 'dg_log_screen.dart';
-import 'electrical_log_screen.dart';
 
 // --- Data Models ---
 class _ReportData {
   final String code;
   final String title;
-  final Widget screen;
+  final String route;
 
-  _ReportData({required this.code, required this.title, required this.screen});
+  _ReportData({required this.code, required this.title, required this.route});
 }
 
 class _CategoryData {
@@ -75,12 +63,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
         _ReportData(
           code: "MT-02",
           title: "Equipment Master",
-          screen: const EquipmentReportScreen(),
+          route: AppRoutes.masterEquipment,
         ),
         _ReportData(
           code: "MT-03",
           title: "Testing Equipment",
-          screen: const TestingEquipmentScreen(),
+          route: AppRoutes.testingEquipment,
         ),
       ],
     ),
@@ -91,12 +79,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
         _ReportData(
           code: "MT-05",
           title: "PM Schedule",
-          screen: const PMScheduleScreen(),
+          route: AppRoutes.pmSchedule,
         ),
         _ReportData(
           code: "MT-06",
           title: "PM Checklist",
-          screen: const PMChecklistScreen(),
+          route: AppRoutes.pmChecklist,
         ),
       ],
     ),
@@ -107,12 +95,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
         _ReportData(
           code: "MT-07",
           title: "Breakdown Intimation",
-          screen: const BreakdownReportScreen(),
+          route: AppRoutes.breakdownReport,
         ),
         _ReportData(
           code: "MT-16",
           title: "Complaint Register",
-          screen: const ComplaintReportScreen(),
+          route: AppRoutes.complaintReport,
         ),
       ],
     ),
@@ -123,22 +111,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
         _ReportData(
           code: "MT-10",
           title: "Electrical Log",
-          screen: const ElectricalLogListScreen(),
+          route: AppRoutes.electricalLog,
         ),
         _ReportData(
           code: "MT-11",
           title: "Boiler Log Sheet",
-          screen: const BoilerLogListScreen(),
+          route: AppRoutes.boilerLog,
         ),
         _ReportData(
           code: "MT-13",
           title: "RO Plant Checklist",
-          screen: const ROChecklistListScreen(),
+          route: AppRoutes.roChecklist,
         ),
         _ReportData(
           code: "MT-14",
           title: "DG Set Report",
-          screen: const DGLogListScreen(),
+          route: AppRoutes.dgLog,
         ),
       ],
     ),
@@ -149,12 +137,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
         _ReportData(
           code: "MT-08",
           title: "Tools & Tackles",
-          screen: const ToolsTacklesScreen(),
+          route: AppRoutes.toolsTackles,
         ),
         _ReportData(
           code: "MT-15",
           title: "Critical Spare Parts",
-          screen: const CriticalSparesReportScreen(),
+          route: AppRoutes.criticalSpares,
         ),
       ],
     ),
@@ -515,10 +503,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _buildReportTile(_ReportData report) {
     return InkWell(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => report.screen),
-      ),
+      onTap: () => context.push(report.route),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: BoxDecoration(

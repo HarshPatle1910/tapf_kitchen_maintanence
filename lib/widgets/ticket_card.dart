@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../screens/ticket_detail_screen.dart'; // Adjust path if needed
+import '../core/routes/app_routes.dart';
 
 class TicketCard extends StatelessWidget {
   final Map<String, dynamic> ticket;
@@ -13,6 +14,7 @@ class TicketCard extends StatelessWidget {
     final priorityInfo = _getPriorityInfo(ticket['priority']);
     final raisedByName = ticket['raised_by']?['name'] ?? 'Unknown User';
     final assignedToName = ticket['assigned_to']?['name'] ?? 'Unassigned';
+    final ticketId = (ticket['id'] ?? ticket['ticket_no'] ?? '').toString();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -37,11 +39,9 @@ class TicketCard extends StatelessWidget {
             ),
           ),
           child: InkWell(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => TicketDetailScreen(ticket: ticket),
-              ),
+            onTap: () => context.push(
+              AppRoutes.ticketDetailPath(ticketId),
+              extra: ticket,
             ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),

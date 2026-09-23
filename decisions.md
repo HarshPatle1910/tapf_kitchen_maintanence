@@ -16,6 +16,7 @@ This document tracks key architectural, technical, and structural decisions made
 - [ADR-008: Official TAPF Brand Identity & Header Standardization](#adr-008-official-tapf-brand-identity--header-standardization)
 - [ADR-009: Dynamic Ticket Swapping & Staggered Transition Animations](#adr-009-dynamic-ticket-swapping--staggered-transition-animations)
 - [ADR-010: Asynchronous Query Concurrency Guards & Atomic State Resets](#adr-010-asynchronous-query-concurrency-guards--atomic-state-resets)
+- [ADR-011: Declarative URL Routing & Reactive Navigation Guard Architecture (go_router)](#adr-011-declarative-url-routing--reactive-navigation-guard-architecture-go_router)
 
 ---
 
@@ -259,4 +260,39 @@ Calling multiple async state mutators in succession (e.g. `setSearchQuery('')` f
 - **Positive:**
   - Completely eliminates race conditions and phantom "No Tickets Found" screens.
   - Guarantees predictable state synchronization across mobile and web interfaces.
+
+---
+
+## ADR-011: Declarative URL Routing & Reactive Navigation Guard Architecture (go_router)
+
+### Status
+**Accepted**
+
+### Context
+Prior to v2.2.4, the application relied entirely on imperative navigation (`Navigator.push(MaterialPageRoute(...))`). This introduced several critical limitations:
+1. **Web Browser Experience:** The URL bar remained static (`/#/`), rendering bookmarking, browser back/forward buttons, and page reloads ineffective.
+2. **Deep-Linking & Push Notifications:** Notification clicks or deep-links required cumbersome manual context lookups and direct modal pushes rather than idiomatic URL navigation (`/tickets/:id`).
+3. **Session Guards & Splash Logic:** Authentication state changes (login, logout, pending account approval) required imperative screen resets, risking desynchronized screens and auth flicker.
+4. **App Update Layering:** `AppUpdateWrapper` needed to consistently wrap all routes without breaking under nested navigator pushes.
+
+### Decision
+Migrate the complete application to **`go_router` (v17.x)** with declarative routing, clean URL strategies, and reactive redirect guards:
+1. **Centralized Route Declarations (`AppRoutes`):** Canonical constants for all paths (`/`, `/splash`, `/login`, `/tickets/:id`, `/verification`, `/master/*`, `/reports/*`).
+2. **Reactive Redirect Guard:** `createAppRouter(authProvider)` registers `refreshListenable: authProvider`. Any change in `authProvider.isAuthenticated`, `isApproved`, or `isInitializing` re-evaluates the redirect logic automatically:
+   - While `isInitializing == true`, routes to `/splash` to eliminate auth flicker.
+   - Unauthenticated users are redirected to `/login`.
+   - Users pending approval are redirected to `/pending-approval`.
+   - Authenticated and approved users attempting to access auth pages are bounced to `/`.
+3. **Clean Web URLs (`usePathUrlStrategy`):** Strips the hash (`#`) from URLs for natural web paths (`/tickets/123`, `/master/spares`).
+4. **Root-Level `AppUpdateWrapper`:** Attached via `MaterialApp.router(builder: (context, child) => AppUpdateWrapper(child: child!))` ensuring version enforcement spans every route without interfering with navigation.
+5. **Universal Deep-Linking Support:** Parametric path `/tickets/:id` automatically extracts ticket IDs and renders `TicketDetailScreen`, supporting both full ticket maps passed via `extra` and direct ID lookups on page reload.
+
+### Consequences
+- **Positive:**
+  - Full browser history support (Back/Forward, bookmarking, clean URLs) on Web.
+  - Push notifications and external integrations navigate cleanly via `context.push(AppRoutes.ticketDetailPath(id))`.
+  - Zero auth desynchronization: logging out or account approval status changes seamlessly update the current route.
+  - Consistent developer ergonomics across all screens (`context.push(...)`, `context.go(...)`).
+- **Negative:**
+  - Complex object parameters passed via `extra` do not persist across hard browser reloads on web, requiring components to support fetching by ID parameter when `extra` is null.
 

@@ -7,7 +7,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/auth_provider.dart';
 import '../providers/ticket_provider.dart';
 
-import 'ticket_detail_screen.dart';
 import '../core/services/notification_service.dart';
 
 import '../widgets/ticket_card.dart';
@@ -20,7 +19,8 @@ import '../widgets/responsive_sidebar.dart';
 // import 'reports/reports_screen.dart';
 import 'master/user_management.dart';
 import 'more_screen.dart';
-import 'ticket_verification_screen.dart';
+import 'package:go_router/go_router.dart';
+import '../core/routes/app_routes.dart';
 
 // ============================================================================
 // ROOT WRAPPER WITH BOTTOM NAVIGATION BAR
@@ -653,12 +653,9 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
               ),
               tooltip: "Ticket Verification",
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const TicketVerificationScreen(),
-                  ),
-                ).then((_) => ticketProvider.refreshTickets());
+                context
+                    .push(AppRoutes.ticketVerification)
+                    .then((_) => ticketProvider.refreshTickets());
               },
             ),
             const SizedBox(width: 8),
@@ -945,10 +942,7 @@ class _HomeTicketViewState extends State<_HomeTicketView> {
           backgroundColor: golden,
           foregroundColor: navy,
           elevation: 4,
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const TicketDetailScreen()),
-          ),
+          onPressed: () => context.push(AppRoutes.ticketNew),
           icon: const Icon(Icons.add_rounded),
           label: Text(
             "Raise Issue",

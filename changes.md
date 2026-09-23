@@ -6,6 +6,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [2.2.4] - 2026-09-23
+
+### Added
+- **Declarative URL Routing Architecture (`go_router`)**:
+  - Replaced legacy imperative `Navigator.push` navigation throughout the entire application with declarative routing via `go_router` (v17.2.1).
+  - Created [`AppRoutes`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/lib/core/routes/app_routes.dart) containing canonical path constants and parameterized path generators (`AppRoutes.ticketDetailPath(id)`).
+  - Built comprehensive router in [`AppRouter`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/lib/core/routes/app_router.dart) with clean URL path strategy (`usePathUrlStrategy()`), removing hash `#` fragments for modern web browsing.
+  - Implemented reactive redirect authentication guard listening to `AuthProvider` via `refreshListenable`, seamlessly handling splash loading, unauthenticated access redirects, pending approval lock screens, and authenticated home navigation.
+  - Built parametric ticket detail route (`/tickets/:id`) supporting deep links, browser reloads, and `extra` state passing for zero-latency card-to-detail transitions.
+  - Implemented custom 404 error page (`_ErrorScreen`) with direct return-home action.
+  - Registered all Master Data routes (`/master/area`, `/master/zone`, `/master/equipment`, `/master/spares`, `/master/spares/inventory`, `/master/tools`, `/master/vendors`, `/master/users`) and Plant Maintenance log routes (`/reports/*`).
+- **Architecture Documentation**:
+  - Added [ADR-011](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/decisions.md#adr-011-declarative-url-routing--reactive-navigation-guard-architecture-go_router) to `decisions.md`.
+  - Updated [`flow.md`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/flow.md) with initialization diagrams, URL route map table, and reactive redirect guard state machine.
+
+### Changed
+- **Root Application Configuration**:
+  - Migrated `MaterialApp` in [`main.dart`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/lib/main.dart) to `MaterialApp.router`.
+  - Integrated `AppUpdateWrapper` seamlessly via `MaterialApp.router(builder: (context, child) => AppUpdateWrapper(child: child!))`, ensuring remote version checks and force-update screens wrap all routes without breaking router state.
+  - Updated notification click handler in `NotificationService` to push parameterized ticket detail routes.
+  - Migrated card taps in `TicketCard`, `WebTicketCard`, and `WebTicketTable` to `context.push(AppRoutes.ticketDetailPath(ticketId), extra: ticket)`.
+  - Migrated verification actions in `HomeScreen` and `TicketVerificationScreen` to `context.push(...)`.
+  - Migrated More screen menu cards and Spares inventory buttons to declarative route navigation.
+  - Migrated `ReportsScreen` to navigate all maintenance log screens via declarative `AppRoutes`.
+
+---
+
 ## [2.2.3+9] - 2026-09-23
 
 ### Added

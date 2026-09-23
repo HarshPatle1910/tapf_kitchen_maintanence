@@ -2,9 +2,11 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 // ignore_for_file: avoid_print
 // ignore_for_file: avoid_print
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../main.dart';
+import '../routes/app_routes.dart';
 
 class NotificationService {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
@@ -96,7 +98,10 @@ class NotificationService {
   void _handleNotificationClick(RemoteMessage message) {
     final String? ticketId = message.data['ticket_id'];
     if (ticketId != null) {
-      navigatorKey.currentState?.pushNamed('/ticket-details', arguments: {'id': ticketId});
+      final context = navigatorKey.currentContext;
+      if (context != null) {
+        context.push(AppRoutes.ticketDetailPath(ticketId));
+      }
     }
   }
 }

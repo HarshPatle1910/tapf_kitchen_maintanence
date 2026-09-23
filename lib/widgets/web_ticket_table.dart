@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../screens/ticket_detail_screen.dart';
+import '../core/routes/app_routes.dart';
 
 class WebTicketTable extends StatelessWidget {
   final List<Map<String, dynamic>> tickets;
@@ -300,11 +301,11 @@ class _ExpandableTableRowState extends State<_ExpandableTableRow> {
               child: IconButton(
                 icon: const Icon(Icons.arrow_forward_ios, size: 20),
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => TicketDetailScreen(ticket: ticket),
-                    ),
+                  final ticketId =
+                      (ticket['id'] ?? ticket['ticket_no'] ?? '').toString();
+                  context.push(
+                    AppRoutes.ticketDetailPath(ticketId),
+                    extra: ticket,
                   );
                 },
                 padding: EdgeInsets.zero,

@@ -6,7 +6,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/ticket_provider.dart';
-import 'ticket_detail_screen.dart';
+import 'package:go_router/go_router.dart';
+import '../core/routes/app_routes.dart';
 
 class TicketVerificationScreen extends StatefulWidget {
   const TicketVerificationScreen({super.key});
@@ -1084,12 +1085,11 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => TicketDetailScreen(ticket: ticket),
-            ),
-          ).then((_) => _fetchAllTickets());
+          final ticketId =
+              (ticket['id'] ?? ticket['ticket_no'] ?? '').toString();
+          context
+              .push(AppRoutes.ticketDetailPath(ticketId), extra: ticket)
+              .then((_) => _fetchAllTickets());
         },
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -1366,12 +1366,11 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => TicketDetailScreen(ticket: ticket),
-            ),
-          ).then((_) => _fetchAllTickets());
+          final ticketId =
+              (ticket['id'] ?? ticket['ticket_no'] ?? '').toString();
+          context
+              .push(AppRoutes.ticketDetailPath(ticketId), extra: ticket)
+              .then((_) => _fetchAllTickets());
         },
         child: Padding(
           padding: const EdgeInsets.all(16.0),

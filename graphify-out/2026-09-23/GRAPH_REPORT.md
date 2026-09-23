@@ -1,12 +1,12 @@
 # Graph Report - kitchen_maintanence  (2026-09-23)
 
 ## Corpus Check
-- 108 files · ~248,763 words
+- 108 files · ~249,609 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 59 file(s) not represented in the graph (top: (none) 10, .plist 9, .xcconfig 8)
 
 ## Summary
-- 1793 nodes · 2655 edges · 108 communities (83 shown, 25 thin omitted)
+- 1799 nodes · 2662 edges · 109 communities (84 shown, 25 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 17 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
@@ -43,7 +43,7 @@
 - user_management.dart
 - breakdown_report_screen.dart
 - complaint_report_screen.dart
-- List
+- package:supabase_flutter/supabase_flutter.dart
 - web_ticket_table.dart
 - Application Flow & Architecture Map - Kitchen Maintenance
 - StatefulWidget
@@ -59,14 +59,14 @@
 - State
 - GeneratedPluginRegistrant.swift
 - ADR-003: State Management Architecture via Provider
-- package:supabase_flutter/supabase_flutter.dart
+- register_screen.dart
 - ticket_card.dart
 - ADR-001: Mobile & Web Platform Selection (Flutter & Dart)
 - utils.cpp
 - web_ticket_card.dart
 - windows/flutter/generated_plugin_registrant.cc
 - string
-- MessageHandler
+- FlutterWindow
 - supabase_types.ts
 - manifest.json
 - firebase_media_service.dart
@@ -91,7 +91,7 @@
 - imports
 - Runner-Bridging-Header.h
 - Kitchen Maintenance App
-- responsive_sidebar.dart
+- List
 - BoilerLogFormScreen
 - _AnimatedTicketCardState
 - rules/graphify.md
@@ -114,16 +114,17 @@
 - ADR-009: Dynamic Ticket Swapping & Staggered Transition Animations
 - ADR-010: Asynchronous Query Concurrency Guards & Atomic State Resets
 - Architecture Decision Records (ADRs) - Kitchen Maintenance
-- widget_test.dart
-- spare_inventory_screen.dart
+- ADR-011: Web & Tablet View Toolbar Decoupling from Global AppBar
+- package:google_fonts/google_fonts.dart
 - ticket_form_fields.dart
+- Size
 
 ## God Nodes (most connected - your core abstractions)
 1. `AuthProvider` - 115 edges
 2. `TicketProvider` - 93 edges
 3. `Win32Window` - 24 edges
-4. `MessageHandler` - 12 edges
-5. `Architecture Decision Records (ADRs) - Kitchen Maintenance` - 12 edges
+4. `Architecture Decision Records (ADRs) - Kitchen Maintenance` - 13 edges
+5. `MessageHandler` - 12 edges
 6. `Application Flow & Architecture Map - Kitchen Maintenance` - 11 edges
 7. `FlutterWindow` - 10 edges
 8. `Create` - 10 edges
@@ -145,7 +146,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (108 total, 25 thin omitted)
+## Communities (109 total, 25 thin omitted)
 
 ### Community 0 - "ticket_detail_screen.dart"
 Cohesion: 0.03
@@ -189,7 +190,7 @@ Nodes (44): ../core/services/firebase_media_service.dart, dart:convert, DateTime
 
 ### Community 10 - "auth_provider.dart"
 Cohesion: 0.08
-Nodes (25): AuthState get, bool get, activeKitchenId, activeKitchenIds, _activeRole, _address, _assignedKitchens, AuthState (+17 more)
+Nodes (23): AuthState get, activeKitchenId, activeKitchenIds, _activeRole, _address, _assignedKitchens, AuthState, _checkExistingSession (+15 more)
 
 ### Community 11 - "zone_screen.dart"
 Cohesion: 0.05
@@ -201,7 +202,7 @@ Nodes (36): class, _achievedDate, background, CreateEditPMScheduleScreen, _Creat
 
 ### Community 13 - "ticket_verification_screen.dart"
 Cohesion: 0.04
-Nodes (47): build, build, build, build, build, build, _buildReportTile, build (+39 more)
+Nodes (48): _buildWebToolbar, build, build, build, build, build, build, _buildReportTile (+40 more)
 
 ### Community 14 - "reports_screen.dart"
 Cohesion: 0.06
@@ -232,16 +233,16 @@ Cohesion: 0.07
 Nodes (26): ../core/services/notification_service.dart, _allowedReportCodes, _buildStatCard, _checkAndFetchPermissions, createState, dispose, golden, HomeScreen (+18 more)
 
 ### Community 21 - "area_screen.dart"
-Cohesion: 0.08
-Nodes (25): _activeZones, AreaMasterScreen, _areas, background, build, _buildChip, _buildSleekAutocomplete, _buildStatCard (+17 more)
+Cohesion: 0.05
+Nodes (40): FormState, _activeZones, AreaMasterScreen, _areas, background, build, _buildChip, _buildSleekAutocomplete (+32 more)
 
 ### Community 22 - "tools_screen.dart"
 Cohesion: 0.08
 Nodes (24): background, build, _buildChip, _buildDatePill, _buildInputField, _buildStatCard, createState, dispose (+16 more)
 
 ### Community 23 - "vendor_screen.dart"
-Cohesion: 0.08
-Nodes (24): background, build, _buildChip, _buildInputField, _buildStatCard, createState, dispose, _fetchData (+16 more)
+Cohesion: 0.04
+Nodes (47): _addQtyController, background, build, createState, _currentQty, dispose, _fetchInventoryData, _formKey (+39 more)
 
 ### Community 24 - "user_management.dart"
 Cohesion: 0.07
@@ -255,9 +256,9 @@ Nodes (23): background, BreakdownReportScreen, build, _completedTickets, createS
 Cohesion: 0.08
 Nodes (23): _allTickets, background, build, ComplaintReportScreen, createState, dispose, _endDate, _fetchTickets (+15 more)
 
-### Community 27 - "List"
-Cohesion: 0.13
-Nodes (15): background, build, createState, _fetchKitchens, golden, initState, _isLoading, KitchenMasterScreen (+7 more)
+### Community 27 - "package:supabase_flutter/supabase_flutter.dart"
+Cohesion: 0.15
+Nodes (12): FirebaseMessaging, _fcm, _handleNotificationClick, initNotifications, NotificationService, _saveTokenToDatabase, _supabase, ../../main.dart (+4 more)
 
 ### Community 28 - "web_ticket_table.dart"
 Cohesion: 0.05
@@ -273,7 +274,7 @@ Nodes (23): HomeScreen, _HomeTicketView, EquipmentMasterScreen, _EquipmentMaster
 
 ### Community 31 - "tools_tackles_screen.dart"
 Cohesion: 0.10
-Nodes (20): background, build, createState, dispose, _executeExport, _fetchData, initState, _isLoading (+12 more)
+Nodes (20): ../core/constants/api_constants.dart, background, build, createState, dispose, _executeExport, _fetchData, initState (+12 more)
 
 ### Community 32 - "user_management_backup.dart"
 Cohesion: 0.10
@@ -285,11 +286,11 @@ Nodes (15): dwmapi, wchar_t, Scale(), Create, Destroy, SetQuitOnClose, Show, Upd
 
 ### Community 34 - "master_equipment_report_screen.dart"
 Cohesion: 0.11
-Nodes (17): ../core/constants/api_constants.dart, int?, background, build, createState, EquipmentReportScreen, initState, _minimalDecor (+9 more)
+Nodes (17): int?, background, build, createState, EquipmentReportScreen, initState, _minimalDecor, _months (+9 more)
 
 ### Community 35 - "Win32Window"
-Cohesion: 0.16
-Nodes (18): FlutterViewController, RECT, unique_ptr, FlutterWindow, flutter_controller_, OnCreate, OnDestroy, project_ (+10 more)
+Cohesion: 0.29
+Nodes (10): RECT, OnCreate, HWND, Win32Window, child_content_, GetClientArea, OnCreate, quit_on_close_ (+2 more)
 
 ### Community 36 - "../providers/ticket_provider.dart"
 Cohesion: 0.12
@@ -319,9 +320,9 @@ Nodes (13): app_links, file_selector_macos, firebase_core, firebase_messaging, f
 Cohesion: 0.40
 Nodes (5): ADR-003: State Management Architecture via Provider, Consequences, Context, Decision, Status
 
-### Community 43 - "package:supabase_flutter/supabase_flutter.dart"
-Cohesion: 0.07
-Nodes (28): FirebaseMessaging, _fcm, _handleNotificationClick, initNotifications, NotificationService, _saveTokenToDatabase, _supabase, _address (+20 more)
+### Community 43 - "register_screen.dart"
+Cohesion: 0.12
+Nodes (16): _address, _amp, _availableKitchens, build, _buildTextField, createState, dispose, _fetchKitchens (+8 more)
 
 ### Community 44 - "ticket_card.dart"
 Cohesion: 0.15
@@ -347,9 +348,9 @@ Nodes (9): app_links_plugin_c_api, file_selector_windows, firebase_core_plugin_c
 Cohesion: 0.27
 Nodes (7): dart_project, flutter_view_controller, functional, memory, string, vector, windows
 
-### Community 50 - "MessageHandler"
-Cohesion: 0.18
-Nodes (10): generated_plugin_registrant, optional, DartProject, HWND, LPARAM, LRESULT, UINT, WPARAM (+2 more)
+### Community 50 - "FlutterWindow"
+Cohesion: 0.11
+Nodes (18): FlutterViewController, generated_plugin_registrant, optional, unique_ptr, DartProject, HWND, LPARAM, LRESULT (+10 more)
 
 ### Community 51 - "supabase_types.ts"
 Cohesion: 0.18
@@ -364,8 +365,8 @@ Cohesion: 0.20
 Nodes (9): FirebaseStorage, compressAndUpload, FirebaseMediaService, _storage, package:firebase_storage/firebase_storage.dart, package:flutter_image_compress/flutter_image_compress.dart, package:mime/mime.dart, package:path/path.dart (+1 more)
 
 ### Community 54 - "package:flutter/material.dart"
-Cohesion: 0.20
-Nodes (8): AppTheme, primaryBlue, build, currentStatus, TicketStatusBanner, package:flutter/material.dart, package:google_fonts/google_fonts.dart, static const
+Cohesion: 0.22
+Nodes (7): AppTheme, primaryBlue, package:flutter/material.dart, package:flutter_test/flutter_test.dart, package:kitchen_maintanence/main.dart, static const, main
 
 ### Community 55 - "firebase_options.dart"
 Cohesion: 0.20
@@ -396,8 +397,8 @@ Cohesion: 0.22
 Nodes (8): build, _buildTimeRow, _formatDate, navy, ticket, TicketTimeline, Map, static const Color
 
 ### Community 62 - "Point"
-Cohesion: 0.21
-Nodes (6): Point, x, y, Size, height, width
+Cohesion: 0.50
+Nodes (3): Point, x, y
 
 ### Community 63 - "FlutterMacOS"
 Cohesion: 0.38
@@ -423,17 +424,17 @@ Nodes (14): AppUpdateWrapper, _AppUpdateWrapperState, build, _checkForUpdates, c
 Cohesion: 0.17
 Nodes (11): Building the Release App (Android APK), 📁 Directory Structure Overview, 🚀 Features, ⚙️ Getting Started, Installation, Kitchen Maintenance App, Prerequisites, 🔔 Smart Notification System (+3 more)
 
-### Community 75 - "responsive_sidebar.dart"
+### Community 75 - "List"
 Cohesion: 0.15
-Nodes (12): IconData, activeIcon, build, icon, isFixed, items, label, navy (+4 more)
+Nodes (12): activeIcon, build, icon, isFixed, items, label, navy, onToggleFixed (+4 more)
 
 ### Community 77 - "_AnimatedTicketCardState"
 Cohesion: 0.67
 Nodes (3): _AnimatedTicketCard, _AnimatedTicketCardState, SingleTickerProviderStateMixin
 
 ### Community 95 - "package:provider/provider.dart"
-Cohesion: 0.15
-Nodes (12): package:kitchen_maintanence/providers/auth_provider.dart, package:kitchen_maintanence/providers/ticket_provider.dart, package:kitchen_maintanence/screens/ticket_detail_screen.dart, package:provider/provider.dart, package:shared_preferences/shared_preferences.dart, activeRole, assignedKitchens, currentUserId (+4 more)
+Cohesion: 0.13
+Nodes (14): bool get, package:kitchen_maintanence/providers/auth_provider.dart, package:kitchen_maintanence/providers/ticket_provider.dart, package:kitchen_maintanence/screens/ticket_detail_screen.dart, package:provider/provider.dart, package:shared_preferences/shared_preferences.dart, String? get, activeRole (+6 more)
 
 ### Community 96 - "../providers/auth_provider.dart"
 Cohesion: 0.40
@@ -467,34 +468,38 @@ Nodes (5): ADR-009: Dynamic Ticket Swapping & Staggered Transition Animations, C
 Cohesion: 0.40
 Nodes (5): ADR-010: Asynchronous Query Concurrency Guards & Atomic State Resets, Consequences, Context, Decision, Status
 
-### Community 105 - "widget_test.dart"
-Cohesion: 0.50
-Nodes (3): package:flutter_test/flutter_test.dart, package:kitchen_maintanence/main.dart, main
+### Community 105 - "ADR-011: Web & Tablet View Toolbar Decoupling from Global AppBar"
+Cohesion: 0.40
+Nodes (5): ADR-011: Web & Tablet View Toolbar Decoupling from Global AppBar, Consequences, Context, Decision, Status
 
-### Community 106 - "spare_inventory_screen.dart"
-Cohesion: 0.09
-Nodes (23): FormState, _addQtyController, background, build, createState, _currentQty, dispose, _fetchInventoryData (+15 more)
+### Community 106 - "package:google_fonts/google_fonts.dart"
+Cohesion: 0.40
+Nodes (4): build, currentStatus, TicketStatusBanner, package:google_fonts/google_fonts.dart
 
 ### Community 107 - "ticket_form_fields.dart"
 Cohesion: 0.09
-Nodes (23): build, buildDescriptionField, buildDropdown, buildSleekAutocomplete, buildTextField, createState, ctrl, _DescriptionFieldWidget (+15 more)
+Nodes (23): IconData, build, buildDescriptionField, buildDropdown, buildSleekAutocomplete, buildTextField, createState, ctrl (+15 more)
+
+### Community 108 - "Size"
+Cohesion: 0.50
+Nodes (3): Size, height, width
 
 ## Knowledge Gaps
-- **1228 isolated node(s):** `ApiConstants`, `isProduction`, `_railwayUrl`, `_localIp`, `FirebaseMediaService` (+1223 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1375 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **1232 isolated node(s):** `ApiConstants`, `isProduction`, `_railwayUrl`, `_localIp`, `FirebaseMediaService` (+1227 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1379 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **25 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `AuthProvider` connect `AuthProvider` to `ticket_detail_screen.dart`, `boiler_log_screen.dart`, `electrical_log_screen.dart`, `equipment_master_screen.dart`, `testing_equipment_screen.dart`, `more_screen.dart`, `dg_log_screen.dart`, `spare_screen.dart`, `ro_checklist_screen.dart`, `auth_provider.dart`, `zone_screen.dart`, `pm_schedule_screen.dart`, `ticket_verification_screen.dart`, `reports_screen.dart`, `pm_checklist_screen.dart`, `home_screen.dart`, `filter_bottom_sheet.dart`, `critical_spares_report_screen.dart`, `home_screen_backup.dart`, `area_screen.dart`, `tools_screen.dart`, `vendor_screen.dart`, `user_management.dart`, `breakdown_report_screen.dart`, `complaint_report_screen.dart`, `StatefulWidget`, `tools_tackles_screen.dart`, `user_management_backup.dart`, `master_equipment_report_screen.dart`, `../providers/ticket_provider.dart`, `login_screen.dart`, `State`, `package:supabase_flutter/supabase_flutter.dart`, `StatelessWidget`, `_DGLogListScreenState`, `_PMScheduleScreenState`, `_TestingEquipmentScreenState`, `package:provider/provider.dart`, `../providers/auth_provider.dart`?**
-  _High betweenness centrality (0.083) - this node is a cross-community bridge._
+- **Why does `AuthProvider` connect `AuthProvider` to `ticket_detail_screen.dart`, `boiler_log_screen.dart`, `electrical_log_screen.dart`, `equipment_master_screen.dart`, `testing_equipment_screen.dart`, `more_screen.dart`, `dg_log_screen.dart`, `spare_screen.dart`, `ro_checklist_screen.dart`, `auth_provider.dart`, `zone_screen.dart`, `pm_schedule_screen.dart`, `ticket_verification_screen.dart`, `reports_screen.dart`, `pm_checklist_screen.dart`, `home_screen.dart`, `filter_bottom_sheet.dart`, `critical_spares_report_screen.dart`, `home_screen_backup.dart`, `area_screen.dart`, `tools_screen.dart`, `vendor_screen.dart`, `user_management.dart`, `breakdown_report_screen.dart`, `complaint_report_screen.dart`, `StatefulWidget`, `tools_tackles_screen.dart`, `user_management_backup.dart`, `master_equipment_report_screen.dart`, `../providers/ticket_provider.dart`, `login_screen.dart`, `State`, `register_screen.dart`, `StatelessWidget`, `_DGLogListScreenState`, `_PMScheduleScreenState`, `_TestingEquipmentScreenState`, `package:provider/provider.dart`, `../providers/auth_provider.dart`?**
+  _High betweenness centrality (0.077) - this node is a cross-community bridge._
 - **Why does `TicketProvider` connect `AuthProvider` to `ticket_detail_screen.dart`, `boiler_log_screen.dart`, `electrical_log_screen.dart`, `equipment_master_screen.dart`, `testing_equipment_screen.dart`, `more_screen.dart`, `dg_log_screen.dart`, `spare_screen.dart`, `ro_checklist_screen.dart`, `ticket_provider.dart`, `zone_screen.dart`, `pm_schedule_screen.dart`, `ticket_verification_screen.dart`, `reports_screen.dart`, `pm_checklist_screen.dart`, `home_screen.dart`, `filter_bottom_sheet.dart`, `critical_spares_report_screen.dart`, `home_screen_backup.dart`, `area_screen.dart`, `tools_screen.dart`, `vendor_screen.dart`, `user_management.dart`, `breakdown_report_screen.dart`, `complaint_report_screen.dart`, `StatefulWidget`, `tools_tackles_screen.dart`, `master_equipment_report_screen.dart`, `../providers/ticket_provider.dart`, `State`, `_DGLogListScreenState`, `_PMScheduleScreenState`, `_TestingEquipmentScreenState`, `package:provider/provider.dart`?**
-  _High betweenness centrality (0.057) - this node is a cross-community bridge._
-- **Why does `Win32Window` connect `Win32Window` to `win32_window.cpp`, `string`, `MessageHandler`, `MessageHandler`, `Point`?**
-  _High betweenness centrality (0.051) - this node is a cross-community bridge._
+  _High betweenness centrality (0.059) - this node is a cross-community bridge._
+- **Why does `Win32Window` connect `Win32Window` to `win32_window.cpp`, `Size`, `string`, `FlutterWindow`, `MessageHandler`, `Point`?**
+  _High betweenness centrality (0.038) - this node is a cross-community bridge._
 - **What connects `ApiConstants`, `isProduction`, `_railwayUrl` to the rest of the system?**
-  _1228 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1232 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `ticket_detail_screen.dart` be split into smaller, more focused modules?**
   _Cohesion score 0.025974025974025976 - nodes in this community are weakly interconnected._
 - **Should `boiler_log_screen.dart` be split into smaller, more focused modules?**
