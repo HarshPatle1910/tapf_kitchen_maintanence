@@ -144,8 +144,17 @@ stateDiagram-v2
 
 ### Mandatory Requirements per Step
 1. **Creation**: Title, description, kitchen, zone, area, equipment ID, priority (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`), initial media.
-2. **Completion**: Tools used selection, resolution notes, after-repair photo/video proof.
-3. **Verification**: Zone supervisor sign-off (`is_verified = true`, `verified_by`, `verified_at`).
+2. **Assignment**: Technician selection, automatic assignment timestamp recording (`assigned_to_time`), and display in the Activity Timeline.
+3. **Completion**: Tools used selection, resolution notes, after-repair photo/video proof, completion timestamp (`ticket_completion_time`).
+4. **Verification**: Dual audit sign-off (Raiser verification + Zone supervisor sign-off `is_verified_by_admin = true`, `verified_by_id`).
+
+### Ticket Detail & Issue Inspection Hierarchy
+The `TicketDetailScreen` structure is modularized into 5 distinct operational cards:
+- **Card 1: Status & Raised On Banner**: Real-time status badge with color coding, squircle status icon, and `Raised On` timestamp chip.
+- **Card 2: Activity Timeline**: Connected vertical timeline tracking `Worker Assigned` $\to$ `Work Started` $\to$ `Work Completed` $\to$ `Admin Verified` $\to$ `Raiser Verified` $\to$ `Verified & Closed`, with dynamic total elapsed duration header.
+- **Card 3: Visual Verification Pipeline**: Segmented before/after media galleries (`• BEFORE (ISSUE RAISED)` and `• AFTER (WORK COMPLETED)`) connected by a directional progression arrow (`↓`), with dual photo and video support, dynamic counters (e.g., `2 Photos, 1 Video`), video thumbnail badges with play buttons, tap-to-zoom photo viewer, and full-screen dedicated in-app [`VideoPlayerScreen`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/lib/screens/video_player_screen.dart).
+- **Card 4: Ticket Information**: Area with pin icon, Equipment with code badge (e.g. `EQ-CH-C9`), Description with live word counter (`X / 200 words`), and 2-column Priority & Category selectors.
+- **Card 5: Work Details & Assignment**: Color-coded Cause of Issue (`#FEF2F2`) and Action Taken (`#F0FDF4`), compact dashed inventory containers (`TOOLS CHECKED OUT` & `SPARES USED`) with modal selection dialogs, and supervisor Sign-off Complete banner.
 
 ---
 

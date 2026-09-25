@@ -18,6 +18,8 @@ This document tracks key architectural, technical, and structural decisions made
 - [ADR-010: Asynchronous Query Concurrency Guards & Atomic State Resets](#adr-010-asynchronous-query-concurrency-guards--atomic-state-resets)
 - [ADR-011: Declarative URL Routing & Reactive Navigation Guard Architecture (go_router)](#adr-011-declarative-url-routing--reactive-navigation-guard-architecture-go_router)
 - [ADR-012: Desktop Web Layout & In-Line Completion Proof Inspection for Ticket Verification](#adr-012-desktop-web-layout--in-line-completion-proof-inspection-for-ticket-verification)
+- [ADR-013: Worker Assignment Tracking & Activity Timeline Integration](#adr-013-worker-assignment-tracking--activity-timeline-integration)
+- [ADR-014: Modular Card-Based UI Overhaul for Ticket Details & Defect Lifecycle](#adr-014-modular-card-based-ui-overhaul-for-ticket-details--defect-lifecycle)
 
 ---
 
@@ -330,4 +332,117 @@ Plant managers, zone supervisors, and central maintenance directors review pendi
 - **Negative:**
   - Requires fetching media attachments for active verification tickets upon loading the verification screen.
 
+---
 
+## ADR-013: Worker Assignment Tracking & Activity Timeline Integration
+
+### Status
+**Accepted**
+
+### Context
+Previously, tickets tracked `repair_start_time`, `ticket_completion_time`, `admin_verified_at`, and `raiser_verified_at`, but did not record a dedicated timestamp for when a technician was assigned. The `TicketTimeline` on the ticket detail screen started only from "Work Started", leaving a gap in operational auditing: supervisors could not track the delay between defect creation and technician dispatch.
+
+### Decision
+1. **Schema & Database Tracking (`assigned_to_time`):**
+   - Added column `assigned_to_time TIMESTAMPTZ` to the `tickets` table in Supabase.
+   - Backfilled existing tickets using historical timestamps from `ticket_status_history` (`to_status = 'ASSIGNED'`), falling back to `repair_start_time` and `ticket_raised_time`.
+   - Created database trigger `trg_set_ticket_assigned_to_time` to automatically record `assigned_to_time = NOW()` whenever `assigned_to_id` is assigned or changed.
+2. **Client-Side Assignment Synchronization:**
+   - In `TicketDetailScreen`, explicitly set `updates['assigned_to_time'] = nowISO` and update in-memory `_localTicket` whenever a worker is assigned or reassigned.
+3. **Activity Timeline UI Display:**
+   - Updated `TicketTimeline` to render "Worker Assigned" as the primary initial stage with an amber/orange engineering badge (`Icons.engineering_rounded`, `Color(0xFFD97706)`).
+   - Display the assigned technician's name as an inline subtitle under the label without layout clipping.
+
+### Consequences
+- **Positive:**
+  - Complete, end-to-end operational visibility from defect report $\to$ assignment $\to$ repair start $\to$ completion $\to$ dual sign-off.
+  - Historical data seamlessly backfilled for all existing tickets.
+  - Zero performance overhead with automatic database trigger governance.
+
+---
+
+## ADR-014: Modular Card-Based UI Overhaul for Ticket Details & Defect Lifecycle
+
+### Status
+**Accepted**
+
+### Context
+The previous `TicketDetailScreen` utilized a monolithic form structure with dense, non-standardized field groupings that diverged from the modern visual language and brand guidelines of The Akshaya Patra Foundation. Floor technicians, plant supervisors, and central auditors required an intuitive, modular layout with clear visual hierarchy matching the approved design spec:
+1. Prominent current status and raised-time metadata header.
+2. Chronologically connected activity timeline with dynamic elapsed duration metrics.
+3. Visual verification section clearly delineating before-repair defect photos and after-repair completion proofs with directional flow.
+4. Cleanly categorized ticket metadata with visual icon badges, equipment identification codes, and word counter limits.
+5. High-contrast, color-coded work resolution and dual sign-off panels.
+
+Strict constraint: All underlying business logic, database mutations, image compression routines, offline persistence, and form validation states had to remain 100% intact with zero changes to functional behavior.
+
+### Decision
+Re-architect `TicketDetailScreen` and its subcomponents into five self-contained, modular visual cards:
+
+1. **Card 1 — Status & Raised Timestamp Banner (`TicketStatusBanner`):**
+   - Rounded card with squircle status icon container, uppercase `"CURRENT STATUS"` caption, dynamic status typography with color-coded dot indicator, and high-contrast status pill badge (e.g., `Resolved`, `In Progress`).
+   - Horizontal separator with clock icon leading to a formatted `Raised On: DD/MM/YYYY hh:mm a` chip.
+2. **Card 2 — Activity Timeline (`TicketTimeline`):**
+   - Header with squircle clock icon, `"Activity Timeline"`, and right-aligned dynamic duration badge (`Total duration: Xh Ym`) computed between defect creation and current/completion timestamp.
+   - Connected vertical timeline utilizing `IntrinsicHeight` and a continuous background track line with colored step nodes (Worker Assigned, Work Started, Work Completed, Admin Verified, Raiser Verified, Verified & Closed) and right-aligned timestamp pill chips.
+3. **Card 3 — Visual Verification Pipeline:**
+   - Dual-segment photo gallery (`• BEFORE (ISSUE RAISED)` and `• AFTER (WORK COMPLETED)`) with live photo counts.
+   - Clean, uncluttered photo rendering with rounded corners (`BorderRadius.circular(11)`) and tap-to-zoom modal viewer (omitting placeholder text overlay cards for production clarity).
+   - Centered green circular downward arrow indicator (`↓`) on a dashed divider representing the progression from issue to resolution.
+   - Contextual after-repair upload container with camera/gallery picker when the ticket is in an active repair phase.
+   - Constrained header title row using `Expanded` and `Flexible(child: Text(..., overflow: TextOverflow.ellipsis))` alongside the timestamp chip to eliminate viewport overflows on compact screens.
+4. **Card 4 — Ticket Information:**
+   - Stylized form containers featuring rounded squircle icons (blue location pin for Area, amber cog for Equipment with equipment code pill e.g., `EQ-CH-C9`).
+   - High-contrast form element borders (`Color(0xFF94A3B8)`, `1.2px` stroke) on all select dropdown buttons and text areas to clearly demarcate interactive touch targets for kitchen staff.
+   - Description container featuring a typography icon and live counter (`X / 200 words`).
+   - 2-column grid for `PRIORITY *` (gold-bordered card with priority dot) and `CATEGORY *`.
+   - Bounded popup height (`menuMaxHeight: 400`, `constraints: BoxConstraints(maxHeight: 400)`) with smooth rounded corners (`12px`) across all dropdown selectors and autocomplete menus to prevent viewport masking.
+5. **Card 5 — Work Details & Assignment:**
+   - Cause of Issue in a crimson soft-fill card (`#FEF2F2`, border `#FECACA`).
+   - Action Taken in an emerald soft-fill card (`#F0FDF4`, border `#BBF7D0`).
+   - 2-column dashed containers for `"TOOLS CHECKED OUT"` and `"SPARES USED"` with bottom-sheet entry modals to keep the card compact while maintaining full inventory validation and stock tracking.
+   - Supervisor Sign-off banner with avatar circle, `"Maintenance Lead"`, `"Verified by Plant Supervisor"`, and `"✓ Sign-off Complete"` badge.
+
+### Consequences
+- **Positive:**
+  - 100% visual parity with modern design specs without visual clutter or text overlap on equipment breakdown photos.
+  - Zero UI layout overflows across compact phone screens down to 320px width.
+  - Enhanced usability and clarity: prominent select borders immediately identify tap targets, and constrained 400px menus allow seamless scrolling without overtaking full screens.
+  - Strict preservation of all form validators, state transitions, notification triggers, image compressor options, and database calls without altering underlying business rules.
+- **Negative:**
+  - Additional UI hierarchy requires responsive branching for desktop/tablet multi-column layouts.
+
+---
+
+## ADR-015: Video Upload & Verification Pipeline for Equipment Maintenance
+
+### Status
+**Accepted**
+
+### Context
+In complex commercial kitchen equipment (e.g. motorized steam kettles, rotary ovens, automated rice washer lines, exhaust ventilation blowers), static photos often fail to capture dynamic operational faults such as abnormal grinding noises, mechanical vibration, motor wobble, water/steam leaks under pressure, or erratic sensor trips. Technicians and issue raisers required the ability to record or upload short video clips as visual and acoustic proof during issue creation and upon repair completion.
+
+### Decision
+Extend the visual verification pipeline across `TicketDetailScreen` to support video capture, compression, upload, and playback alongside photos:
+1. **Picker & Options**:
+   - Provide a bottom sheet modal offering 4 clear options: *Take a Photo (Camera)*, *Choose Photos from Gallery*, *Record a Video (Camera)*, and *Choose Video from Gallery*.
+   - Constrain video uploads to a maximum duration of 3 minutes and an initial file size cap of 50MB before compression.
+2. **Compression & Storage Pipeline**:
+   - Leverage `VideoCompress.compressVideo` at `VideoQuality.MediumQuality` on mobile platforms to drastically reduce network payload and Firebase Storage footprint while preserving high diagnostic fidelity.
+   - Retain full MIME-type detection (`video/mp4`, `video/quicktime`, etc.) and upload to Firebase Cloud Storage path: `PMT_Tickets/<ticket_no>/<stage>/`.
+3. **Database Schema Integration**:
+   - Supabase `ticket_media` records are stored with `media_type: 'video'` and appropriate `file_name` extensions (`.mp4`, `.mov`).
+4. **Playback & Verification UI (`VideoPlayerScreen`)**:
+   - Visual Verification gallery renders video items with a dark slate background, centered play icon (`Icons.play_circle_filled_rounded`), and uppercase `"VIDEO"` badge.
+   - Tapping either an uploaded verification video or an unsaved locally picked video navigates to a dedicated full-screen [`VideoPlayerScreen`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/lib/screens/video_player_screen.dart).
+   - Features rich in-app controls: animated play/pause, +/-10s seek buttons, interactive timeline scrubber, playback speed presets (0.5x to 2.0x), audio mute toggle, aspect ratio fit toggle, header info with sharing (`Share.share`), auto-hiding overlays, and a graceful fallback dialog to launch in the system media player (`launchUrl`) or browser if decoding errors occur.
+
+### Consequences
+- **Positive:**
+  - Full audiovisual verification capability for high-speed or acoustic equipment breakdowns.
+  - Premium in-app playback experience with intuitive scrubbing, speed control, and ticket context.
+  - Resilient dual-layer playback: in-app `video_player` rendering with zero-dead-end fallback to native system players.
+  - Supabase database schema compatibility without requiring table migrations.
+  - Consistent count badges (e.g. `2 Photos, 1 Video`) and zero disruption to existing photo flows.
+- **Negative:**
+  - Video compression requires a brief client-side processing period before upload.

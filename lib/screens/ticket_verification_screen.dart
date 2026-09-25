@@ -8,6 +8,7 @@ import '../providers/auth_provider.dart';
 import '../providers/ticket_provider.dart';
 import 'package:go_router/go_router.dart';
 import '../core/routes/app_routes.dart';
+import 'video_player_screen.dart';
 
 class TicketVerificationScreen extends StatefulWidget {
   const TicketVerificationScreen({super.key});
@@ -805,6 +806,9 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                             isExpanded: true,
                             value: _selectedKitchenId,
                             isDense: true,
+                            dropdownColor: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            menuMaxHeight: 400,
                             icon: const Icon(
                               Icons.keyboard_arrow_down_rounded,
                               color: navy,
@@ -1023,12 +1027,17 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade300),
+                        border: Border.all(
+                          color: const Color(0xFF94A3B8),
+                          width: 1.2,
+                        ),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           isExpanded: true,
+                          dropdownColor: Colors.white,
                           borderRadius: const BorderRadius.all(Radius.circular(12)),
+                          menuMaxHeight: 400,
                           value: _selectedKitchenId,
                           isDense: true,
                           icon: const Icon(
@@ -1788,6 +1797,26 @@ class _TicketVerificationScreenState extends State<TicketVerificationScreen>
   }
 
   void _openImageViewer(BuildContext context, String imageUrl) {
+    final lower = imageUrl.toLowerCase();
+    final isVideo = lower.contains('.mp4') ||
+        lower.contains('.mov') ||
+        lower.contains('.webm') ||
+        lower.contains('.mkv') ||
+        lower.contains('.avi');
+
+    if (isVideo) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => VideoPlayerScreen(
+            videoUrl: imageUrl,
+            title: "Verification Video",
+            subtitle: "Completion Proof",
+          ),
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       barrierColor: Colors.black87,

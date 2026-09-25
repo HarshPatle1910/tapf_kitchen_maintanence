@@ -10,6 +10,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:mime/mime.dart';
+import 'package:video_compress/video_compress.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:open_filex/open_filex.dart';
+import 'video_player_screen.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/ticket_provider.dart';
@@ -69,7 +74,32 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   final List<XFile> _selectedImages = [];
   List<String> _beforeUrls = [];
   List<String> _afterUrls = [];
+  List<Map<String, dynamic>> _beforeMedia = [];
+  List<Map<String, dynamic>> _afterMedia = [];
   bool _isLoadingMedia = false;
+
+  bool _isVideoExtension(String pathOrUrl) {
+    final lower = pathOrUrl.toLowerCase();
+    return lower.endsWith('.mp4') ||
+        lower.endsWith('.mov') ||
+        lower.endsWith('.avi') ||
+        lower.endsWith('.mkv') ||
+        lower.endsWith('.webm') ||
+        lower.endsWith('.3gp') ||
+        lower.endsWith('.m4v');
+  }
+
+  String _formatMediaCount(List<Map<String, dynamic>> mediaList) {
+    final int photos = mediaList.where((m) => m['type'] != 'video').length;
+    final int videos = mediaList.where((m) => m['type'] == 'video').length;
+    if (photos > 0 && videos > 0) {
+      return "$photos ${photos == 1 ? 'Photo' : 'Photos'}, $videos ${videos == 1 ? 'Video' : 'Videos'}";
+    } else if (videos > 0) {
+      return "$videos ${videos == 1 ? 'Video' : 'Videos'}";
+    } else {
+      return "$photos ${photos == 1 ? 'Photo' : 'Photos'}";
+    }
+  }
 
   List<Map<String, dynamic>> _allAreas = [];
   List<Map<String, dynamic>> _allEquipment = [];
@@ -332,6 +362,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
       List<String> before = [];
       List<String> after = [];
+      List<Map<String, dynamic>> beforeMedia = [];
+      List<Map<String, dynamic>> afterMedia = [];
 
       for (var record in mediaRecords) {
         String url = record['media_url'] ?? '';
@@ -340,16 +372,35 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           url = _supabase.storage.from('ticket-media').getPublicUrl(url);
         }
 
-        if (record['upload_stage'] == 'COMPLETED')
+        final isVideo =
+            record['media_type'] == 'video' ||
+            record['content_type']?.toString().startsWith('video') == true ||
+            _isVideoExtension(url) ||
+            _isVideoExtension(record['file_name'] ?? '');
+
+        final mediaItem = {
+          'url': url,
+          'type': isVideo ? 'video' : 'photo',
+          'file_name': record['file_name'] ?? '',
+          'upload_stage': record['upload_stage'] ?? '',
+        };
+
+        if (record['upload_stage'] == 'COMPLETED') {
           after.add(url);
-        else
+          afterMedia.add(mediaItem);
+        } else {
           before.add(url);
+          beforeMedia.add(mediaItem);
+        }
       }
-      if (mounted)
+      if (mounted) {
         setState(() {
           _beforeUrls = before;
           _afterUrls = after;
+          _beforeMedia = beforeMedia;
+          _afterMedia = afterMedia;
         });
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -371,7 +422,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
             'id, used_qty, m_spares(*, m_vendor(name), spare_tracker(current_qty))',
           )
           .eq('ticket_id', _localTicket!['id']);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _usedSpares = records
               .map(
@@ -384,6 +435,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
               )
               .toList();
         });
+      }
     } catch (e) {
       debugPrint("Error fetching used spares: $e");
     }
@@ -618,7 +670,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                "Add Photo",
+                "Add Media (Photos & Videos)",
                 style: GoogleFonts.inter(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -654,7 +706,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   child: const Icon(Icons.photo_library_rounded, color: navy),
                 ),
                 title: Text(
-                  'Choose from Gallery',
+                  'Choose Photos from Gallery',
                   style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                 ),
                 onTap: () {
@@ -662,11 +714,112 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   _pickImages(fromCamera: false);
                 },
               ),
+              const Divider(height: 16, indent: 16, endIndent: 16),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.videocam_rounded,
+                    color: Color(0xFFD97706),
+                  ),
+                ),
+                title: Text(
+                  'Record a Video (Camera)',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF92400E),
+                  ),
+                ),
+                subtitle: Text(
+                  'Record up to 3 mins (Max 50MB)',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickVideo(fromCamera: true);
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.video_library_rounded,
+                    color: Color(0xFFD97706),
+                  ),
+                ),
+                title: Text(
+                  'Choose Video from Gallery',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF92400E),
+                  ),
+                ),
+                subtitle: Text(
+                  'Max 50MB',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickVideo(fromCamera: false);
+                },
+              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _pickVideo({required bool fromCamera}) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? video = await picker.pickVideo(
+        source: fromCamera ? ImageSource.camera : ImageSource.gallery,
+        maxDuration: const Duration(minutes: 3),
+      );
+      if (video == null) return;
+
+      final length = await video.length();
+      if (length > 52428800) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Video exceeds maximum limit of 50MB.',
+                style: GoogleFonts.inter(),
+              ),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+      setState(() => _selectedImages.add(video));
+    } catch (e) {
+      debugPrint("Error picking video: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to pick video: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _pickImages({required bool fromCamera}) async {
@@ -866,43 +1019,92 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     final userId = _supabase.auth.currentUser?.id;
     final pathStage = stage.toLowerCase() == 'completed' ? 'closed' : 'raised';
 
-    for (var img in _selectedImages) {
-      final fileExt = img.name.contains('.') ? img.name.split('.').last : 'jpg';
+    for (var file in _selectedImages) {
+      final fileExt = file.name.contains('.')
+          ? file.name.split('.').last.toLowerCase()
+          : 'jpg';
+      final isVideo =
+          _isVideoExtension(file.name) || _isVideoExtension(file.path);
       final fileName =
           '${stage.toLowerCase()}_${DateTime.now().microsecondsSinceEpoch}.$fileExt';
       final storagePath = 'PMT_Tickets/$ticketNo/$pathStage/$fileName';
 
       // Upload to Firebase Storage
       final ref = FirebaseStorage.instance.ref().child(storagePath);
-      final imageBytes = await img.readAsBytes();
 
-      // Compress the image
-      final compressedBytes = await FlutterImageCompress.compressWithList(
-        imageBytes,
-        minHeight: 1080,
-        minWidth: 1080,
-        quality: 70,
-      );
+      if (isVideo) {
+        File uploadFile = File(file.path);
+        if (!kIsWeb) {
+          try {
+            final MediaInfo? mediaInfo = await VideoCompress.compressVideo(
+              file.path,
+              quality: VideoQuality.MediumQuality,
+              deleteOrigin: false,
+            );
+            if (mediaInfo != null && mediaInfo.file != null) {
+              uploadFile = mediaInfo.file!;
+            }
+          } catch (e) {
+            debugPrint("Video compression error: $e, uploading original file");
+          }
+        }
 
-      final uploadTask = await ref.putData(
-        compressedBytes,
-        SettableMetadata(contentType: 'image/$fileExt'),
-      );
+        final fileSize = await uploadFile.length();
+        final contentType = lookupMimeType(uploadFile.path) ?? 'video/$fileExt';
 
-      // Get the download URL
-      final downloadUrl = await ref.getDownloadURL();
+        await ref.putFile(
+          uploadFile,
+          SettableMetadata(contentType: contentType),
+        );
 
-      // Save the Firebase download URL in Supabase
-      await _supabase.from('ticket_media').insert({
-        'ticket_id': ticketId,
-        'media_url': downloadUrl,
-        'upload_stage': stage,
-        'uploaded_by': userId,
-        'file_name': img.name,
-        'file_size': compressedBytes.length,
-        'content_type': 'image/$fileExt',
-        'media_type': 'photo',
-      });
+        final downloadUrl = await ref.getDownloadURL();
+
+        if (!kIsWeb) {
+          try {
+            await VideoCompress.deleteAllCache();
+          } catch (_) {}
+        }
+
+        await _supabase.from('ticket_media').insert({
+          'ticket_id': ticketId,
+          'media_url': downloadUrl,
+          'upload_stage': stage,
+          'uploaded_by': userId,
+          'file_name': file.name,
+          'file_size': fileSize,
+          'content_type': contentType,
+          'media_type': 'video',
+        });
+      } else {
+        final imageBytes = await file.readAsBytes();
+
+        // Compress the image
+        final compressedBytes = await FlutterImageCompress.compressWithList(
+          imageBytes,
+          minHeight: 1080,
+          minWidth: 1080,
+          quality: 70,
+        );
+
+        await ref.putData(
+          compressedBytes,
+          SettableMetadata(contentType: 'image/$fileExt'),
+        );
+
+        final downloadUrl = await ref.getDownloadURL();
+
+        // Save the Firebase download URL in Supabase
+        await _supabase.from('ticket_media').insert({
+          'ticket_id': ticketId,
+          'media_url': downloadUrl,
+          'upload_stage': stage,
+          'uploaded_by': userId,
+          'file_name': file.name,
+          'file_size': compressedBytes.length,
+          'content_type': 'image/$fileExt',
+          'media_type': 'photo',
+        });
+      }
     }
   }
 
@@ -945,7 +1147,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Please upload at least one photo of the issue.',
+            'Please upload at least one photo or video of the issue.',
             style: GoogleFonts.inter(),
           ),
           backgroundColor: Colors.red,
@@ -1126,7 +1328,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Please upload Completion Photos.',
+              'Please upload completion photos or videos.',
               style: GoogleFonts.inter(),
             ),
             backgroundColor: Colors.red,
@@ -1204,6 +1406,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         if (currentStatus == 'RAISED' || currentStatus == 'ASSIGNED') {
           if (_selectedWorker != null) {
             updates['assigned_to_id'] = _selectedWorker;
+            if (_selectedWorker !=
+                    _localTicket!['assigned_to_id']?.toString() ||
+                _localTicket!['assigned_to_time'] == null) {
+              updates['assigned_to_time'] = nowISO;
+            }
             if (currentStatus == 'RAISED' && nextStatus == null)
               updates['status'] = 'ASSIGNED';
           }
@@ -1321,7 +1528,23 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       }
 
       if (mounted) {
-        if (_localTicket != null) _localTicket!.addAll(updates);
+        if (_localTicket != null) {
+          _localTicket!.addAll(updates);
+          if (_selectedWorker != null) {
+            final assignedWorkerObj = _workers.firstWhere(
+              (w) => w['id']?.toString() == _selectedWorker,
+              orElse: () => <String, dynamic>{},
+            );
+            if (assignedWorkerObj.isNotEmpty) {
+              _localTicket!['assigned_to'] = {
+                'name':
+                    assignedWorkerObj['display_name'] ??
+                    assignedWorkerObj['name'] ??
+                    'Assigned Worker',
+              };
+            }
+          }
+        }
         context.read<TicketProvider>().refreshTickets();
 
         if (nextStatus == null)
@@ -1431,32 +1654,36 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         alignment: Alignment.topLeft,
         child: Material(
           elevation: 4.0,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           child: Container(
             constraints: BoxConstraints(
-              maxHeight: 250,
+              maxHeight: 400,
               maxWidth: MediaQuery.of(context).size.width - 68,
             ),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF94A3B8), width: 1.2),
             ),
-            child: ListView.separated(
-              padding: EdgeInsets.zero,
-              shrinkWrap: true,
-              itemCount: opts.length,
-              separatorBuilder: (_, __) =>
-                  Divider(height: 1, color: Colors.grey.shade200),
-              itemBuilder: (ctx, idx) => ListTile(
-                title: Text(
-                  (opts.elementAt(idx)['display_name'] ?? '').toString(),
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: navy,
-                    fontWeight: FontWeight.w500,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: ListView.separated(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: opts.length,
+                separatorBuilder: (_, __) =>
+                    Divider(height: 1, color: Colors.grey.shade200),
+                itemBuilder: (ctx, idx) => ListTile(
+                  title: Text(
+                    (opts.elementAt(idx)['display_name'] ?? '').toString(),
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: navy,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
+                  onTap: () => onSel(opts.elementAt(idx)),
                 ),
-                onTap: () => onSel(opts.elementAt(idx)),
               ),
             ),
           ),
@@ -1481,30 +1708,122 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   width: 100,
                   margin: const EdgeInsets.only(left: 8),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300),
+                    border: Border.all(
+                      color: const Color(0xFF94A3B8),
+                      width: 1.2,
+                    ),
                   ),
-                  child: const Icon(Icons.add_a_photo, color: Colors.grey),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.add_circle_outline_rounded,
+                        color: navy,
+                        size: 28,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        "Add More",
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: navy,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             }
+
+            final isVideo = _isVideoExtension(_selectedImages[index].path);
+
             return Stack(
               children: [
-                Container(
-                  width: 100,
-                  margin: const EdgeInsets.only(right: 8),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: kIsWeb
-                        ? Image.network(
-                            _selectedImages[index].path,
-                            fit: BoxFit.cover,
-                          )
-                        : Image.file(
-                            File(_selectedImages[index].path),
-                            fit: BoxFit.cover,
+                GestureDetector(
+                  onTap: () {
+                    if (isVideo) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => VideoPlayerScreen(
+                            videoUrl: _selectedImages[index].path,
+                            title: "Selected Video Preview",
+                            subtitle: _selectedImages[index].name,
                           ),
+                        ),
+                      );
+                    }
+                  },
+                  child: Container(
+                    width: 100,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color: isVideo
+                          ? const Color(0xFF0F172A)
+                          : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFF94A3B8),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(11),
+                      child: isVideo
+                          ? Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.play_circle_fill_rounded,
+                                  color: Color(0xFFD97706),
+                                  size: 38,
+                                ),
+                                Positioned(
+                                  bottom: 6,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.65),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.videocam_rounded,
+                                          size: 10,
+                                          color: Colors.white,
+                                        ),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          "VIDEO",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : kIsWeb
+                          ? Image.network(
+                              _selectedImages[index].path,
+                              fit: BoxFit.cover,
+                            )
+                          : Image.file(
+                              File(_selectedImages[index].path),
+                              fit: BoxFit.cover,
+                            ),
+                    ),
                   ),
                 ),
                 Positioned(
@@ -1536,25 +1855,37 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           color: Colors.grey.shade50,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isCompleting ? Colors.red.shade300 : Colors.grey.shade300,
-            style: BorderStyle.solid,
+            color: isCompleting ? Colors.red.shade300 : const Color(0xFF94A3B8),
+            width: 1.2,
           ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.add_photo_alternate_rounded,
-              size: 40,
-              color: isCompleting ? Colors.red : navy,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.add_photo_alternate_rounded,
+                  size: 34,
+                  color: isCompleting ? Colors.red : navy,
+                ),
+                const SizedBox(width: 10),
+                Icon(
+                  Icons.videocam_rounded,
+                  size: 34,
+                  color: isCompleting ? Colors.red : const Color(0xFFD97706),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Text(
-              "Tap to add photos\n(Camera or Gallery)",
+              "Tap to add photos or videos\n(Camera or Gallery)",
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 color: isCompleting ? Colors.red : Colors.grey.shade600,
                 fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -1563,110 +1894,216 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     );
   }
 
-  Widget _buildMediaGallery() {
-    if (_isLoadingMedia) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: CircularProgressIndicator(color: golden),
-        ),
-      );
-    }
-    if (_beforeUrls.isEmpty && _afterUrls.isEmpty) {
-      return Text(
-        "No photos attached yet.",
-        style: GoogleFonts.inter(
-          color: Colors.grey.shade500,
-          fontStyle: FontStyle.italic,
-        ),
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (_beforeUrls.isNotEmpty) ...[
-          Text(
-            "BEFORE (Issue Raised)",
-            style: GoogleFonts.inter(
-              fontWeight: FontWeight.bold,
-              color: Colors.redAccent,
-              fontSize: 12,
+  int _getWordCount(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return 0;
+    return trimmed.split(RegExp(r'\s+')).length;
+  }
+
+  String _getAreaDisplayName(String? areaId) {
+    if (areaId == null) return 'Select Area';
+    final found = _allAreas.firstWhere(
+      (a) => a['id'].toString() == areaId,
+      orElse: () => {},
+    );
+    return (found['display_name'] ?? found['area_name'] ?? 'Unknown Area')
+        .toString();
+  }
+
+  void _showAddToolDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              left: 16,
+              right: 16,
+              top: 16,
             ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 100,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _beforeUrls.length,
-              itemBuilder: (context, index) {
-                return GestureDetector(
-                  onTap: () => _openImageViewer(context, _beforeUrls[index]),
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        _beforeUrls[index],
-                        height: 100,
-                        width: 100,
-                        fit: BoxFit.cover,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Check Out Tool",
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        color: const Color(0xFF1E293B),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _buildAutocomplete(
+                  hint: "Search Required Tool",
+                  icon: Icons.plumbing,
+                  controller: _toolSearchController,
+                  focusNode: _toolFocusNode,
+                  options: _availableTools,
+                  isDisabled: false,
+                  onSelected: (val) {
+                    setModalState(() => _currentlySelectedToolToAdd = val);
+                    setState(() => _currentlySelectedToolToAdd = val);
+                  },
+                  onCleared: () {
+                    setModalState(() => _currentlySelectedToolToAdd = null);
+                    setState(() => _currentlySelectedToolToAdd = null);
+                  },
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: navy,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () {
+                      _addToolToTicket();
+                      Navigator.pop(ctx);
+                    },
+                    child: Text(
+                      "Add Tool",
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showAddSpareDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              left: 16,
+              right: 16,
+              top: 16,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Use Spare Part",
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        color: const Color(0xFF1E293B),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _buildAutocomplete(
+                  hint: "Search Spare",
+                  icon: Icons.build_circle,
+                  controller: _spareSearchController,
+                  focusNode: _spareFocusNode,
+                  options: _availableSpares,
+                  isDisabled: false,
+                  onSelected: (val) {
+                    setModalState(() => _currentlySelectedSpareToAdd = val);
+                    setState(() => _currentlySelectedSpareToAdd = val);
+                  },
+                  onCleared: () {
+                    setModalState(() => _currentlySelectedSpareToAdd = null);
+                    setState(() => _currentlySelectedSpareToAdd = null);
+                  },
+                ),
+                if (_currentlySelectedSpareToAdd != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6.0, left: 4),
+                    child: Text(
+                      "Available in Stock: ${_getSpareCurrentQty(_currentlySelectedSpareToAdd!)}",
+                      style: GoogleFonts.inter(
+                        color: Colors.green.shade700,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                );
-              },
-            ),
-          ),
-        ],
-        if (_beforeUrls.isNotEmpty && _afterUrls.isNotEmpty) ...[
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Icon(
-                Icons.arrow_downward_rounded,
-                size: 28,
-                color: Colors.green,
-              ),
-            ),
-          ),
-        ],
-        if (_afterUrls.isNotEmpty) ...[
-          Text(
-            "AFTER (Work Completed)",
-            style: GoogleFonts.inter(
-              fontWeight: FontWeight.bold,
-              color: Colors.green,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 100,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _afterUrls.length,
-              itemBuilder: (context, index) {
-                return GestureDetector(
-                  onTap: () => _openImageViewer(context, _afterUrls[index]),
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        _afterUrls[index],
-                        height: 100,
-                        width: 100,
-                        fit: BoxFit.cover,
-                      ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _spareQtyController,
+                  keyboardType: TextInputType.number,
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    color: navy,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: "Quantity",
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                );
-              },
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: golden,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () {
+                      _addSpareToTicket();
+                      Navigator.pop(ctx);
+                    },
+                    child: Text(
+                      "Add Spare",
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ],
+          );
+        },
+      ),
     );
   }
 
@@ -1688,6 +2125,167 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
               maxScale: 4.0,
               child: Image.network(imageUrl),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openMediaViewer(BuildContext context, Map<String, dynamic> media) {
+    if (media['type'] == 'video') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => VideoPlayerScreen(
+            videoUrl: media['url'] ?? '',
+            title: _localTicket?['ticket_no'] != null
+                ? "Ticket #${_localTicket!['ticket_no']}"
+                : "Visual Verification",
+            subtitle: "${media['upload_stage'] ?? 'Verification'} Video",
+            fileName: media['file_name'],
+          ),
+        ),
+      );
+    } else {
+      _openImageViewer(context, media['url'] ?? '');
+    }
+  }
+
+  void _showVideoPlayerModal(
+    BuildContext context,
+    String videoUrl,
+    String? fileName,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFFDE68A)),
+                ),
+                child: const Icon(
+                  Icons.videocam_rounded,
+                  color: Color(0xFFD97706),
+                  size: 36,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                "Verification Video",
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: navy,
+                ),
+              ),
+              if (fileName != null && fileName.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  fileName,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: const Color(0xFF64748B),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    final uri = Uri.parse(videoUrl);
+                    try {
+                      final launched = await launchUrl(
+                        uri,
+                        mode: LaunchMode.externalApplication,
+                      );
+                      if (!launched) {
+                        await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+                      }
+                    } catch (e) {
+                      debugPrint("Error opening video: $e");
+                    }
+                  },
+                  icon: const Icon(
+                    Icons.play_arrow_rounded,
+                    color: Colors.white,
+                  ),
+                  label: Text(
+                    "Play Video",
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: navy,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    final uri = Uri.parse(videoUrl);
+                    await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+                  },
+                  icon: const Icon(
+                    Icons.open_in_new_rounded,
+                    color: navy,
+                    size: 18,
+                  ),
+                  label: Text(
+                    "Open in Browser",
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: navy,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(
+                      color: Color(0xFF94A3B8),
+                      width: 1.2,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -2011,15 +2609,33 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         appBar: AppBar(
           elevation: 0,
           backgroundColor: Colors.white,
-          foregroundColor: navy,
-          title: Text(
-            isEditing
-                ? (_localTicket!['ticket_no'] ?? 'Ticket Details')
-                : "Raise New Issue",
-            style: GoogleFonts.inter(
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-            ),
+          foregroundColor: const Color(0xFF1E293B),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isEditing
+                    ? (_localTicket!['ticket_no'] ?? 'Ticket Details')
+                    : "Raise New Issue",
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                  color: const Color(0xFF1E293B),
+                  letterSpacing: -0.5,
+                ),
+              ),
+              if (activeKitchenName.isNotEmpty &&
+                  activeKitchenName != "Loading Kitchen..." &&
+                  activeKitchenName != "Unknown Kitchen")
+                Text(
+                  activeKitchenName,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+            ],
           ),
         ),
         body: SingleChildScrollView(
@@ -2032,760 +2648,1882 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (isEditing) ...[
-                      TicketStatusBanner(currentStatus: currentStatus),
-                      const SizedBox(height: 12),
-
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.access_time_rounded,
-                              color: navy,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              "Raised On: ",
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade600,
-                                fontSize: 13,
-                              ),
-                            ),
-                            Expanded(
-                              child: Text(
-                                _localTicket?['ticket_raised_time'] != null
-                                    ? _formatDisplayDate(
-                                        DateTime.tryParse(
-                                          _localTicket!['ticket_raised_time'],
-                                        )?.toLocal(),
-                                      )
-                                    : 'Unknown',
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.bold,
-                                  color: navy,
-                                  fontSize: 13,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
+                      TicketStatusBanner(
+                        currentStatus: currentStatus,
+                        raisedTime: _localTicket?['ticket_raised_time'] != null
+                            ? _formatDisplayDate(
+                                DateTime.tryParse(
+                                  _localTicket!['ticket_raised_time'],
+                                )?.toLocal(),
+                              )
+                            : null,
                       ),
                       const SizedBox(height: 12),
-
                       TicketTimeline(ticket: _localTicket!),
-                      const SizedBox(height: 12),
                     ] else
-                      Padding(
+                      Container(
+                        width: double.infinity,
                         padding: const EdgeInsets.all(16.0),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
                         child: Text(
-                          "Status & Timeline available after creation.",
-                          style: GoogleFonts.inter(color: Colors.grey.shade500),
+                          "Status & Timeline will be tracked here once created.",
+                          style: GoogleFonts.inter(
+                            color: Colors.grey.shade500,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                   ],
                 );
 
-                final Widget ticketDetailsSection = Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
-                  ),
+                final Widget visualVerificationSection = Container(
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade200),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // if (authProv.assignedKitchens.length > 1) ...[
-                      //   TicketFormFields.buildTextField(
-                      //     ctrl: TextEditingController(text: activeKitchenName),
-                      //     label: "Target Kitchen",
-                      //     icon: Icons.kitchen,
-                      //     isReadOnly: true,
-                      //   ),
-                      //   const SizedBox(height: 12),
-                      // ],
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      // Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          if (isEditing) _buildMediaGallery(),
-                          if (showCameraBox) ...[
-                            if (isEditing) const Divider(height: 32),
-                            Text(
-                              (!isEditing || !canEditWorkDetails)
-                                  ? "Upload issue photo *"
-                                  : "Upload Completion Photos *",
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt_outlined,
+                                    color: Color(0xFF475569),
+                                    size: 16,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    "Visual Verification",
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF1E293B),
+                                      fontSize: 14,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          if (_breakdownTime != null ||
+                              _localTicket?['ticket_raised_time'] != null)
+                            InkWell(
+                              onTap: readOnlyFields ? null : _pickBreakdownTime,
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: const Color(0xFFE2E8F0),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      _formatDateTimeLocal(
+                                        _breakdownTime ??
+                                            DateTime.tryParse(
+                                              _localTicket!['ticket_raised_time'],
+                                            )?.toLocal(),
+                                      ),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFF475569),
+                                      ),
+                                    ),
+                                    if (!readOnlyFields) ...[
+                                      const SizedBox(width: 4),
+                                      const Icon(
+                                        Icons.edit_calendar,
+                                        size: 12,
+                                        color: Color(0xFF94A3B8),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      if (_isLoadingMedia)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(24.0),
+                            child: CircularProgressIndicator(color: golden),
+                          ),
+                        )
+                      else ...[
+                        if (_beforeUrls.isEmpty &&
+                            _afterUrls.isEmpty &&
+                            !showCameraBox)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              "No media attached yet.",
                               style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade700,
+                                color: Colors.grey.shade500,
+                                fontStyle: FontStyle.italic,
                                 fontSize: 13,
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            _buildImageUploader(canEditWorkDetails),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 12),
+                          ),
 
-                      InkWell(
-                        onTap: readOnlyFields ? null : _pickBreakdownTime,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
-                          decoration: BoxDecoration(
-                            color: readOnlyFields
-                                ? Colors.grey.shade100
-                                : Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: Row(
+                        // BEFORE PHOTOS & VIDEOS
+                        if (_beforeUrls.isNotEmpty) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Icon(
-                                Icons.access_time_filled,
-                                color: Colors.grey.shade400,
-                                size: 20,
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFDC2626),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "BEFORE (ISSUE RAISED)",
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFFDC2626),
+                                      fontSize: 11,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 12),
                               Text(
-                                _formatDateTimeLocal(_breakdownTime),
+                                _beforeMedia.isNotEmpty
+                                    ? _formatMediaCount(_beforeMedia)
+                                    : "${_beforeUrls.length} ${_beforeUrls.length == 1 ? 'Photo' : 'Photos'}",
                                 style: GoogleFonts.inter(
-                                  color: _breakdownTime == null
-                                      ? Colors.red.shade400
-                                      : navy,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
+                                  fontSize: 11,
+                                  color: const Color(0xFF94A3B8),
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            height: 120,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _beforeUrls.length,
+                              itemBuilder: (context, index) {
+                                final mediaItem = _beforeMedia.length > index
+                                    ? _beforeMedia[index]
+                                    : {
+                                        'url': _beforeUrls[index],
+                                        'type':
+                                            _isVideoExtension(
+                                              _beforeUrls[index],
+                                            )
+                                            ? 'video'
+                                            : 'photo',
+                                      };
+                                final isVideo = mediaItem['type'] == 'video';
 
-                      // DROPDOWN REPLACEMENT FOR AREA
-                      DropdownButtonFormField<String>(
-                        value: _selectedAreaId,
-                        isExpanded: true,
-                        dropdownColor: Colors.white,
-                        menuMaxHeight: 300,
-                        borderRadius: BorderRadius.circular(10),
-                        decoration: InputDecoration(
-                          labelText: "Select Area *",
-                          labelStyle: GoogleFonts.inter(
-                            color: Colors.grey.shade500,
-                            fontSize: 13,
-                          ),
-                          prefixIcon: const Icon(
-                            Icons.place_outlined,
-                            color: Colors.grey,
-                          ),
-                          suffixIcon: Icon(
-                            Icons.keyboard_arrow_down,
-                            color: navy,
-                            size: 20,
-                          ),
-                          filled: true,
-                          fillColor: readOnlyFields
-                              ? Colors.grey.shade100
-                              : Colors.grey.shade50,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: Colors.grey.shade200),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: Colors.grey.shade200),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: golden),
-                          ),
-                        ),
-                        items: _allAreas
-                            .map(
-                              (a) => DropdownMenuItem<String>(
-                                value: a['id'].toString(),
-                                child: Text(
-                                  (a['display_name'] ?? '').toString(),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: navy,
-                                  ),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: readOnlyFields
-                            ? null
-                            : (val) {
-                                setState(() {
-                                  _selectedAreaId = val;
-                                  _selectedEquipments.clear();
-                                });
-                              },
-                        validator: (v) => v == null ? 'Required' : null,
-                      ),
-                      const SizedBox(height: 12),
-
-                      // DROPDOWN REPLACEMENT FOR EQUIPMENT
-                      Builder(
-                        builder: (context) {
-                          String? currentEqId = _selectedEquipments.isNotEmpty
-                              ? _selectedEquipments.first['id'].toString()
-                              : null;
-                          if (currentEqId != null &&
-                              !availableEquipments.any(
-                                (e) => e['id'].toString() == currentEqId,
-                              )) {
-                            currentEqId = null;
-                          }
-
-                          return DropdownButtonFormField<String>(
-                            value: currentEqId,
-                            isExpanded: true,
-                            dropdownColor: Colors.white,
-                            menuMaxHeight: 300,
-                            borderRadius: BorderRadius.circular(10),
-                            decoration: InputDecoration(
-                              labelText: _selectedAreaId == null
-                                  ? "Select an Area first"
-                                  : (availableEquipments.isNotEmpty
-                                        ? "Select Equipment *"
-                                        : "No equipment in this area"),
-                              labelStyle: GoogleFonts.inter(
-                                color: Colors.grey.shade500,
-                                fontSize: 13,
-                              ),
-                              prefixIcon: const Icon(
-                                Icons.precision_manufacturing_outlined,
-                                color: Colors.grey,
-                              ),
-                              suffixIcon: Icon(
-                                Icons.keyboard_arrow_down,
-                                color: navy,
-                                size: 20,
-                              ),
-                              filled: true,
-                              fillColor: readOnlyFields
-                                  ? Colors.grey.shade100
-                                  : Colors.grey.shade50,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade200,
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade200,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(color: golden),
-                              ),
-                            ),
-                            items: availableEquipments
-                                .map(
-                                  (e) => DropdownMenuItem<String>(
-                                    value: e['id'].toString(),
-                                    child: Text(
-                                      (e['display_name'] ?? '').toString(),
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: navy,
+                                return GestureDetector(
+                                  onTap: () =>
+                                      _openMediaViewer(context, mediaItem),
+                                  child: Container(
+                                    width: 140,
+                                    margin: const EdgeInsets.only(right: 10),
+                                    decoration: BoxDecoration(
+                                      color: isVideo
+                                          ? const Color(0xFF0F172A)
+                                          : Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: const Color(0xFFE2E8F0),
                                       ),
                                     ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(11),
+                                      child: isVideo
+                                          ? Stack(
+                                              alignment: Alignment.center,
+                                              children: [
+                                                Container(
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                        gradient:
+                                                            LinearGradient(
+                                                              begin: Alignment
+                                                                  .topCenter,
+                                                              end: Alignment
+                                                                  .bottomCenter,
+                                                              colors: [
+                                                                Color(
+                                                                  0xFF1E293B,
+                                                                ),
+                                                                Color(
+                                                                  0xFF0F172A,
+                                                                ),
+                                                              ],
+                                                            ),
+                                                      ),
+                                                ),
+                                                const Icon(
+                                                  Icons
+                                                      .play_circle_fill_rounded,
+                                                  color: Color(0xFFD97706),
+                                                  size: 44,
+                                                ),
+                                                Positioned(
+                                                  bottom: 8,
+                                                  left: 8,
+                                                  child: Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 6,
+                                                          vertical: 3,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.black
+                                                          .withOpacity(0.65),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            6,
+                                                          ),
+                                                      border: Border.all(
+                                                        color: Colors.white24,
+                                                        width: 0.5,
+                                                      ),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        const Icon(
+                                                          Icons
+                                                              .videocam_rounded,
+                                                          size: 12,
+                                                          color: Colors.white,
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 4,
+                                                        ),
+                                                        Text(
+                                                          "VIDEO",
+                                                          style:
+                                                              GoogleFonts.inter(
+                                                                fontSize: 10,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                                color: Colors
+                                                                    .white,
+                                                              ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            )
+                                          : Image.network(
+                                              mediaItem['url'] ?? '',
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) =>
+                                                  Container(
+                                                    color: Colors.grey.shade100,
+                                                    child: const Icon(
+                                                      Icons.broken_image,
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ),
+                                            ),
+                                    ),
                                   ),
-                                )
-                                .toList(),
-                            onChanged:
-                                (_selectedAreaId == null ||
-                                    availableEquipments.isEmpty ||
-                                    readOnlyFields)
-                                ? null
-                                : (val) {
-                                    if (val != null) {
-                                      final eq = availableEquipments.firstWhere(
-                                        (e) => e['id'].toString() == val,
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+
+                        // DIVIDER WITH CIRCULAR GREEN DOWN ARROW
+                        if (_beforeUrls.isNotEmpty && _afterUrls.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      return Flex(
+                                        direction: Axis.horizontal,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: List.generate(
+                                          (constraints.constrainWidth() / 8)
+                                              .floor(),
+                                          (_) => const SizedBox(
+                                            width: 4,
+                                            height: 1,
+                                            child: DecoratedBox(
+                                              decoration: BoxDecoration(
+                                                color: Color(0xFFCBD5E1),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       );
-                                      setState(() {
-                                        _selectedEquipments = [eq];
-                                        _isCustomEquipment = val == 'others';
-                                        if (!_isCustomEquipment) {
-                                          _customEquipmentController.clear();
-                                        }
-                                      });
-                                    }
-                                  },
-                          );
-                        },
+                                    },
+                                  ),
+                                ),
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFECFDF5),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: const Color(0xFFA7F3D0),
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.arrow_downward_rounded,
+                                    size: 14,
+                                    color: Color(0xFF10B981),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      return Flex(
+                                        direction: Axis.horizontal,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: List.generate(
+                                          (constraints.constrainWidth() / 8)
+                                              .floor(),
+                                          (_) => const SizedBox(
+                                            width: 4,
+                                            height: 1,
+                                            child: DecoratedBox(
+                                              decoration: BoxDecoration(
+                                                color: Color(0xFFCBD5E1),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                        // AFTER PHOTOS & VIDEOS
+                        if (_afterUrls.isNotEmpty) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF10B981),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "AFTER (WORK COMPLETED)",
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF10B981),
+                                      fontSize: 11,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                _afterMedia.isNotEmpty
+                                    ? _formatMediaCount(_afterMedia)
+                                    : "${_afterUrls.length} ${_afterUrls.length == 1 ? 'Photo' : 'Photos'}",
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: const Color(0xFF94A3B8),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            height: 120,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _afterUrls.length,
+                              itemBuilder: (context, index) {
+                                final mediaItem = _afterMedia.length > index
+                                    ? _afterMedia[index]
+                                    : {
+                                        'url': _afterUrls[index],
+                                        'type':
+                                            _isVideoExtension(_afterUrls[index])
+                                            ? 'video'
+                                            : 'photo',
+                                      };
+                                final isVideo = mediaItem['type'] == 'video';
+
+                                return GestureDetector(
+                                  onTap: () =>
+                                      _openMediaViewer(context, mediaItem),
+                                  child: Container(
+                                    width: 140,
+                                    margin: const EdgeInsets.only(right: 10),
+                                    decoration: BoxDecoration(
+                                      color: isVideo
+                                          ? const Color(0xFF0F172A)
+                                          : Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: const Color(0xFFE2E8F0),
+                                      ),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(11),
+                                      child: isVideo
+                                          ? Stack(
+                                              alignment: Alignment.center,
+                                              children: [
+                                                Container(
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                        gradient:
+                                                            LinearGradient(
+                                                              begin: Alignment
+                                                                  .topCenter,
+                                                              end: Alignment
+                                                                  .bottomCenter,
+                                                              colors: [
+                                                                Color(
+                                                                  0xFF1E293B,
+                                                                ),
+                                                                Color(
+                                                                  0xFF0F172A,
+                                                                ),
+                                                              ],
+                                                            ),
+                                                      ),
+                                                ),
+                                                const Icon(
+                                                  Icons
+                                                      .play_circle_fill_rounded,
+                                                  color: Color(0xFFD97706),
+                                                  size: 44,
+                                                ),
+                                                Positioned(
+                                                  bottom: 8,
+                                                  left: 8,
+                                                  child: Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 6,
+                                                          vertical: 3,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.black
+                                                          .withOpacity(0.65),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            6,
+                                                          ),
+                                                      border: Border.all(
+                                                        color: Colors.white24,
+                                                        width: 0.5,
+                                                      ),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        const Icon(
+                                                          Icons
+                                                              .videocam_rounded,
+                                                          size: 12,
+                                                          color: Colors.white,
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 4,
+                                                        ),
+                                                        Text(
+                                                          "VIDEO",
+                                                          style:
+                                                              GoogleFonts.inter(
+                                                                fontSize: 10,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                                color: Colors
+                                                                    .white,
+                                                              ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            )
+                                          : Image.network(
+                                              mediaItem['url'] ?? '',
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) =>
+                                                  Container(
+                                                    color: Colors.grey.shade100,
+                                                    child: const Icon(
+                                                      Icons.broken_image,
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ),
+                                            ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+
+                        // UPLOAD BOX IF APPLICABLE
+                        if (showCameraBox) ...[
+                          if (_beforeUrls.isNotEmpty || _afterUrls.isNotEmpty)
+                            const SizedBox(height: 16),
+                          Text(
+                            (!isEditing || !canEditWorkDetails)
+                                ? "Attach Issue Media (Photos / Videos) *"
+                                : "Attach Completion Media (Photos / Videos) *",
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade700,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          _buildImageUploader(canEditWorkDetails),
+                        ],
+                      ],
+                    ],
+                  ),
+                );
+
+                String? currentEqId = _selectedEquipments.isNotEmpty
+                    ? _selectedEquipments.first['id'].toString()
+                    : null;
+                if (currentEqId != null &&
+                    !availableEquipments.any(
+                      (e) => e['id'].toString() == currentEqId,
+                    )) {
+                  currentEqId = null;
+                }
+
+                final String? eqCode = _selectedEquipments.isNotEmpty
+                    ? (_selectedEquipments.first['equipment_code'] ??
+                              _selectedEquipments.first['code'] ??
+                              _selectedEquipments.first['equipment_number'])
+                          ?.toString()
+                    : null;
+
+                final Widget ticketInformationSection = Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.description_outlined,
+                              color: Color(0xFF475569),
+                              size: 16,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Ticket Information",
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1E293B),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // AREA BOX
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: const Color(0xFF94A3B8),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: const Color(0xFFDBEAFE),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.location_on_outlined,
+                                color: Color(0xFF2563EB),
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "SELECT AREA *",
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF94A3B8),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  if (readOnlyFields)
+                                    Text(
+                                      _getAreaDisplayName(_selectedAreaId),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF1E293B),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    )
+                                  else
+                                    DropdownButtonHideUnderline(
+                                      child: DropdownButtonFormField<String>(
+                                        value: _selectedAreaId,
+                                        isExpanded: true,
+                                        isDense: true,
+                                        menuMaxHeight: 400,
+                                        borderRadius: BorderRadius.circular(12),
+                                        dropdownColor: Colors.white,
+                                        decoration: const InputDecoration(
+                                          border: InputBorder.none,
+                                          isDense: true,
+                                          contentPadding: EdgeInsets.zero,
+                                        ),
+                                        icon: const Icon(
+                                          Icons.unfold_more_rounded,
+                                          color: Color(0xFF94A3B8),
+                                          size: 18,
+                                        ),
+                                        hint: Text(
+                                          "Select Area",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
+                                            color: const Color(0xFF94A3B8),
+                                          ),
+                                        ),
+                                        items: _allAreas.map((a) {
+                                          return DropdownMenuItem<String>(
+                                            value: a['id'].toString(),
+                                            child: Text(
+                                              (a['display_name'] ??
+                                                      a['area_name'] ??
+                                                      '')
+                                                  .toString(),
+                                              style: GoogleFonts.inter(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w700,
+                                                color: const Color(0xFF1E293B),
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          );
+                                        }).toList(),
+                                        onChanged: (val) {
+                                          setState(() {
+                                            _selectedAreaId = val;
+                                            _selectedEquipments.clear();
+                                          });
+                                        },
+                                        validator: (v) =>
+                                            v == null ? 'Required' : null,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // EQUIPMENT BOX
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: const Color(0xFF94A3B8),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: const Color(0xFFFDE68A),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.precision_manufacturing_outlined,
+                                color: Color(0xFFD97706),
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "EQUIPMENT NAME *",
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF94A3B8),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  if (readOnlyFields)
+                                    Text(
+                                      _selectedEquipments.isNotEmpty
+                                          ? (_selectedEquipments
+                                                    .first['display_name'] ??
+                                                _selectedEquipments
+                                                    .first['name'] ??
+                                                'Unknown Equipment')
+                                          : 'No equipment selected',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF1E293B),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    )
+                                  else
+                                    DropdownButtonHideUnderline(
+                                      child: DropdownButtonFormField<String>(
+                                        value: currentEqId,
+                                        isExpanded: true,
+                                        isDense: true,
+                                        menuMaxHeight: 400,
+                                        borderRadius: BorderRadius.circular(12),
+                                        dropdownColor: Colors.white,
+                                        decoration: const InputDecoration(
+                                          border: InputBorder.none,
+                                          isDense: true,
+                                          contentPadding: EdgeInsets.zero,
+                                        ),
+                                        icon:
+                                            (eqCode != null &&
+                                                eqCode.isNotEmpty)
+                                            ? const SizedBox.shrink()
+                                            : const Icon(
+                                                Icons.unfold_more_rounded,
+                                                color: Color(0xFF94A3B8),
+                                                size: 18,
+                                              ),
+                                        hint: Text(
+                                          _selectedAreaId == null
+                                              ? "Select Area first"
+                                              : "Select Equipment",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
+                                            color: const Color(0xFF94A3B8),
+                                          ),
+                                        ),
+                                        items: availableEquipments.map((e) {
+                                          return DropdownMenuItem<String>(
+                                            value: e['id'].toString(),
+                                            child: Text(
+                                              (e['display_name'] ?? '')
+                                                  .toString(),
+                                              style: GoogleFonts.inter(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w700,
+                                                color: const Color(0xFF1E293B),
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          );
+                                        }).toList(),
+                                        onChanged:
+                                            (_selectedAreaId == null ||
+                                                availableEquipments.isEmpty)
+                                            ? null
+                                            : (val) {
+                                                if (val != null) {
+                                                  final eq = availableEquipments
+                                                      .firstWhere(
+                                                        (e) =>
+                                                            e['id']
+                                                                .toString() ==
+                                                            val,
+                                                      );
+                                                  setState(() {
+                                                    _selectedEquipments = [eq];
+                                                    _isCustomEquipment =
+                                                        val == 'others';
+                                                    if (!_isCustomEquipment) {
+                                                      _customEquipmentController
+                                                          .clear();
+                                                    }
+                                                  });
+                                                }
+                                              },
+                                        validator: (v) =>
+                                            (_selectedEquipments.isEmpty &&
+                                                !_isCustomEquipment)
+                                            ? 'Required'
+                                            : null,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            if (eqCode != null && eqCode.isNotEmpty) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: const Color(0xFFE2E8F0),
+                                  ),
+                                ),
+                                child: Text(
+                                  eqCode,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF475569),
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+
                       if (_isCustomEquipment) ...[
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         TicketFormFields.buildTextField(
                           ctrl: _customEquipmentController,
-                          label: "Equipment Name *",
+                          label: "Custom Equipment Name *",
                           icon: Icons.precision_manufacturing,
                           isReadOnly: readOnlyFields,
                           isRequired: true,
                           textCapitalization: TextCapitalization.words,
                         ),
                       ],
-                      const SizedBox(height: 12),
-                      TicketFormFields.buildDescriptionField(
-                        ctrl: _titleController,
-                        label: "Description *",
-                        icon: Icons.title,
-                        isReadOnly: readOnlyFields,
-                        isRequired: true,
-                      ),
-                      const SizedBox(height: 12),
-                      // DROPDOWN REPLACEMENT FOR PRIORITY
-                      TicketFormFields.buildDropdown(
-                        label: "Priority *",
-                        items: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
-                        val: _priority,
-                        onChanged: readOnlyFields
-                            ? null
-                            : (val) => setState(() => _priority = val!),
-                      ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
 
-                      // DROPDOWN REPLACEMENT FOR CATEGORY
-                      TicketFormFields.buildDropdown(
-                        label: "Category *",
-                        items: [
-                          'In Running Condition',
-                          'In Breakdown Condition',
-                          'Running at Risk',
+                      // DESCRIPTION BOX
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: const Color(0xFF94A3B8),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Icon(
+                                    Icons.text_fields_rounded,
+                                    color: Color(0xFF64748B),
+                                    size: 14,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "DESCRIPTION *",
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF94A3B8),
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  "${_getWordCount(_titleController.text)} / 200 words",
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    color: const Color(0xFF94A3B8),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            if (readOnlyFields)
+                              Text(
+                                _titleController.text.trim().isNotEmpty
+                                    ? _titleController.text
+                                    : "No description provided.",
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1E293B),
+                                  height: 1.4,
+                                ),
+                              )
+                            else
+                              TextFormField(
+                                controller: _titleController,
+                                maxLines: 3,
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1E293B),
+                                  height: 1.4,
+                                ),
+                                onChanged: (_) => setState(() {}),
+                                decoration: InputDecoration(
+                                  hintText: "Describe the issue in detail...",
+                                  hintStyle: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    color: const Color(0xFF94A3B8),
+                                  ),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                                validator: (v) =>
+                                    (v == null || v.trim().isEmpty)
+                                    ? 'Required'
+                                    : null,
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // PRIORITY & CATEGORY ROW
+                      Row(
+                        children: [
+                          // Priority Box
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFFBEB),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: const Color(0xFFD97706),
+                                  width: 1.2,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "PRIORITY *",
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFFD97706),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  if (readOnlyFields)
+                                    Row(
+                                      children: [
+                                        Container(
+                                          width: 6,
+                                          height: 6,
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFD97706),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          _priority,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w800,
+                                            color: const Color(0xFFD97706),
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  else
+                                    DropdownButtonHideUnderline(
+                                      child: DropdownButton<String>(
+                                        value: _priority,
+                                        isExpanded: true,
+                                        isDense: true,
+                                        menuMaxHeight: 400,
+                                        borderRadius: BorderRadius.circular(12),
+                                        dropdownColor: Colors.white,
+                                        items:
+                                            [
+                                              'CRITICAL',
+                                              'HIGH',
+                                              'MEDIUM',
+                                              'LOW',
+                                            ].map((p) {
+                                              return DropdownMenuItem<String>(
+                                                value: p,
+                                                child: Row(
+                                                  children: [
+                                                    Container(
+                                                      width: 6,
+                                                      height: 6,
+                                                      decoration:
+                                                          const BoxDecoration(
+                                                            color: Color(
+                                                              0xFFD97706,
+                                                            ),
+                                                            shape:
+                                                                BoxShape.circle,
+                                                          ),
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Text(
+                                                      p,
+                                                      style: GoogleFonts.inter(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color: const Color(
+                                                          0xFFD97706,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            }).toList(),
+                                        onChanged: (val) {
+                                          if (val != null)
+                                            setState(() => _priority = val);
+                                        },
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+
+                          // Category Box
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: const Color(0xFF94A3B8),
+                                  width: 1.2,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "CATEGORY *",
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF94A3B8),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  if (readOnlyFields)
+                                    Text(
+                                      _category,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF1E293B),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    )
+                                  else
+                                    DropdownButtonHideUnderline(
+                                      child: DropdownButton<String>(
+                                        value: _category,
+                                        isExpanded: true,
+                                        isDense: true,
+                                        menuMaxHeight: 400,
+                                        borderRadius: BorderRadius.circular(12),
+                                        dropdownColor: Colors.white,
+                                        items:
+                                            [
+                                              'In Running Condition',
+                                              'In Breakdown Condition',
+                                              'Running at Risk',
+                                            ].map((c) {
+                                              return DropdownMenuItem<String>(
+                                                value: c,
+                                                child: Text(
+                                                  c,
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: const Color(
+                                                      0xFF1E293B,
+                                                    ),
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              );
+                                            }).toList(),
+                                        onChanged: (val) {
+                                          if (val != null)
+                                            setState(() => _category = val);
+                                        },
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
-                        val: _category,
-                        onChanged: readOnlyFields
-                            ? null
-                            : (val) => setState(() => _category = val!),
                       ),
                     ],
                   ),
                 );
 
-                final Widget workDetails = Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (currentStatus == 'IN_PROGRESS' ||
-                        currentStatus == 'COMPLETED' ||
-                        currentStatus == 'VERIFIED') ...[
-                      const SizedBox(height: 20),
+                final Widget workDetailsAndAssignmentSection = Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.engineering_outlined,
+                              color: Color(0xFF475569),
+                              size: 16,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Work Details & Assignment",
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1E293B),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // CAUSE OF ISSUE BOX
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 16,
-                        ),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.shade200),
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFFECACA)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              "Work Details",
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 16,
-                                color: navy,
-                              ),
-                            ),
-                            const Divider(height: 24),
-
-                            TicketFormFields.buildTextField(
-                              ctrl: _causeController,
-                              label: "Cause of Issue *",
-                              icon: Icons.report_problem_outlined,
-                              maxLines: 3,
-                              isReadOnly: !canEditWorkDetails,
-                              isRequired: canEditWorkDetails,
-                              textCapitalization: TextCapitalization.sentences,
-                            ),
-                            const SizedBox(height: 16),
-
-                            TicketFormFields.buildTextField(
-                              ctrl: _actionTakenController,
-                              label: "Action Taken *",
-                              icon: Icons.handyman,
-                              maxLines: 3,
-                              isReadOnly: !canEditWorkDetails,
-                              isRequired: canEditWorkDetails,
-                              textCapitalization: TextCapitalization.sentences,
-                            ),
-                            const SizedBox(height: 24),
-
-                            Text(
-                              "Tools Checked Out",
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: Colors.grey.shade800,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-
-                            if (canEditWorkDetails) ...[
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: _buildAutocomplete(
-                                      hint: "Search Required Tool",
-                                      icon: Icons.plumbing,
-                                      controller: _toolSearchController,
-                                      focusNode: _toolFocusNode,
-                                      options: _availableTools,
-                                      isDisabled: false,
-                                      onSelected: (val) {
-                                        setState(
-                                          () =>
-                                              _currentlySelectedToolToAdd = val,
-                                        );
-                                      },
-                                      onCleared: () {
-                                        setState(
-                                          () => _currentlySelectedToolToAdd =
-                                              null,
-                                        );
-                                      },
-                                    ),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.warning_amber_rounded,
+                                  color: Color(0xFFEF4444),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  "CAUSE OF ISSUE *",
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFFDC2626),
+                                    letterSpacing: 0.5,
                                   ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: navy,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: IconButton(
-                                      icon: const Icon(
-                                        Icons.add,
-                                        color: Colors.white,
-                                      ),
-                                      onPressed: _addToolToTicket,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                            ],
-
-                            if (_usedTools.isEmpty)
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            if (!canEditWorkDetails)
                               Text(
-                                "No tools logged.",
+                                _causeController.text.trim().isNotEmpty
+                                    ? _causeController.text
+                                    : "No cause specified.",
                                 style: GoogleFonts.inter(
                                   fontSize: 13,
-                                  color: Colors.grey.shade500,
-                                  fontStyle: FontStyle.italic,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1E293B),
                                 ),
-                              ),
-                            ..._usedTools.map((item) {
-                              final tool = item['tool'];
-                              final bool isReturned =
-                                  item['return_time'] != null;
-
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isReturned
-                                      ? Colors.green.shade50
-                                      : Colors.blueGrey.shade50,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      isReturned
-                                          ? Icons.check_circle
-                                          : Icons.handyman_outlined,
-                                      size: 16,
-                                      color: isReturned ? Colors.green : navy,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            tool['tool_name'],
-                                            style: GoogleFonts.inter(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 13,
-                                              color: isReturned
-                                                  ? Colors.green.shade800
-                                                  : navy,
-                                            ),
-                                          ),
-                                          if (isReturned)
-                                            Text(
-                                              "Returned",
-                                              style: GoogleFonts.inter(
-                                                fontSize: 10,
-                                                color: Colors.green.shade700,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    if (canEditWorkDetails)
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.delete,
-                                          color: Colors.redAccent,
-                                          size: 18,
-                                        ),
-                                        onPressed: () => _removeTool(item),
-                                      ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-
-                            const SizedBox(height: 24),
-
-                            Text(
-                              "Spares Used",
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: Colors.grey.shade800,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-
-                            if (canEditWorkDetails) ...[
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    flex: 3,
-                                    child: _buildAutocomplete(
-                                      hint: "Search Spare",
-                                      icon: Icons.build_circle,
-                                      controller: _spareSearchController,
-                                      focusNode: _spareFocusNode,
-                                      options: _availableSpares,
-                                      isDisabled: false,
-                                      onSelected: (val) {
-                                        setState(
-                                          () => _currentlySelectedSpareToAdd =
-                                              val,
-                                        );
-                                      },
-                                      onCleared: () {
-                                        setState(
-                                          () => _currentlySelectedSpareToAdd =
-                                              null,
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    flex: 1,
-                                    child: TextFormField(
-                                      controller: _spareQtyController,
-                                      keyboardType: TextInputType.number,
-                                      style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w600,
-                                        color: navy,
-                                      ),
-                                      decoration: InputDecoration(
-                                        labelText: "Qty",
-                                        filled: true,
-                                        fillColor: Colors.grey.shade50,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              vertical: 14,
-                                              horizontal: 12,
-                                            ),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                          borderSide: BorderSide(
-                                            color: Colors.grey.shade300,
-                                          ),
-                                        ),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                          borderSide: BorderSide(
-                                            color: Colors.grey.shade300,
-                                          ),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                          borderSide: const BorderSide(
-                                            color: golden,
-                                            width: 2,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: golden,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: IconButton(
-                                      icon: const Icon(
-                                        Icons.add,
-                                        color: Colors.white,
-                                      ),
-                                      onPressed: _addSpareToTicket,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (_currentlySelectedSpareToAdd != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                    top: 6.0,
-                                    left: 4,
-                                  ),
-                                  child: Text(
-                                    "Available in Stock: ${_getSpareCurrentQty(_currentlySelectedSpareToAdd!)}",
-                                    style: GoogleFonts.inter(
-                                      color: Colors.green.shade700,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              const SizedBox(height: 12),
-                            ],
-
-                            if (_usedSpares.isEmpty)
-                              Text(
-                                "No spares selected.",
+                              )
+                            else
+                              TextFormField(
+                                controller: _causeController,
+                                maxLines: 2,
                                 style: GoogleFonts.inter(
                                   fontSize: 13,
-                                  color: Colors.grey.shade500,
-                                  fontStyle: FontStyle.italic,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1E293B),
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: "Enter root cause...",
+                                  hintStyle: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    color: const Color(0xFF94A3B8),
+                                  ),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
                                 ),
                               ),
-                            ..._usedSpares.map((item) {
-                              final spare = item['spare'];
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.blueGrey.shade50,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.settings,
-                                      size: 16,
-                                      color: navy,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            spare['spare_name'],
-                                            style: GoogleFonts.inter(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 13,
-                                              color: navy,
-                                            ),
-                                          ),
-                                          if (spare['m_vendor']?['name'] !=
-                                              null)
-                                            Text(
-                                              "Vendor: ${spare['m_vendor']['name']}",
-                                              style: GoogleFonts.inter(
-                                                fontSize: 10,
-                                                color: Colors.grey.shade600,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    Text(
-                                      "Qty: ${item['qty']}",
-                                      style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w900,
-                                        color: navy,
-                                      ),
-                                    ),
-                                    if (canEditWorkDetails)
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.delete,
-                                          color: Colors.redAccent,
-                                          size: 18,
-                                        ),
-                                        onPressed: () => _removeSpare(item),
-                                      ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
                           ],
                         ),
                       ),
+                      const SizedBox(height: 10),
 
+                      // ACTION TAKEN BOX
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFBBF7D0)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.handyman_outlined,
+                                  color: Color(0xFF10B981),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  "ACTION TAKEN *",
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF059669),
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            if (!canEditWorkDetails)
+                              Text(
+                                _actionTakenController.text.trim().isNotEmpty
+                                    ? _actionTakenController.text
+                                    : "No action recorded yet.",
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1E293B),
+                                ),
+                              )
+                            else
+                              TextFormField(
+                                controller: _actionTakenController,
+                                maxLines: 2,
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1E293B),
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: "Enter corrective action taken...",
+                                  hintStyle: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    color: const Color(0xFF94A3B8),
+                                  ),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // TOOLS & SPARES 2-COLUMN ROW
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Tools Checked Out
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: const Color(0xFFE2E8F0),
+                                  style: BorderStyle.solid,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "TOOLS CHECKED OUT",
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF64748B),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  if (_usedTools.isEmpty)
+                                    Text(
+                                      "No tools logged.",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontStyle: FontStyle.italic,
+                                        color: const Color(0xFF94A3B8),
+                                      ),
+                                    )
+                                  else
+                                    ..._usedTools.map((item) {
+                                      final tool = item['tool'];
+                                      final bool isReturned =
+                                          item['return_time'] != null;
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 4,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              isReturned
+                                                  ? Icons.check_circle
+                                                  : Icons.handyman_outlined,
+                                              size: 13,
+                                              color: isReturned
+                                                  ? const Color(0xFF10B981)
+                                                  : navy,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                tool['tool_name'] ?? 'Tool',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: const Color(
+                                                    0xFF1E293B,
+                                                  ),
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            if (canEditWorkDetails)
+                                              GestureDetector(
+                                                onTap: () => _removeTool(item),
+                                                child: const Icon(
+                                                  Icons.close,
+                                                  size: 14,
+                                                  color: Colors.redAccent,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      );
+                                    }),
+                                  if (canEditWorkDetails) ...[
+                                    const SizedBox(height: 8),
+                                    InkWell(
+                                      onTap: _showAddToolDialog,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.add_circle_outline,
+                                            size: 13,
+                                            color: Color(0xFF2563EB),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            "Add Tool",
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: const Color(0xFF2563EB),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+
+                          // Spares Used
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: const Color(0xFFE2E8F0),
+                                  style: BorderStyle.solid,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "SPARES USED",
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF64748B),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  if (_usedSpares.isEmpty)
+                                    Text(
+                                      "No spares selected.",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontStyle: FontStyle.italic,
+                                        color: const Color(0xFF94A3B8),
+                                      ),
+                                    )
+                                  else
+                                    ..._usedSpares.map((item) {
+                                      final spare = item['spare'];
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 4,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.settings_outlined,
+                                              size: 13,
+                                              color: Color(0xFFD97706),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                "${spare['spare_name']} (x${item['qty']})",
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: const Color(
+                                                    0xFF1E293B,
+                                                  ),
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            if (canEditWorkDetails)
+                                              GestureDetector(
+                                                onTap: () => _removeSpare(item),
+                                                child: const Icon(
+                                                  Icons.close,
+                                                  size: 14,
+                                                  color: Colors.redAccent,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      );
+                                    }),
+                                  if (canEditWorkDetails) ...[
+                                    const SizedBox(height: 8),
+                                    InkWell(
+                                      onTap: _showAddSpareDialog,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.add_circle_outline,
+                                            size: 13,
+                                            color: Color(0xFFD97706),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            "Add Spare",
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: const Color(0xFFD97706),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // SIGN-OFF BANNER
+                      if (currentStatus == 'VERIFIED' ||
+                          _localTicket?['verified_by_id'] != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF1E3A8A),
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  "MK",
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Maintenance Lead",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF1E293B),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 1),
+                                    Text(
+                                      "Verified by Plant Supervisor",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        color: const Color(0xFF64748B),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDCFCE7),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.check,
+                                      size: 12,
+                                      color: Color(0xFF15803D),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "Sign-off Complete",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF15803D),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // WORKER ASSIGNMENT FOR ADMIN (IF EDITABLE)
+                      if (isEditing &&
+                          isAdmin &&
+                          (currentStatus == 'RAISED' ||
+                              currentStatus == 'ASSIGNED')) ...[
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: const Color(0xFF94A3B8),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF3C7),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: const Color(0xFFFDE68A),
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.engineering_outlined,
+                                  color: Color(0xFFD97706),
+                                  size: 18,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Builder(
+                                  builder: (context) {
+                                    final eligibleWorkers = _workers.where((w) {
+                                      final assignedKitchensList =
+                                          w['user_kitchens']
+                                              as List<dynamic>? ??
+                                          [];
+                                      return assignedKitchensList.any(
+                                        (uk) =>
+                                            uk['kitchen_id'].toString() ==
+                                            activeKitchenId,
+                                      );
+                                    }).toList();
+
+                                    String? currentWorkerId = _selectedWorker;
+                                    if (currentWorkerId != null &&
+                                        !eligibleWorkers.any(
+                                          (w) =>
+                                              w['id'].toString() ==
+                                              currentWorkerId,
+                                        )) {
+                                      currentWorkerId = null;
+                                    }
+
+                                    return DropdownButtonHideUnderline(
+                                      child: DropdownButtonFormField<String>(
+                                        value: currentWorkerId,
+                                        isExpanded: true,
+                                        isDense: true,
+                                        dropdownColor: Colors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                        menuMaxHeight: 400,
+                                        decoration: const InputDecoration(
+                                          border: InputBorder.none,
+                                          isDense: true,
+                                          contentPadding: EdgeInsets.zero,
+                                        ),
+                                        icon: const Icon(
+                                          Icons.unfold_more_rounded,
+                                          color: Color(0xFF94A3B8),
+                                          size: 18,
+                                        ),
+                                        hint: Text(
+                                          "Assign Worker",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
+                                            color: const Color(0xFF94A3B8),
+                                          ),
+                                        ),
+                                        items: eligibleWorkers.map((w) {
+                                          return DropdownMenuItem<String>(
+                                            value: w['id'].toString(),
+                                            child: Text(
+                                              w['display_name'].toString(),
+                                              style: GoogleFonts.inter(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w700,
+                                                color: const Color(0xFF1E293B),
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                        onChanged: isTicketClosed
+                                            ? null
+                                            : (val) {
+                                                setState(() {
+                                                  _selectedWorker = val;
+                                                });
+                                              },
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // RETURNED TOOLS CHECKBOXES
                       if (currentStatus == 'IN_PROGRESS' &&
                           isAssignedWorker &&
                           _usedTools.isNotEmpty) ...[
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 12),
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.orange.shade50,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: Colors.orange.shade300),
                           ),
                           child: CheckboxListTile(
@@ -2794,12 +4532,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                               style: GoogleFonts.inter(
                                 fontWeight: FontWeight.w700,
                                 color: Colors.orange.shade800,
+                                fontSize: 13,
                               ),
                             ),
                             subtitle: Text(
                               "Please return all checked-out tools to the inventory before marking complete.",
                               style: GoogleFonts.inter(
-                                fontSize: 12,
+                                fontSize: 11,
                                 color: Colors.orange.shade700,
                               ),
                             ),
@@ -2818,11 +4557,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                       if (currentStatus == 'COMPLETED' &&
                           isAdmin &&
                           _usedTools.isNotEmpty) ...[
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 12),
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: Colors.green.shade300),
                           ),
                           child: CheckboxListTile(
@@ -2831,12 +4570,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                               style: GoogleFonts.inter(
                                 fontWeight: FontWeight.w700,
                                 color: Colors.green.shade800,
+                                fontSize: 13,
                               ),
                             ),
                             subtitle: Text(
                               "Acknowledge that all checked-out tools have been safely returned.",
                               style: GoogleFonts.inter(
-                                fontSize: 12,
+                                fontSize: 11,
                                 color: Colors.green.shade700,
                               ),
                             ),
@@ -2851,139 +4591,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         ),
                       ],
                     ],
-                  ],
+                  ),
                 );
-
-                final Widget adminActions = Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
-                    if (isEditing &&
-                        isAdmin &&
-                        (currentStatus == 'RAISED' ||
-                            currentStatus == 'ASSIGNED')) ...[
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        child: Builder(
-                          builder: (context) {
-                            final eligibleWorkers = _workers.where((w) {
-                              final assignedKitchensList =
-                                  w['user_kitchens'] as List<dynamic>? ?? [];
-                              return assignedKitchensList.any(
-                                (uk) =>
-                                    uk['kitchen_id'].toString() ==
-                                    activeKitchenId,
-                              );
-                            }).toList();
-
-                            String? currentWorkerId = _selectedWorker;
-                            if (currentWorkerId != null &&
-                                !eligibleWorkers.any(
-                                  (w) => w['id'].toString() == currentWorkerId,
-                                )) {
-                              currentWorkerId = null;
-                            }
-
-                            return DropdownButtonFormField<String>(
-                              value: currentWorkerId,
-                              isExpanded: true,
-                              borderRadius: BorderRadius.circular(12),
-                              menuMaxHeight: 300,
-                              decoration: InputDecoration(
-                                labelText: "Assign Worker",
-                                labelStyle: GoogleFonts.inter(
-                                  color: Colors.grey.shade500,
-                                  fontSize: 13,
-                                ),
-                                prefixIcon: const Icon(
-                                  Icons.engineering_outlined,
-                                  color: Colors.grey,
-                                ),
-                                suffixIcon: const Icon(
-                                  Icons.keyboard_arrow_down,
-                                  color: navy,
-                                  size: 20,
-                                ),
-                                filled: true,
-                                fillColor: isTicketClosed
-                                    ? Colors.grey.shade100
-                                    : Colors.white,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 14,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade200,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade200,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(color: golden),
-                                ),
-                              ),
-                              items: eligibleWorkers
-                                  .map(
-                                    (w) => DropdownMenuItem<String>(
-                                      value: w['id'].toString(),
-                                      child: Text(
-                                        w['display_name'].toString(),
-                                        style: GoogleFonts.inter(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: navy,
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: isTicketClosed
-                                  ? null
-                                  : (val) {
-                                      setState(() {
-                                        _selectedWorker = val;
-                                      });
-                                    },
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                  ],
-                );
-
-                Widget buildSectionHeader(String title, IconData icon) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12.0, top: 4.0),
-                    child: Row(
-                      children: [
-                        Icon(icon, color: navy, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          title,
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: navy,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
 
                 final double screenWidth = MediaQuery.of(context).size.width;
 
@@ -2992,71 +4601,43 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Card 3: Images & Ticket Details
-                      Expanded(
-                        flex: 3,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            buildSectionHeader(
-                              "Ticket Information",
-                              Icons.description,
-                            ),
-                            ticketDetailsSection,
-                            const SizedBox(height: 100),
-                          ],
-                        ),
-                      ),
+                      // Column 1: Status & Timeline
                       if (isEditing) ...[
-                        const SizedBox(width: 20),
-                        // Card 2: Work Details & Assigned Worker
                         Expanded(
                           flex: 3,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              buildSectionHeader(
-                                "Work & Assignment",
-                                Icons.engineering,
-                              ),
-                              if (currentStatus == 'RAISED' &&
-                                  (!isEditing || !isAdmin))
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: Colors.grey.shade200,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    "No work has commenced on this ticket yet.",
-                                    style: GoogleFonts.inter(
-                                      color: Colors.grey.shade600,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ),
-                              workDetails,
-                              adminActions,
+                              statusAndTimelineSection,
                               const SizedBox(height: 100),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 20),
-                        // Card 1: Status, Activity Timeline, Raised On
+                        const SizedBox(width: 16),
+                      ],
+                      // Column 2: Visual Verification & Ticket Information
+                      Expanded(
+                        flex: 4,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            visualVerificationSection,
+                            const SizedBox(height: 14),
+                            ticketInformationSection,
+                            const SizedBox(height: 100),
+                          ],
+                        ),
+                      ),
+                      // Column 3: Work Details & Assignment
+                      if (isEditing &&
+                          (currentStatus != 'RAISED' || isAdmin)) ...[
+                        const SizedBox(width: 16),
                         Expanded(
                           flex: 3,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              buildSectionHeader(
-                                "Status & Timeline",
-                                Icons.history,
-                              ),
-                              statusAndTimelineSection,
+                              workDetailsAndAssignmentSection,
                               const SizedBox(height: 100),
                             ],
                           ),
@@ -3065,7 +4646,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                     ],
                   );
                 } else if (screenWidth >= 768) {
-                  // 2-Column Tablet/Medium Layout
+                  // 2-Column Tablet Layout
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -3074,34 +4655,25 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            buildSectionHeader(
-                              "Ticket Information",
-                              Icons.description,
-                            ),
-                            ticketDetailsSection,
+                            visualVerificationSection,
+                            const SizedBox(height: 14),
+                            ticketInformationSection,
                             const SizedBox(height: 100),
                           ],
                         ),
                       ),
                       if (isEditing) ...[
-                        const SizedBox(width: 20),
+                        const SizedBox(width: 16),
                         Expanded(
                           flex: 1,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              buildSectionHeader(
-                                "Status & Timeline",
-                                Icons.history,
-                              ),
                               statusAndTimelineSection,
-                              const SizedBox(height: 24),
-                              buildSectionHeader(
-                                "Work & Assignment",
-                                Icons.engineering,
-                              ),
-                              workDetails,
-                              adminActions,
+                              if (currentStatus != 'RAISED' || isAdmin) ...[
+                                const SizedBox(height: 14),
+                                workDetailsAndAssignmentSection,
+                              ],
                               const SizedBox(height: 100),
                             ],
                           ),
@@ -3110,28 +4682,24 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                     ],
                   );
                 } else {
-                  // 1-Column Mobile Layout
+                  // 1-Column Mobile Layout (Matches mockup sequence exactly)
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (isEditing) ...[
-                        buildSectionHeader("Status & Timeline", Icons.history),
                         statusAndTimelineSection,
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 14),
+                        visualVerificationSection,
+                        const SizedBox(height: 14),
+                      ] else ...[
+                        visualVerificationSection,
+                        const SizedBox(height: 14),
                       ],
-                      buildSectionHeader(
-                        "Ticket Information",
-                        Icons.description,
-                      ),
-                      ticketDetailsSection,
-                      if (isEditing) ...[
-                        const SizedBox(height: 20),
-                        buildSectionHeader(
-                          "Work & Assignment",
-                          Icons.engineering,
-                        ),
-                        workDetails,
-                        adminActions,
+                      ticketInformationSection,
+                      if (isEditing &&
+                          (currentStatus != 'RAISED' || isAdmin)) ...[
+                        const SizedBox(height: 14),
+                        workDetailsAndAssignmentSection,
                       ],
                       const SizedBox(height: 100),
                     ],

@@ -40,6 +40,9 @@ class AppRoutes {
   static const String toolsTackles = '/reports/tools-tackles';
   static const String masterEquipment = '/reports/master-equipment';
 
+  // Media & Video Playback
+  static const String videoPlayer = '/video-player';
+
   // Helper Path Generators
   static String ticketDetailPath(dynamic id) => '/tickets/$id';
 }

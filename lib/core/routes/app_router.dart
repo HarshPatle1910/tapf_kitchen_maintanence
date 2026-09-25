@@ -30,6 +30,7 @@ import '../../screens/reports/testing_equipment_screen.dart';
 import '../../screens/reports/tools_tackles_screen.dart';
 import '../../screens/ticket_detail_screen.dart';
 import '../../screens/ticket_verification_screen.dart';
+import '../../screens/video_player_screen.dart';
 import 'app_routes.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -217,6 +218,27 @@ GoRouter createAppRouter(AuthProvider authProvider) {
       GoRoute(
         path: AppRoutes.masterEquipment,
         builder: (context, state) => const EquipmentReportScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.videoPlayer,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final videoUrl = extra['videoUrl']?.toString() ??
+              state.uri.queryParameters['url'] ??
+              '';
+          final title = extra['title']?.toString() ??
+              state.uri.queryParameters['title'];
+          final subtitle = extra['subtitle']?.toString() ??
+              state.uri.queryParameters['subtitle'];
+          final fileName = extra['fileName']?.toString() ??
+              state.uri.queryParameters['fileName'];
+          return VideoPlayerScreen(
+            videoUrl: videoUrl,
+            title: title,
+            subtitle: subtitle,
+            fileName: fileName,
+          );
+        },
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
