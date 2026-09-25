@@ -6,9 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [2.2.5] - 2026-09-23
+## [2.2.5] - 2026-09-24
 
 ### Added
+- **Product Requirements Document (`PRD.md`)**:
+  - Authored comprehensive Product Requirements Document defining TAPF kitchen maintenance operations, system objectives, personas, RBAC matrix, architecture, module specifications, NFRs, ER diagram, and release roadmap.
 - **Desktop Web Layout for Ticket Verification Screen (`width > 800`)**:
   - Implemented desktop web interface for [`TicketVerificationScreen`](file:///Users/harsh/Documents/TAPF%20Projects/flutter%20projects/kitchen_maintanence/lib/screens/ticket_verification_screen.dart) matching the TAPF Web design system.
   - **75px Desktop Web Header**: Features official Akshaya Patra Foundation logo, interactive kitchen/facility dropdown selector, metric stat cards ("Total Pending", "Raised by Me", "Zone Sign-Off"), and asynchronous refresh controls.

@@ -3063,17 +3063,6 @@
       "source_location": "L16"
     },
     {
-      "id": "lib_screens_updates_app_update_wrapper_forceupdatescreen",
-      "label": "ForceUpdateScreen",
-      "_origin": "ast",
-      "community": 106,
-      "community_name": "app_update_wrapper.dart",
-      "file_type": "code",
-      "norm_label": "forceupdatescreen",
-      "source_file": "lib/screens/updates/app_update_wrapper.dart",
-      "source_location": "L84"
-    },
-    {
       "id": "lib_screens_updates_app_update_wrapper_initstate",
       "label": "initState",
       "_origin": "ast",
@@ -3767,6 +3756,17 @@
       "source_location": "L511"
     },
     {
+      "id": "lib_screens_master_zone_screen_zonemasterscreen",
+      "label": "ZoneMasterScreen",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "zone_screen.dart",
+      "file_type": "code",
+      "norm_label": "zonemasterscreen",
+      "source_file": "lib/screens/master/zone_screen.dart",
+      "source_location": "L9"
+    },
+    {
       "id": "lib_screens_master_zone_screen_zones",
       "label": "_zones",
       "_origin": "ast",
@@ -3855,279 +3855,48 @@
       "source_location": null
     },
     {
-      "id": "lib_widgets_ticket_ticket_form_fields",
-      "label": "ticket_form_fields.dart",
+      "id": "lib_screens_reports_boiler_log_screen_boilerloglistscreen",
+      "label": "BoilerLogListScreen",
       "_origin": "ast",
       "community": 112,
-      "community_name": "ticket_form_fields.dart",
+      "community_name": "_BoilerLogListScreenState",
       "file_type": "code",
-      "norm_label": "ticket_form_fields.dart",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": null
+      "norm_label": "boilerloglistscreen",
+      "source_file": "lib/screens/reports/boiler_log_screen.dart",
+      "source_location": "L20"
     },
     {
-      "id": "lib_widgets_ticket_ticket_form_fields_build",
-      "label": "build",
+      "id": "lib_screens_reports_boiler_log_screen_boilerloglistscreenstate",
+      "label": "_BoilerLogListScreenState",
       "_origin": "ast",
       "community": 112,
-      "community_name": "ticket_form_fields.dart",
+      "community_name": "_BoilerLogListScreenState",
       "file_type": "code",
-      "norm_label": "build",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L178"
+      "norm_label": "_boilerloglistscreenstate",
+      "source_file": "lib/screens/reports/boiler_log_screen.dart",
+      "source_location": "L27"
     },
     {
-      "id": "lib_widgets_ticket_ticket_form_fields_builddescriptionfield",
-      "label": "buildDescriptionField",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "builddescriptionfield",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L37"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_builddropdown",
-      "label": "buildDropdown",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "builddropdown",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L53"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_buildsleekautocomplete",
-      "label": "buildSleekAutocomplete",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "buildsleekautocomplete",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L76"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_buildtextfield",
-      "label": "buildTextField",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "buildtextfield",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L8"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_createstate",
-      "label": "createState",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "createstate",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L144"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_ctrl",
-      "label": "ctrl",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "ctrl",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L129"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_descriptionfieldwidget",
-      "label": "_DescriptionFieldWidget",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "_descriptionfieldwidget",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L128"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_descriptionfieldwidgetstate",
-      "label": "_DescriptionFieldWidgetState",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "_descriptionfieldwidgetstate",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L147"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_dispose",
-      "label": "dispose",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "dispose",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L162"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_golden",
-      "label": "golden",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "golden",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L6"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_icon",
-      "label": "icon",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "icon",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L131"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_initstate",
-      "label": "initState",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "initstate",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L155"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_isreadonly",
-      "label": "isReadOnly",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "isreadonly",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L132"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_isrequired",
-      "label": "isRequired",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "isrequired",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L133"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_label",
-      "label": "label",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "label",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L130"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_maxwords",
-      "label": "maxWords",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "maxwords",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L150"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_navy",
-      "label": "navy",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "navy",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L5"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_ticketformfields",
-      "label": "TicketFormFields",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "ticketformfields",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L4"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_updatewordcount",
-      "label": "_updateWordCount",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "_updatewordcount",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L167"
-    },
-    {
-      "id": "lib_widgets_ticket_ticket_form_fields_wordcount",
-      "label": "_wordCount",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "_wordcount",
-      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
-      "source_location": "L152"
-    },
-    {
-      "id": "static_const_int",
-      "label": "static const int",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "ticket_form_fields.dart",
-      "file_type": "code",
-      "norm_label": "static const int",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "lib_screens_master_equipment_master_screen_equipmentmasterscreen",
-      "label": "EquipmentMasterScreen",
+      "id": "lib_screens_reports_ro_checklist_screen_romastertemplatescreen",
+      "label": "ROMasterTemplateScreen",
       "_origin": "ast",
       "community": 113,
-      "community_name": "_EquipmentMasterScreenState",
+      "community_name": "_ROMasterTemplateScreenState",
       "file_type": "code",
-      "norm_label": "equipmentmasterscreen",
-      "source_file": "lib/screens/master/equipment_master_screen.dart",
-      "source_location": "L9"
+      "norm_label": "romastertemplatescreen",
+      "source_file": "lib/screens/reports/ro_checklist_screen.dart",
+      "source_location": "L765"
     },
     {
-      "id": "lib_screens_master_equipment_master_screen_equipmentmasterscreenstate",
-      "label": "_EquipmentMasterScreenState",
+      "id": "lib_screens_reports_ro_checklist_screen_romastertemplatescreenstate",
+      "label": "_ROMasterTemplateScreenState",
       "_origin": "ast",
       "community": 113,
-      "community_name": "_EquipmentMasterScreenState",
+      "community_name": "_ROMasterTemplateScreenState",
       "file_type": "code",
-      "norm_label": "_equipmentmasterscreenstate",
-      "source_file": "lib/screens/master/equipment_master_screen.dart",
-      "source_location": "L16"
+      "norm_label": "_romastertemplatescreenstate",
+      "source_file": "lib/screens/reports/ro_checklist_screen.dart",
+      "source_location": "L772"
     },
     {
       "id": "lib_screens_ticket_verification_screen_webverificationtablerow",
@@ -4150,28 +3919,6 @@
       "norm_label": "_webverificationtablerowstate",
       "source_file": "lib/screens/ticket_verification_screen.dart",
       "source_location": "L2653"
-    },
-    {
-      "id": "lib_screens_reports_ro_checklist_screen_rochecklistlistscreen",
-      "label": "ROChecklistListScreen",
-      "_origin": "ast",
-      "community": 115,
-      "community_name": "_ROChecklistListScreenState",
-      "file_type": "code",
-      "norm_label": "rochecklistlistscreen",
-      "source_file": "lib/screens/reports/ro_checklist_screen.dart",
-      "source_location": "L17"
-    },
-    {
-      "id": "lib_screens_reports_ro_checklist_screen_rochecklistlistscreenstate",
-      "label": "_ROChecklistListScreenState",
-      "_origin": "ast",
-      "community": 115,
-      "community_name": "_ROChecklistListScreenState",
-      "file_type": "code",
-      "norm_label": "_rochecklistlistscreenstate",
-      "source_file": "lib/screens/reports/ro_checklist_screen.dart",
-      "source_location": "L24"
     },
     {
       "id": "class",
@@ -5120,6 +4867,17 @@
       "source_location": null
     },
     {
+      "id": "icondata",
+      "label": "IconData",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "icondata",
+      "source_file": null,
+      "source_location": null
+    },
+    {
       "id": "lib_screens_reports_reports_screen",
       "label": "reports_screen.dart",
       "_origin": "ast",
@@ -5384,6 +5142,259 @@
       "source_location": "L14"
     },
     {
+      "id": "lib_widgets_ticket_ticket_form_fields",
+      "label": "ticket_form_fields.dart",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "ticket_form_fields.dart",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_build",
+      "label": "build",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "build",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L178"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_builddescriptionfield",
+      "label": "buildDescriptionField",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "builddescriptionfield",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L37"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_builddropdown",
+      "label": "buildDropdown",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "builddropdown",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L53"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_buildsleekautocomplete",
+      "label": "buildSleekAutocomplete",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "buildsleekautocomplete",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L76"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_buildtextfield",
+      "label": "buildTextField",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "buildtextfield",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L8"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_createstate",
+      "label": "createState",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "createstate",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L144"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_ctrl",
+      "label": "ctrl",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "ctrl",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L129"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_descriptionfieldwidget",
+      "label": "_DescriptionFieldWidget",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "_descriptionfieldwidget",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L128"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_descriptionfieldwidgetstate",
+      "label": "_DescriptionFieldWidgetState",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "_descriptionfieldwidgetstate",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L147"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_dispose",
+      "label": "dispose",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "dispose",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L162"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_golden",
+      "label": "golden",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "golden",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L6"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_icon",
+      "label": "icon",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "icon",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L131"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_initstate",
+      "label": "initState",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "initstate",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L155"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_isreadonly",
+      "label": "isReadOnly",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "isreadonly",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L132"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_isrequired",
+      "label": "isRequired",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "isrequired",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L133"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_label",
+      "label": "label",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "label",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L130"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_maxwords",
+      "label": "maxWords",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "maxwords",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L150"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_navy",
+      "label": "navy",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "navy",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L5"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_ticketformfields",
+      "label": "TicketFormFields",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "ticketformfields",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L4"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_updatewordcount",
+      "label": "_updateWordCount",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "_updatewordcount",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L167"
+    },
+    {
+      "id": "lib_widgets_ticket_ticket_form_fields_wordcount",
+      "label": "_wordCount",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "_wordcount",
+      "source_file": "lib/widgets/ticket/ticket_form_fields.dart",
+      "source_location": "L152"
+    },
+    {
+      "id": "static_const_int",
+      "label": "static const int",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "reports_screen.dart",
+      "file_type": "code",
+      "norm_label": "static const int",
+      "source_file": null,
+      "source_location": null
+    },
+    {
       "id": "lib_screens_reports_boiler_log_screen_build",
       "label": "build",
       "_origin": "ast",
@@ -5481,17 +5492,6 @@
       "norm_label": "_checklists",
       "source_file": "lib/screens/reports/pm_checklist_screen.dart",
       "source_location": "L27"
-    },
-    {
-      "id": "lib_screens_reports_pm_checklist_screen_createpmchecklistscreen",
-      "label": "CreatePMChecklistScreen",
-      "_origin": "ast",
-      "community": 15,
-      "community_name": "pm_checklist_screen.dart",
-      "file_type": "code",
-      "norm_label": "createpmchecklistscreen",
-      "source_file": "lib/screens/reports/pm_checklist_screen.dart",
-      "source_location": "L760"
     },
     {
       "id": "lib_screens_reports_pm_checklist_screen_createstate",
@@ -8090,6 +8090,171 @@
       "source_location": null
     },
     {
+      "id": "core_routes_app_router_dart",
+      "label": "core/routes/app_router.dart",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "area_screen.dart",
+      "file_type": "code",
+      "norm_label": "core/routes/app_router.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "firebase_options_dart",
+      "label": "firebase_options.dart",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "area_screen.dart",
+      "file_type": "code",
+      "norm_label": "firebase_options.dart",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "gorouter",
+      "label": "GoRouter",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "area_screen.dart",
+      "file_type": "code",
+      "norm_label": "gorouter",
+      "source_file": null,
+      "source_location": null
+    },
+    {
+      "id": "lib_main",
+      "label": "main.dart",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "area_screen.dart",
+      "file_type": "code",
+      "norm_label": "main.dart",
+      "source_file": "lib/main.dart",
+      "source_location": null
+    },
+    {
+      "id": "lib_main_build",
+      "label": "build",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "area_screen.dart",
+      "file_type": "code",
+      "norm_label": "build",
+      "source_file": "lib/main.dart",
+      "source_location": "L63"
+    },
+    {
+      "id": "lib_main_createstate",
+      "label": "createState",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "area_screen.dart",
+      "file_type": "code",
+      "norm_label": "createstate",
+      "source_file": "lib/main.dart",
+      "source_location": "L49"
+    },
+    {
+      "id": "lib_main_initialize",
+      "label": "initialize",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "area_screen.dart",
+      "file_type": "code",
+      "norm_label": "initialize",
+      "source_file": "lib/main.dart",
+      "source_location": "L25"
+    },
+    {
+      "id": "lib_main_initializeapp",
+      "label": "initializeApp",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "area_screen.dart",
+      "file_type": "code",
+      "norm_label": "initializeapp",
+      "source_file": "lib/main.dart",
+      "source_location": "L30"
+    },
+    {
+      "id": "lib_main_initstate",
+      "label": "initState",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "area_screen.dart",
+      "file_type": "code",
+      "norm_label": "initstate",
+      "source_file": "lib/main.dart",
+      "source_location": "L56"
+    },
+    {
+      "id": "lib_main_load",
+      "label": "load",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "area_screen.dart",
+      "file_type": "code",
+      "norm_label": "load",
+      "source_file": "lib/main.dart",
+      "source_location": "L23"
+    },
+    {
+      "id": "lib_main_main",
+      "label": "main",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "area_screen.dart",
+      "file_type": "code",
+      "norm_label": "main",
+      "source_file": "lib/main.dart",
+      "source_location": "L20"
+    },
+    {
+      "id": "lib_main_myapp",
+      "label": "MyApp",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "area_screen.dart",
+      "file_type": "code",
+      "norm_label": "myapp",
+      "source_file": "lib/main.dart",
+      "source_location": "L45"
+    },
+    {
+      "id": "lib_main_myappstate",
+      "label": "_MyAppState",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "area_screen.dart",
+      "file_type": "code",
+      "norm_label": "_myappstate",
+      "source_file": "lib/main.dart",
+      "source_location": "L52"
+    },
+    {
+      "id": "lib_main_navigatorkey",
+      "label": "navigatorKey",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "area_screen.dart",
+      "file_type": "code",
+      "norm_label": "navigatorkey",
+      "source_file": "lib/main.dart",
+      "source_location": "L18"
+    },
+    {
+      "id": "lib_main_router",
+      "label": "_router",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "area_screen.dart",
+      "file_type": "code",
+      "norm_label": "_router",
+      "source_file": "lib/main.dart",
+      "source_location": "L53"
+    },
+    {
       "id": "lib_screens_master_area_screen",
       "label": "area_screen.dart",
       "_origin": "ast",
@@ -8376,180 +8541,37 @@
       "source_location": "L29"
     },
     {
-      "id": "formstate",
-      "label": "FormState",
+      "id": "package_flutter_web_plugins_url_strategy_dart",
+      "label": "package:flutter_web_plugins/url_strategy.dart",
       "_origin": "ast",
-      "community": 22,
-      "community_name": "tools_screen.dart",
+      "community": 21,
+      "community_name": "area_screen.dart",
       "file_type": "code",
-      "norm_label": "formstate",
+      "norm_label": "package:flutter_web_plugins/url_strategy.dart",
       "source_file": null,
       "source_location": null
     },
     {
-      "id": "lib_screens_master_kitchen_screen",
-      "label": "kitchen_screen.dart",
+      "id": "providers_ticket_provider_dart",
+      "label": "../providers/ticket_provider.dart",
       "_origin": "ast",
-      "community": 22,
-      "community_name": "tools_screen.dart",
+      "community": 21,
+      "community_name": "area_screen.dart",
       "file_type": "code",
-      "norm_label": "kitchen_screen.dart",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "norm_label": "../providers/ticket_provider.dart",
+      "source_file": null,
       "source_location": null
     },
     {
-      "id": "lib_screens_master_kitchen_screen_background",
-      "label": "background",
+      "id": "screens_updates_app_update_wrapper_dart",
+      "label": "screens/updates/app_update_wrapper.dart",
       "_origin": "ast",
-      "community": 22,
-      "community_name": "tools_screen.dart",
+      "community": 21,
+      "community_name": "area_screen.dart",
       "file_type": "code",
-      "norm_label": "background",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L15"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_build",
-      "label": "build",
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "tools_screen.dart",
-      "file_type": "code",
-      "norm_label": "build",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L124"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_createstate",
-      "label": "createState",
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "tools_screen.dart",
-      "file_type": "code",
-      "norm_label": "createstate",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L9"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_fetchkitchens",
-      "label": "_fetchKitchens",
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "tools_screen.dart",
-      "file_type": "code",
-      "norm_label": "_fetchkitchens",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L27"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_golden",
-      "label": "golden",
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "tools_screen.dart",
-      "file_type": "code",
-      "norm_label": "golden",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L14"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_initstate",
-      "label": "initState",
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "tools_screen.dart",
-      "file_type": "code",
-      "norm_label": "initstate",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L22"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_isloading",
-      "label": "_isLoading",
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "tools_screen.dart",
-      "file_type": "code",
-      "norm_label": "_isloading",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L19"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_kitchenmasterscreen",
-      "label": "KitchenMasterScreen",
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "tools_screen.dart",
-      "file_type": "code",
-      "norm_label": "kitchenmasterscreen",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L5"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_kitchenmasterscreenstate",
-      "label": "_KitchenMasterScreenState",
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "tools_screen.dart",
-      "file_type": "code",
-      "norm_label": "_kitchenmasterscreenstate",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L12"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_kitchens",
-      "label": "_kitchens",
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "tools_screen.dart",
-      "file_type": "code",
-      "norm_label": "_kitchens",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L18"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_navy",
-      "label": "navy",
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "tools_screen.dart",
-      "file_type": "code",
-      "norm_label": "navy",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L13"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_showkitchenform",
-      "label": "_showKitchenForm",
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "tools_screen.dart",
-      "file_type": "code",
-      "norm_label": "_showkitchenform",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L39"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_supabase",
-      "label": "_supabase",
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "tools_screen.dart",
-      "file_type": "code",
-      "norm_label": "_supabase",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L17"
-    },
-    {
-      "id": "lib_screens_master_kitchen_screen_togglestatus",
-      "label": "_toggleStatus",
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "tools_screen.dart",
-      "file_type": "code",
-      "norm_label": "_togglestatus",
-      "source_file": "lib/screens/master/kitchen_screen.dart",
-      "source_location": "L114"
+      "norm_label": "screens/updates/app_update_wrapper.dart",
+      "source_file": null,
+      "source_location": null
     },
     {
       "id": "lib_screens_master_tools_screen",
@@ -8827,171 +8849,6 @@
       "source_location": "L8"
     },
     {
-      "id": "core_routes_app_router_dart",
-      "label": "core/routes/app_router.dart",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "core/routes/app_router.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "firebase_options_dart",
-      "label": "firebase_options.dart",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "firebase_options.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "gorouter",
-      "label": "GoRouter",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "gorouter",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "lib_main",
-      "label": "main.dart",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "main.dart",
-      "source_file": "lib/main.dart",
-      "source_location": null
-    },
-    {
-      "id": "lib_main_build",
-      "label": "build",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "build",
-      "source_file": "lib/main.dart",
-      "source_location": "L63"
-    },
-    {
-      "id": "lib_main_createstate",
-      "label": "createState",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "createstate",
-      "source_file": "lib/main.dart",
-      "source_location": "L49"
-    },
-    {
-      "id": "lib_main_initialize",
-      "label": "initialize",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "initialize",
-      "source_file": "lib/main.dart",
-      "source_location": "L25"
-    },
-    {
-      "id": "lib_main_initializeapp",
-      "label": "initializeApp",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "initializeapp",
-      "source_file": "lib/main.dart",
-      "source_location": "L30"
-    },
-    {
-      "id": "lib_main_initstate",
-      "label": "initState",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "initstate",
-      "source_file": "lib/main.dart",
-      "source_location": "L56"
-    },
-    {
-      "id": "lib_main_load",
-      "label": "load",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "load",
-      "source_file": "lib/main.dart",
-      "source_location": "L23"
-    },
-    {
-      "id": "lib_main_main",
-      "label": "main",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "main",
-      "source_file": "lib/main.dart",
-      "source_location": "L20"
-    },
-    {
-      "id": "lib_main_myapp",
-      "label": "MyApp",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "myapp",
-      "source_file": "lib/main.dart",
-      "source_location": "L45"
-    },
-    {
-      "id": "lib_main_myappstate",
-      "label": "_MyAppState",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "_myappstate",
-      "source_file": "lib/main.dart",
-      "source_location": "L52"
-    },
-    {
-      "id": "lib_main_navigatorkey",
-      "label": "navigatorKey",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "navigatorkey",
-      "source_file": "lib/main.dart",
-      "source_location": "L18"
-    },
-    {
-      "id": "lib_main_router",
-      "label": "_router",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "_router",
-      "source_file": "lib/main.dart",
-      "source_location": "L53"
-    },
-    {
       "id": "lib_screens_master_vendor_screen",
       "label": "vendor_screen.dart",
       "_origin": "ast",
@@ -9265,39 +9122,6 @@
       "norm_label": "_vendors",
       "source_file": "lib/screens/master/vendor_screen.dart",
       "source_location": "L21"
-    },
-    {
-      "id": "package_flutter_web_plugins_url_strategy_dart",
-      "label": "package:flutter_web_plugins/url_strategy.dart",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "package:flutter_web_plugins/url_strategy.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "providers_ticket_provider_dart",
-      "label": "../providers/ticket_provider.dart",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "../providers/ticket_provider.dart",
-      "source_file": null,
-      "source_location": null
-    },
-    {
-      "id": "screens_updates_app_update_wrapper_dart",
-      "label": "screens/updates/app_update_wrapper.dart",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "vendor_screen.dart",
-      "file_type": "code",
-      "norm_label": "screens/updates/app_update_wrapper.dart",
-      "source_file": null,
-      "source_location": null
     },
     {
       "id": "lib_screens_master_user_management",
@@ -11484,48 +11308,26 @@
       "source_location": "L271"
     },
     {
-      "id": "lib_screens_master_zone_screen_zonemasterscreen",
-      "label": "ZoneMasterScreen",
+      "id": "lib_screens_master_equipment_master_screen_equipmentmasterscreen",
+      "label": "EquipmentMasterScreen",
       "_origin": "ast",
       "community": 30,
       "community_name": "StatefulWidget",
       "file_type": "code",
-      "norm_label": "zonemasterscreen",
-      "source_file": "lib/screens/master/zone_screen.dart",
+      "norm_label": "equipmentmasterscreen",
+      "source_file": "lib/screens/master/equipment_master_screen.dart",
       "source_location": "L9"
     },
     {
-      "id": "lib_screens_master_zone_screen_zonemasterscreenstate",
-      "label": "_ZoneMasterScreenState",
+      "id": "lib_screens_master_equipment_master_screen_equipmentmasterscreenstate",
+      "label": "_EquipmentMasterScreenState",
       "_origin": "ast",
       "community": 30,
       "community_name": "StatefulWidget",
       "file_type": "code",
-      "norm_label": "_zonemasterscreenstate",
-      "source_file": "lib/screens/master/zone_screen.dart",
+      "norm_label": "_equipmentmasterscreenstate",
+      "source_file": "lib/screens/master/equipment_master_screen.dart",
       "source_location": "L16"
-    },
-    {
-      "id": "lib_screens_reports_boiler_log_screen_boilerloglistscreen",
-      "label": "BoilerLogListScreen",
-      "_origin": "ast",
-      "community": 30,
-      "community_name": "StatefulWidget",
-      "file_type": "code",
-      "norm_label": "boilerloglistscreen",
-      "source_file": "lib/screens/reports/boiler_log_screen.dart",
-      "source_location": "L20"
-    },
-    {
-      "id": "lib_screens_reports_boiler_log_screen_boilerloglistscreenstate",
-      "label": "_BoilerLogListScreenState",
-      "_origin": "ast",
-      "community": 30,
-      "community_name": "StatefulWidget",
-      "file_type": "code",
-      "norm_label": "_boilerloglistscreenstate",
-      "source_file": "lib/screens/reports/boiler_log_screen.dart",
-      "source_location": "L27"
     },
     {
       "id": "lib_screens_reports_dg_log_screen_dgloglistscreen",
@@ -11594,6 +11396,28 @@
       "source_location": "L24"
     },
     {
+      "id": "lib_screens_reports_pm_checklist_screen_createpmchecklistscreen",
+      "label": "CreatePMChecklistScreen",
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "StatefulWidget",
+      "file_type": "code",
+      "norm_label": "createpmchecklistscreen",
+      "source_file": "lib/screens/reports/pm_checklist_screen.dart",
+      "source_location": "L760"
+    },
+    {
+      "id": "lib_screens_reports_pm_checklist_screen_createpmchecklistscreenstate",
+      "label": "_CreatePMChecklistScreenState",
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "StatefulWidget",
+      "file_type": "code",
+      "norm_label": "_createpmchecklistscreenstate",
+      "source_file": "lib/screens/reports/pm_checklist_screen.dart",
+      "source_location": "L769"
+    },
+    {
       "id": "lib_screens_reports_pm_checklist_screen_pmchecklistscreen",
       "label": "PMChecklistScreen",
       "_origin": "ast",
@@ -11638,26 +11462,26 @@
       "source_location": "L26"
     },
     {
-      "id": "lib_screens_reports_ro_checklist_screen_romastertemplatescreen",
-      "label": "ROMasterTemplateScreen",
+      "id": "lib_screens_reports_ro_checklist_screen_rochecklistlistscreen",
+      "label": "ROChecklistListScreen",
       "_origin": "ast",
       "community": 30,
       "community_name": "StatefulWidget",
       "file_type": "code",
-      "norm_label": "romastertemplatescreen",
+      "norm_label": "rochecklistlistscreen",
       "source_file": "lib/screens/reports/ro_checklist_screen.dart",
-      "source_location": "L765"
+      "source_location": "L17"
     },
     {
-      "id": "lib_screens_reports_ro_checklist_screen_romastertemplatescreenstate",
-      "label": "_ROMasterTemplateScreenState",
+      "id": "lib_screens_reports_ro_checklist_screen_rochecklistlistscreenstate",
+      "label": "_ROChecklistListScreenState",
       "_origin": "ast",
       "community": 30,
       "community_name": "StatefulWidget",
       "file_type": "code",
-      "norm_label": "_romastertemplatescreenstate",
+      "norm_label": "_rochecklistlistscreenstate",
       "source_file": "lib/screens/reports/ro_checklist_screen.dart",
-      "source_location": "L772"
+      "source_location": "L24"
     },
     {
       "id": "lib_screens_reports_testing_equipment_screen_testingequipmentscreen",
@@ -14360,6 +14184,17 @@
       "source_location": "L15"
     },
     {
+      "id": "lib_screens_master_zone_screen_zonemasterscreenstate",
+      "label": "_ZoneMasterScreenState",
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "State",
+      "file_type": "code",
+      "norm_label": "_zonemasterscreenstate",
+      "source_file": "lib/screens/master/zone_screen.dart",
+      "source_location": "L16"
+    },
+    {
       "id": "lib_screens_more_screen_morescreenstate",
       "label": "_MoreScreenState",
       "_origin": "ast",
@@ -14413,17 +14248,6 @@
       "norm_label": "_equipmentreportscreenstate",
       "source_file": "lib/screens/reports/master_equipment_report_screen.dart",
       "source_location": "L21"
-    },
-    {
-      "id": "lib_screens_reports_pm_checklist_screen_createpmchecklistscreenstate",
-      "label": "_CreatePMChecklistScreenState",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "State",
-      "file_type": "code",
-      "norm_label": "_createpmchecklistscreenstate",
-      "source_file": "lib/screens/reports/pm_checklist_screen.dart",
-      "source_location": "L769"
     },
     {
       "id": "lib_screens_reports_reports_screen_reportsscreenstate",
@@ -15082,17 +14906,6 @@
       "source_location": null
     },
     {
-      "id": "color",
-      "label": "Color",
-      "_origin": "ast",
-      "community": 44,
-      "community_name": "ticket_card.dart",
-      "file_type": "code",
-      "norm_label": "color",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "lib_widgets_ticket_card",
       "label": "ticket_card.dart",
       "_origin": "ast",
@@ -15338,6 +15151,17 @@
       "norm_label": "utils.cpp",
       "source_file": "windows/runner/utils.cpp",
       "source_location": "L1"
+    },
+    {
+      "id": "color",
+      "label": "Color",
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "web_ticket_card.dart",
+      "file_type": "code",
+      "norm_label": "color",
+      "source_file": null,
+      "source_location": null
     },
     {
       "id": "core_routes_app_routes_dart",
@@ -16420,15 +16244,15 @@
       "source_location": "L1288"
     },
     {
-      "id": "lib_widgets_responsive_sidebar_responsivesidebar",
-      "label": "ResponsiveSidebar",
+      "id": "lib_screens_updates_app_update_wrapper_forceupdatescreen",
+      "label": "ForceUpdateScreen",
       "_origin": "ast",
       "community": 56,
       "community_name": "StatelessWidget",
       "file_type": "code",
-      "norm_label": "responsivesidebar",
-      "source_file": "lib/widgets/responsive_sidebar.dart",
-      "source_location": "L5"
+      "norm_label": "forceupdatescreen",
+      "source_file": "lib/screens/updates/app_update_wrapper.dart",
+      "source_location": "L84"
     },
     {
       "id": "lib_widgets_ticket_card_ticketcard",
@@ -17664,7 +17488,7 @@
       "node_kind": "heading",
       "norm_label": "[2.0.0] - 2026-05-10",
       "source_file": "changes.md",
-      "source_location": "L165"
+      "source_location": "L163"
     },
     {
       "id": "changes_2_1_2_2026_07_15",
@@ -17676,7 +17500,7 @@
       "node_kind": "heading",
       "norm_label": "[2.1.2] - 2026-07-15",
       "source_file": "changes.md",
-      "source_location": "L135"
+      "source_location": "L133"
     },
     {
       "id": "changes_2_2_0_2026_07_25",
@@ -17688,7 +17512,7 @@
       "node_kind": "heading",
       "norm_label": "[2.2.0] - 2026-07-25",
       "source_file": "changes.md",
-      "source_location": "L114"
+      "source_location": "L112"
     },
     {
       "id": "changes_2_2_1_2026_07_28",
@@ -17700,7 +17524,7 @@
       "node_kind": "heading",
       "norm_label": "[2.2.1] - 2026-07-28",
       "source_file": "changes.md",
-      "source_location": "L105"
+      "source_location": "L103"
     },
     {
       "id": "changes_2_2_3_9_2026_09_23",
@@ -17712,7 +17536,7 @@
       "node_kind": "heading",
       "norm_label": "[2.2.3+9] - 2026-09-23",
       "source_file": "changes.md",
-      "source_location": "L59"
+      "source_location": "L57"
     },
     {
       "id": "changes_2_2_4_2026_09_23",
@@ -17724,17 +17548,17 @@
       "node_kind": "heading",
       "norm_label": "[2.2.4] - 2026-09-23",
       "source_file": "changes.md",
-      "source_location": "L32"
+      "source_location": "L30"
     },
     {
-      "id": "changes_2_2_5_2026_09_24",
-      "label": "[2.2.5] - 2026-09-24",
+      "id": "changes_2_2_5_2026_09_23",
+      "label": "[2.2.5] - 2026-09-23",
       "_origin": "ast",
       "community": 65,
       "community_name": "Changelog & Project Changes - Kitchen Maintenance",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "[2.2.5] - 2026-09-24",
+      "norm_label": "[2.2.5] - 2026-09-23",
       "source_file": "changes.md",
       "source_location": "L9"
     },
@@ -17751,7 +17575,7 @@
       "source_location": "L11"
     },
     {
-      "id": "changes_added_116",
+      "id": "changes_added_114",
       "label": "Added",
       "_origin": "ast",
       "community": 65,
@@ -17760,10 +17584,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "changes.md",
-      "source_location": "L116"
+      "source_location": "L114"
     },
     {
-      "id": "changes_added_137",
+      "id": "changes_added_135",
       "label": "Added",
       "_origin": "ast",
       "community": 65,
@@ -17772,10 +17596,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "changes.md",
-      "source_location": "L137"
+      "source_location": "L135"
     },
     {
-      "id": "changes_added_167",
+      "id": "changes_added_165",
       "label": "Added",
       "_origin": "ast",
       "community": 65,
@@ -17784,10 +17608,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "changes.md",
-      "source_location": "L167"
+      "source_location": "L165"
     },
     {
-      "id": "changes_added_34",
+      "id": "changes_added_32",
       "label": "Added",
       "_origin": "ast",
       "community": 65,
@@ -17796,10 +17620,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "changes.md",
-      "source_location": "L34"
+      "source_location": "L32"
     },
     {
-      "id": "changes_added_61",
+      "id": "changes_added_59",
       "label": "Added",
       "_origin": "ast",
       "community": 65,
@@ -17808,7 +17632,7 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "changes.md",
-      "source_location": "L61"
+      "source_location": "L59"
     },
     {
       "id": "changes_changed",
@@ -17820,10 +17644,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "changes.md",
-      "source_location": "L47"
+      "source_location": "L45"
     },
     {
-      "id": "changes_changed_107",
+      "id": "changes_changed_105",
       "label": "Changed",
       "_origin": "ast",
       "community": 65,
@@ -17832,10 +17656,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "changes.md",
-      "source_location": "L107"
+      "source_location": "L105"
     },
     {
-      "id": "changes_changed_154",
+      "id": "changes_changed_152",
       "label": "Changed",
       "_origin": "ast",
       "community": 65,
@@ -17844,10 +17668,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "changes.md",
-      "source_location": "L154"
+      "source_location": "L152"
     },
     {
-      "id": "changes_changed_89",
+      "id": "changes_changed_87",
       "label": "Changed",
       "_origin": "ast",
       "community": 65,
@@ -17856,7 +17680,7 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "changes.md",
-      "source_location": "L89"
+      "source_location": "L87"
     },
     {
       "id": "changes_changelog_project_changes_kitchen_maintenance",
@@ -17880,10 +17704,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "changes.md",
-      "source_location": "L97"
+      "source_location": "L95"
     },
     {
-      "id": "changes_fixed_158",
+      "id": "changes_fixed_156",
       "label": "Fixed",
       "_origin": "ast",
       "community": 65,
@@ -17892,7 +17716,7 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "changes.md",
-      "source_location": "L158"
+      "source_location": "L156"
     },
     {
       "id": "changes_security",
@@ -17904,7 +17728,7 @@
       "node_kind": "heading",
       "norm_label": "security",
       "source_file": "changes.md",
-      "source_location": "L130"
+      "source_location": "L128"
     },
     {
       "id": "flutterpluginregistry",
@@ -18744,22 +18568,11 @@
       "source_location": "L15"
     },
     {
-      "id": "icondata",
-      "label": "IconData",
-      "_origin": "ast",
-      "community": 75,
-      "community_name": "List",
-      "file_type": "code",
-      "norm_label": "icondata",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "lib_widgets_responsive_sidebar",
       "label": "responsive_sidebar.dart",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "responsive_sidebar.dart",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -18770,7 +18583,7 @@
       "label": "activeIcon",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "activeicon",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -18781,7 +18594,7 @@
       "label": "build",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "build",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -18792,7 +18605,7 @@
       "label": "icon",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "icon",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -18803,7 +18616,7 @@
       "label": "isFixed",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "isfixed",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -18814,7 +18627,7 @@
       "label": "items",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "items",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -18825,7 +18638,7 @@
       "label": "label",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "label",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -18836,7 +18649,7 @@
       "label": "navy",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "navy",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -18847,18 +18660,29 @@
       "label": "onToggleFixed",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "ontogglefixed",
       "source_file": "lib/widgets/responsive_sidebar.dart",
       "source_location": "L9"
     },
     {
+      "id": "lib_widgets_responsive_sidebar_responsivesidebar",
+      "label": "ResponsiveSidebar",
+      "_origin": "ast",
+      "community": 75,
+      "community_name": "responsive_sidebar.dart",
+      "file_type": "code",
+      "norm_label": "responsivesidebar",
+      "source_file": "lib/widgets/responsive_sidebar.dart",
+      "source_location": "L5"
+    },
+    {
       "id": "lib_widgets_responsive_sidebar_selectedindex",
       "label": "selectedIndex",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "selectedindex",
       "source_file": "lib/widgets/responsive_sidebar.dart",
@@ -18869,29 +18693,18 @@
       "label": "SidebarItem",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "sidebaritem",
       "source_file": "lib/widgets/responsive_sidebar.dart",
       "source_location": "L106"
     },
     {
-      "id": "list",
-      "label": "List",
-      "_origin": "ast",
-      "community": 75,
-      "community_name": "List",
-      "file_type": "code",
-      "norm_label": "list",
-      "source_file": null,
-      "source_location": null
-    },
-    {
       "id": "voidcallback",
       "label": "VoidCallback?",
       "_origin": "ast",
       "community": 75,
-      "community_name": "List",
+      "community_name": "responsive_sidebar.dart",
       "file_type": "code",
       "norm_label": "voidcallback?",
       "source_file": null,
@@ -18981,400 +18794,180 @@
       "source_location": "L6"
     },
     {
-      "id": "prd",
-      "label": "PRD.md",
+      "id": "lib_screens_master_kitchen_screen",
+      "label": "kitchen_screen.dart",
       "_origin": "ast",
       "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "page",
-      "norm_label": "prd.md",
-      "source_file": "PRD.md",
-      "source_location": "L1"
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "kitchen_screen.dart",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": null
     },
     {
-      "id": "prd_1_1_vision_statement",
-      "label": "1.1 Vision Statement",
+      "id": "lib_screens_master_kitchen_screen_background",
+      "label": "background",
       "_origin": "ast",
       "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "1.1 vision statement",
-      "source_file": "PRD.md",
-      "source_location": "L29"
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "background",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L15"
     },
     {
-      "id": "prd_1_2_core_business_objectives_kpis_okrs",
-      "label": "1.2 Core Business Objectives (KPIs & OKRs)",
+      "id": "lib_screens_master_kitchen_screen_build",
+      "label": "build",
       "_origin": "ast",
       "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "1.2 core business objectives (kpis & okrs)",
-      "source_file": "PRD.md",
-      "source_location": "L32"
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "build",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L124"
     },
     {
-      "id": "prd_1_product_vision_strategic_objectives",
-      "label": "1. Product Vision & Strategic Objectives",
+      "id": "lib_screens_master_kitchen_screen_createstate",
+      "label": "createState",
       "_origin": "ast",
       "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "1. product vision & strategic objectives",
-      "source_file": "PRD.md",
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "createstate",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L9"
+    },
+    {
+      "id": "lib_screens_master_kitchen_screen_fetchkitchens",
+      "label": "_fetchKitchens",
+      "_origin": "ast",
+      "community": 79,
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "_fetchkitchens",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
       "source_location": "L27"
     },
     {
-      "id": "prd_2_1_persona_specifications",
-      "label": "2.1 Persona Specifications",
+      "id": "lib_screens_master_kitchen_screen_golden",
+      "label": "golden",
       "_origin": "ast",
       "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "2.1 persona specifications",
-      "source_file": "PRD.md",
-      "source_location": "L66"
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "golden",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L14"
     },
     {
-      "id": "prd_2_2_granular_permissions_matrix",
-      "label": "2.2 Granular Permissions Matrix",
+      "id": "lib_screens_master_kitchen_screen_initstate",
+      "label": "initState",
       "_origin": "ast",
       "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "2.2 granular permissions matrix",
-      "source_file": "PRD.md",
-      "source_location": "L85"
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "initstate",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L22"
     },
     {
-      "id": "prd_2_user_personas_role_based_access_control_rbac",
-      "label": "2. User Personas & Role-Based Access Control (RBAC)",
+      "id": "lib_screens_master_kitchen_screen_isloading",
+      "label": "_isLoading",
       "_origin": "ast",
       "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "2. user personas & role-based access control (rbac)",
-      "source_file": "PRD.md",
-      "source_location": "L43"
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "_isloading",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L19"
     },
     {
-      "id": "prd_3_1_technology_selection_breakdown",
-      "label": "3.1 Technology Selection Breakdown",
+      "id": "lib_screens_master_kitchen_screen_kitchenmasterscreen",
+      "label": "KitchenMasterScreen",
       "_origin": "ast",
       "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "3.1 technology selection breakdown",
-      "source_file": "PRD.md",
-      "source_location": "L142"
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "kitchenmasterscreen",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L5"
     },
     {
-      "id": "prd_3_system_architecture_technology_stack",
-      "label": "3. System Architecture & Technology Stack",
+      "id": "lib_screens_master_kitchen_screen_kitchenmasterscreenstate",
+      "label": "_KitchenMasterScreenState",
       "_origin": "ast",
       "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "3. system architecture & technology stack",
-      "source_file": "PRD.md",
-      "source_location": "L103"
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "_kitchenmasterscreenstate",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L12"
     },
     {
-      "id": "prd_4_1_module_1_authentication_onboarding_user_governance",
-      "label": "4.1 Module 1: Authentication, Onboarding & User Governance",
+      "id": "lib_screens_master_kitchen_screen_kitchens",
+      "label": "_kitchens",
       "_origin": "ast",
       "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "4.1 module 1: authentication, onboarding & user governance",
-      "source_file": "PRD.md",
-      "source_location": "L169"
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "_kitchens",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L18"
     },
     {
-      "id": "prd_4_2_module_2_ticket_lifecycle_workflow_engine",
-      "label": "4.2 Module 2: Ticket Lifecycle & Workflow Engine",
+      "id": "lib_screens_master_kitchen_screen_navy",
+      "label": "navy",
       "_origin": "ast",
       "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "4.2 module 2: ticket lifecycle & workflow engine",
-      "source_file": "PRD.md",
-      "source_location": "L180"
-    },
-    {
-      "id": "prd_4_3_module_3_ticket_verification_engine_desktop_data_grid",
-      "label": "4.3 Module 3: Ticket Verification Engine & Desktop Data Grid",
-      "_origin": "ast",
-      "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "4.3 module 3: ticket verification engine & desktop data grid",
-      "source_file": "PRD.md",
-      "source_location": "L220"
-    },
-    {
-      "id": "prd_4_4_module_4_ui_ux_motion_query_concurrency_engine",
-      "label": "4.4 Module 4: UI/UX Motion & Query Concurrency Engine",
-      "_origin": "ast",
-      "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "4.4 module 4: ui/ux motion & query concurrency engine",
-      "source_file": "PRD.md",
-      "source_location": "L243"
-    },
-    {
-      "id": "prd_4_5_module_5_multi_channel_real_time_notifications",
-      "label": "4.5 Module 5: Multi-Channel Real-Time Notifications",
-      "_origin": "ast",
-      "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "4.5 module 5: multi-channel real-time notifications",
-      "source_file": "PRD.md",
-      "source_location": "L253"
-    },
-    {
-      "id": "prd_4_6_module_6_facility_master_data_management",
-      "label": "4.6 Module 6: Facility Master Data Management",
-      "_origin": "ast",
-      "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "4.6 module 6: facility master data management",
-      "source_file": "PRD.md",
-      "source_location": "L280"
-    },
-    {
-      "id": "prd_4_7_module_7_plant_utility_logging_statutory_reports",
-      "label": "4.7 Module 7: Plant Utility Logging & Statutory Reports",
-      "_origin": "ast",
-      "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "4.7 module 7: plant utility logging & statutory reports",
-      "source_file": "PRD.md",
-      "source_location": "L293"
-    },
-    {
-      "id": "prd_4_8_module_8_version_control_remote_app_update_enforcement",
-      "label": "4.8 Module 8: Version Control & Remote App Update Enforcement",
-      "_origin": "ast",
-      "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "4.8 module 8: version control & remote app update enforcement",
-      "source_file": "PRD.md",
-      "source_location": "L305"
-    },
-    {
-      "id": "prd_4_end_to_end_functional_requirements",
-      "label": "4. End-to-End Functional Requirements",
-      "_origin": "ast",
-      "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "4. end-to-end functional requirements",
-      "source_file": "PRD.md",
-      "source_location": "L167"
-    },
-    {
-      "id": "prd_5_1_performance_latency",
-      "label": "5.1 Performance & Latency",
-      "_origin": "ast",
-      "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "5.1 performance & latency",
-      "source_file": "PRD.md",
-      "source_location": "L317"
-    },
-    {
-      "id": "prd_5_2_reliability_availability",
-      "label": "5.2 Reliability & Availability",
-      "_origin": "ast",
-      "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "5.2 reliability & availability",
-      "source_file": "PRD.md",
-      "source_location": "L323"
-    },
-    {
-      "id": "prd_5_3_security_data_protection",
-      "label": "5.3 Security & Data Protection",
-      "_origin": "ast",
-      "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "5.3 security & data protection",
-      "source_file": "PRD.md",
-      "source_location": "L328"
-    },
-    {
-      "id": "prd_5_4_cross_platform_responsive_form_factors",
-      "label": "5.4 Cross-Platform Responsive Form Factors",
-      "_origin": "ast",
-      "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "5.4 cross-platform responsive form factors",
-      "source_file": "PRD.md",
-      "source_location": "L333"
-    },
-    {
-      "id": "prd_5_non_functional_requirements_nfrs",
-      "label": "5. Non-Functional Requirements (NFRs)",
-      "_origin": "ast",
-      "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "5. non-functional requirements (nfrs)",
-      "source_file": "PRD.md",
-      "source_location": "L315"
-    },
-    {
-      "id": "prd_6_entity_relationship_data_model_core_tables",
-      "label": "6. Entity Relationship & Data Model (Core Tables)",
-      "_origin": "ast",
-      "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "6. entity relationship & data model (core tables)",
-      "source_file": "PRD.md",
-      "source_location": "L339"
-    },
-    {
-      "id": "prd_7_product_release_roadmap",
-      "label": "7. Product Release Roadmap",
-      "_origin": "ast",
-      "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "7. product release roadmap",
-      "source_file": "PRD.md",
-      "source_location": "L429"
-    },
-    {
-      "id": "prd_8_acceptance_criteria_sign_off_checklist",
-      "label": "8. Acceptance Criteria & Sign-Off Checklist",
-      "_origin": "ast",
-      "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "8. acceptance criteria & sign-off checklist",
-      "source_file": "PRD.md",
-      "source_location": "L451"
-    },
-    {
-      "id": "prd_executive_summary_background",
-      "label": "Executive Summary & Background",
-      "_origin": "ast",
-      "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "executive summary & background",
-      "source_file": "PRD.md",
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "navy",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
       "source_location": "L13"
     },
     {
-      "id": "prd_lifecycle_step_specifications",
-      "label": "Lifecycle Step Specifications",
+      "id": "lib_screens_master_kitchen_screen_showkitchenform",
+      "label": "_showKitchenForm",
       "_origin": "ast",
       "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "lifecycle step specifications",
-      "source_file": "PRD.md",
-      "source_location": "L196"
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "_showkitchenform",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L39"
     },
     {
-      "id": "prd_phase_1_foundation_core_workflows_completed",
-      "label": "Phase 1: Foundation & Core Workflows (Completed)",
+      "id": "lib_screens_master_kitchen_screen_supabase",
+      "label": "_supabase",
       "_origin": "ast",
       "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "phase 1: foundation & core workflows (completed)",
-      "source_file": "PRD.md",
-      "source_location": "L431"
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "_supabase",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L17"
     },
     {
-      "id": "prd_phase_2_operational_intelligence_automation_near_term",
-      "label": "Phase 2: Operational Intelligence & Automation (Near-Term)",
+      "id": "lib_screens_master_kitchen_screen_togglestatus",
+      "label": "_toggleStatus",
       "_origin": "ast",
       "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "phase 2: operational intelligence & automation (near-term)",
-      "source_file": "PRD.md",
-      "source_location": "L439"
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "_togglestatus",
+      "source_file": "lib/screens/master/kitchen_screen.dart",
+      "source_location": "L114"
     },
     {
-      "id": "prd_phase_3_predictive_maintenance_enterprise_erp_long_term",
-      "label": "Phase 3: Predictive Maintenance & Enterprise ERP (Long-Term)",
+      "id": "list",
+      "label": "List",
       "_origin": "ast",
       "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "phase 3: predictive maintenance & enterprise erp (long-term)",
-      "source_file": "PRD.md",
-      "source_location": "L444"
-    },
-    {
-      "id": "prd_product_requirements_document_prd",
-      "label": "Product Requirements Document (PRD)",
-      "_origin": "ast",
-      "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "product requirements document (prd)",
-      "source_file": "PRD.md",
-      "source_location": "L1"
-    },
-    {
-      "id": "prd_the_akshaya_patra_foundation_tapf_kitchen_maintenance_system",
-      "label": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "_origin": "ast",
-      "community": 79,
-      "community_name": "The Akshaya Patra Foundation (TAPF) \u2014 Kitchen Maintenance System",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "the akshaya patra foundation (tapf) \u2014 kitchen maintenance system",
-      "source_file": "PRD.md",
-      "source_location": "L3"
+      "community_name": "List",
+      "file_type": "code",
+      "norm_label": "list",
+      "source_file": null,
+      "source_location": null
     },
     {
       "id": "lib_screens_reports_ro_checklist_screen",
@@ -19848,6 +19441,17 @@
       "norm_label": "_togglemastercheckbox",
       "source_file": "lib/screens/reports/ro_checklist_screen.dart",
       "source_location": "L490"
+    },
+    {
+      "id": "formstate",
+      "label": "FormState",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "spare_inventory_screen.dart",
+      "file_type": "code",
+      "norm_label": "formstate",
+      "source_file": null,
+      "source_location": null
     },
     {
       "id": "lib_screens_master_spares_spare_inventory_screen",
@@ -29146,57 +28750,57 @@
     },
     {
       "source": "changes_2_0_0_2026_05_10",
-      "target": "changes_added_167",
+      "target": "changes_added_165",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L167",
+      "source_location": "L165",
       "weight": 1.0
     },
     {
       "source": "changes_2_1_2_2026_07_15",
-      "target": "changes_added_137",
+      "target": "changes_added_135",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L137",
+      "source_location": "L135",
       "weight": 1.0
     },
     {
       "source": "changes_2_1_2_2026_07_15",
-      "target": "changes_changed_154",
+      "target": "changes_changed_152",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L154",
+      "source_location": "L152",
       "weight": 1.0
     },
     {
       "source": "changes_2_1_2_2026_07_15",
-      "target": "changes_fixed_158",
+      "target": "changes_fixed_156",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L158",
+      "source_location": "L156",
       "weight": 1.0
     },
     {
       "source": "changes_2_2_0_2026_07_25",
-      "target": "changes_added_116",
+      "target": "changes_added_114",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L116",
+      "source_location": "L114",
       "weight": 1.0
     },
     {
@@ -29207,40 +28811,40 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L130",
+      "source_location": "L128",
       "weight": 1.0
     },
     {
       "source": "changes_2_2_1_2026_07_28",
-      "target": "changes_changed_107",
+      "target": "changes_changed_105",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L107",
+      "source_location": "L105",
       "weight": 1.0
     },
     {
       "source": "changes_2_2_3_9_2026_09_23",
-      "target": "changes_added_61",
+      "target": "changes_added_59",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L61",
+      "source_location": "L59",
       "weight": 1.0
     },
     {
       "source": "changes_2_2_3_9_2026_09_23",
-      "target": "changes_changed_89",
+      "target": "changes_changed_87",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L89",
+      "source_location": "L87",
       "weight": 1.0
     },
     {
@@ -29251,18 +28855,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L97",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
       "source": "changes_2_2_4_2026_09_23",
-      "target": "changes_added_34",
+      "target": "changes_added_32",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L34",
+      "source_location": "L32",
       "weight": 1.0
     },
     {
@@ -29273,11 +28877,11 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L47",
+      "source_location": "L45",
       "weight": 1.0
     },
     {
-      "source": "changes_2_2_5_2026_09_24",
+      "source": "changes_2_2_5_2026_09_23",
       "target": "changes_added",
       "relation": "contains",
       "_origin": "ast",
@@ -29295,7 +28899,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L105",
+      "source_location": "L103",
       "weight": 1.0
     },
     {
@@ -29306,7 +28910,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L114",
+      "source_location": "L112",
       "weight": 1.0
     },
     {
@@ -29317,7 +28921,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L135",
+      "source_location": "L133",
       "weight": 1.0
     },
     {
@@ -29328,7 +28932,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L165",
+      "source_location": "L163",
       "weight": 1.0
     },
     {
@@ -29339,7 +28943,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L32",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -29350,12 +28954,12 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "changes.md",
-      "source_location": "L59",
+      "source_location": "L57",
       "weight": 1.0
     },
     {
       "source": "changes_changelog_project_changes_kitchen_maintenance",
-      "target": "changes_2_2_5_2026_09_24",
+      "target": "changes_2_2_5_2026_09_23",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -30462,358 +30066,6 @@
       "confidence_score": 1.0,
       "source_file": "macos/RunnerTests/RunnerTests.swift",
       "source_location": "L5",
-      "weight": 1.0
-    },
-    {
-      "source": "prd",
-      "target": "prd_product_requirements_document_prd",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L1",
-      "weight": 1.0
-    },
-    {
-      "source": "prd",
-      "target": "prd_the_akshaya_patra_foundation_tapf_kitchen_maintenance_system",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L3",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_1_product_vision_strategic_objectives",
-      "target": "prd_1_1_vision_statement",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L29",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_1_product_vision_strategic_objectives",
-      "target": "prd_1_2_core_business_objectives_kpis_okrs",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L32",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_2_user_personas_role_based_access_control_rbac",
-      "target": "prd_2_1_persona_specifications",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L66",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_2_user_personas_role_based_access_control_rbac",
-      "target": "prd_2_2_granular_permissions_matrix",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L85",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_3_system_architecture_technology_stack",
-      "target": "prd_3_1_technology_selection_breakdown",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L142",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_4_2_module_2_ticket_lifecycle_workflow_engine",
-      "target": "prd_lifecycle_step_specifications",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L196",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_4_end_to_end_functional_requirements",
-      "target": "prd_4_1_module_1_authentication_onboarding_user_governance",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L169",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_4_end_to_end_functional_requirements",
-      "target": "prd_4_2_module_2_ticket_lifecycle_workflow_engine",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L180",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_4_end_to_end_functional_requirements",
-      "target": "prd_4_3_module_3_ticket_verification_engine_desktop_data_grid",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L220",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_4_end_to_end_functional_requirements",
-      "target": "prd_4_4_module_4_ui_ux_motion_query_concurrency_engine",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L243",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_4_end_to_end_functional_requirements",
-      "target": "prd_4_5_module_5_multi_channel_real_time_notifications",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L253",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_4_end_to_end_functional_requirements",
-      "target": "prd_4_6_module_6_facility_master_data_management",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L280",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_4_end_to_end_functional_requirements",
-      "target": "prd_4_7_module_7_plant_utility_logging_statutory_reports",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L293",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_4_end_to_end_functional_requirements",
-      "target": "prd_4_8_module_8_version_control_remote_app_update_enforcement",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L305",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_5_non_functional_requirements_nfrs",
-      "target": "prd_5_1_performance_latency",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L317",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_5_non_functional_requirements_nfrs",
-      "target": "prd_5_2_reliability_availability",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L323",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_5_non_functional_requirements_nfrs",
-      "target": "prd_5_3_security_data_protection",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L328",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_5_non_functional_requirements_nfrs",
-      "target": "prd_5_4_cross_platform_responsive_form_factors",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L333",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_7_product_release_roadmap",
-      "target": "prd_phase_1_foundation_core_workflows_completed",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L431",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_7_product_release_roadmap",
-      "target": "prd_phase_2_operational_intelligence_automation_near_term",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L439",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_7_product_release_roadmap",
-      "target": "prd_phase_3_predictive_maintenance_enterprise_erp_long_term",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L444",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_the_akshaya_patra_foundation_tapf_kitchen_maintenance_system",
-      "target": "prd_3_system_architecture_technology_stack",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L103",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_the_akshaya_patra_foundation_tapf_kitchen_maintenance_system",
-      "target": "prd_executive_summary_background",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L13",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_the_akshaya_patra_foundation_tapf_kitchen_maintenance_system",
-      "target": "prd_4_end_to_end_functional_requirements",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L167",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_the_akshaya_patra_foundation_tapf_kitchen_maintenance_system",
-      "target": "prd_1_product_vision_strategic_objectives",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L27",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_the_akshaya_patra_foundation_tapf_kitchen_maintenance_system",
-      "target": "prd_5_non_functional_requirements_nfrs",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L315",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_the_akshaya_patra_foundation_tapf_kitchen_maintenance_system",
-      "target": "prd_6_entity_relationship_data_model_core_tables",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L339",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_the_akshaya_patra_foundation_tapf_kitchen_maintenance_system",
-      "target": "prd_7_product_release_roadmap",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L429",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_the_akshaya_patra_foundation_tapf_kitchen_maintenance_system",
-      "target": "prd_2_user_personas_role_based_access_control_rbac",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L43",
-      "weight": 1.0
-    },
-    {
-      "source": "prd_the_akshaya_patra_foundation_tapf_kitchen_maintenance_system",
-      "target": "prd_8_acceptance_criteria_sign_off_checklist",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "PRD.md",
-      "source_location": "L451",
       "weight": 1.0
     },
     {
@@ -52956,5 +52208,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "5b3aa5d5810b2dd8191b88fe4ba2c69f81bddce6"
+  "built_at_commit": "9afe3be5218cae73b7048dfbb4a8775bdaadaf0f"
 }
